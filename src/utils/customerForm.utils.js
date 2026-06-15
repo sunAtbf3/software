@@ -15,11 +15,16 @@ export const validateCustomerForm = (form, { requireMobile = true } = {}) => {
     if (!pin) errors.pincode = "Pincode is required";
     else if (!/^\d{6}$/.test(pin)) errors.pincode = "Pincode must be 6 digits";
 
+    const gst = String(form.gst_number || "").trim();
+    if (gst && gst.length !== 15) {
+        errors.gst_number = "GST number must be 15 characters when provided";
+    }
+
     return errors;
 };
 
 /** Trim required fields; drop empty optional fields before API submit. */
-export const buildCustomerSubmitPayload = (form) => {
+export const buildCustomerSubmitPayload = (form, { isUpdate = false } = {}) => {
     const payload = {
         mobile: form.mobile?.trim(),
         name: form.name?.trim(),
@@ -33,7 +38,11 @@ export const buildCustomerSubmitPayload = (form) => {
     if (email) payload.email = email;
 
     const gst = form.gst_number?.trim();
-    if (gst) payload.gst_number = gst;
+    if (gst) {
+        payload.gst_number = gst;
+    } else if (isUpdate) {
+        payload.gst_number = null;
+    }
 
     const remarks = form.remarks?.trim();
     if (remarks) payload.remarks = remarks;

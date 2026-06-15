@@ -106,10 +106,10 @@ export const SUB_TAB_PERMISSIONS = {
     "teammembers.internal.teammembers": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER"],
 
     // Backup internal horizontal tabs (from backupTabRegistry.js)
-    "backup.internal.autobackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "backup.internal.backuptocomputer": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "backup.internal.backuptodrive": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "backup.internal.restorebackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
+    "backup.internal.autobackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.backuptocomputer": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.backuptodrive": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.restorebackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
 
     // Utilities internal horizontal tabs (from utilitiesTabRegistry.js)
     "utilities.internal.importitems": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],

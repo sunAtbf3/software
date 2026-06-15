@@ -191,8 +191,11 @@ export default function CreateCustomerModal() {
                             value={formData.gst_number}
                             onChange={(e) => handleChange("gst_number", e.target.value)}
                             placeholder="22AAAAA0000A1Z"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.gst_number ? "border-red-400" : "border-gray-300"
+                            }`}
                         />
+                        {errors.gst_number && <p className="text-xs text-red-500 mt-1">{errors.gst_number}</p>}
                     </div>
 
                     <div>

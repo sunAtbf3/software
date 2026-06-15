@@ -488,13 +488,16 @@ export default function CheckoutPanel({ shop_id }) {
             setCreatedBillData(result);
             dispatch(setLastCreatedBill(result));
             dispatch(clearCart());
+            // Refresh credit-note pool before clearing customer (skipped queries cannot refetch).
+            if (selectedCustomer?.customer_id) {
+                refetchCreditNotes();
+            }
             dispatch(clearSelectedCustomer());
             setSelectedCreditNoteIds([]);
             setSearchedCreditNotes([]);
             setCreditNoteSearchInput("");
             setShowUpiModal(false);
             setSelectedStaffCodeId("");
-            refetchCreditNotes();
         } catch (err) {
             console.error("Bill creation error:", err);
             toast.error(err?.data?.message || err?.message || "Failed to create bill");

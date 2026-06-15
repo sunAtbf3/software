@@ -146,7 +146,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Unit of Measure <span className="text-red-500">*</span>
+              Unit of Measure <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             <select value={formData.unit_of_measure || ""} onChange={(e) => onChange({ unit_of_measure: e.target.value })} className={inputCls("unit_of_measure")}>
               <option value="">— Select UOM —</option>
@@ -170,7 +170,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Primary Vendor <span className="text-red-500">*</span>
+              Primary Vendor <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             {vendorsLoading ? (
               <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-400">Loading vendors…</div>
@@ -187,7 +187,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Category <span className="text-red-500">*</span>
+              Category <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             {categoriesLoading ? (
               <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-400">Loading categories…</div>
@@ -230,7 +230,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Purchase Price <span className="text-red-500">*</span>
+              Purchase Price <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
             {errorMsg("purchase_price")}
@@ -290,7 +290,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              HSN Code <span className="text-red-500">*</span>
+              HSN Code <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             <input {...field("hsn_code")} placeholder="6-digit HSN" className={inputCls("hsn_code")} />
             {errorMsg("hsn_code")}
@@ -298,9 +298,10 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              GST % <span className="text-red-500">*</span>
+              GST % <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
-            <select value={formData.gst_percent || ""} onChange={(e) => onChange({ gst_percent: e.target.value })} className={inputCls("gst_percent")}>
+            <select value={formData.gst_percent ?? ""} onChange={(e) => onChange({ gst_percent: e.target.value })} className={inputCls("gst_percent")}>
+              <option value="">— Select —</option>
               {GST_PERCENTS.map(g => <option key={g} value={g}>{g}%</option>)}
             </select>
             {errorMsg("gst_percent")}
@@ -308,9 +309,10 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              GST Type <span className="text-red-500">*</span>
+              GST Type <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
             <select value={formData.gst_type || ""} onChange={(e) => onChange({ gst_type: e.target.value })} className={inputCls("gst_type")}>
+              <option value="">— Select —</option>
               {GST_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             {errorMsg("gst_type")}

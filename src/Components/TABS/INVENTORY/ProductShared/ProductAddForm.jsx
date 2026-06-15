@@ -54,7 +54,7 @@ const buildCompleteVariantsArray = (formData, extraVariants) => {
     attributes: [],
     mrp: toNumber(formData.mrp),
     special_price: toNumber(formData.special_price),
-    purchase_price: toNumber(formData.purchase_price),
+    purchase_price: formData.purchase_price ? toNumber(formData.purchase_price) : undefined,
     expenses: toNumber(formData.expenses),
     online_price: formData.online_price ? toNumber(formData.online_price) : undefined,
     purchase_cost: formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,
@@ -72,7 +72,7 @@ const buildCompleteVariantsArray = (formData, extraVariants) => {
       ...rest,
       mrp: toNumber(rest.mrp),
       special_price: toNumber(rest.special_price),
-      purchase_price: toNumber(rest.purchase_price),
+      purchase_price: rest.purchase_price ? toNumber(rest.purchase_price) : undefined,
       expenses: toNumber(rest.expenses),
       online_price: rest.online_price ? toNumber(rest.online_price) : undefined,
       purchase_cost: rest.purchase_cost ? toNumber(rest.purchase_cost) : undefined,
@@ -94,13 +94,16 @@ const buildBasePayload = (formData, extraVariants) => {
     product_code: formData.product_code.trim().toUpperCase(),
     name: formData.name.trim(),
     title: formData.title?.trim() || undefined,
-    primary_vendor_id: formData.primary_vendor_id,
-    category_id: formData.category_id,
-    hsn_code: formData.hsn_code.trim(),
-    gst_percent: toNumber(formData.gst_percent),
-    gst_type: formData.gst_type,
-    unit_of_measure: formData.unit_of_measure,
   };
+
+  if (formData.primary_vendor_id) base.primary_vendor_id = formData.primary_vendor_id;
+  if (formData.category_id) base.category_id = formData.category_id;
+  if (formData.hsn_code?.trim()) base.hsn_code = formData.hsn_code.trim();
+  if (formData.gst_percent !== "" && formData.gst_percent != null) {
+    base.gst_percent = toNumber(formData.gst_percent);
+  }
+  if (formData.gst_type) base.gst_type = formData.gst_type;
+  if (formData.unit_of_measure) base.unit_of_measure = formData.unit_of_measure;
   
   if (formData.description?.trim())  base.description = formData.description.trim();
   if (formData.brand_name?.trim())   base.brand_name = formData.brand_name.trim();
@@ -150,17 +153,13 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
     const errors = {};
     if (!formData.product_code?.trim())      errors.product_code = "Product code is required";
     if (!formData.name?.trim())              errors.name = "Product name is required";
-    if (!formData.primary_vendor_id)         errors.primary_vendor_id = "Vendor is required";
-    if (!formData.category_id)               errors.category_id = "Category is required";
-    if (!formData.hsn_code?.trim())          errors.hsn_code = "HSN code is required";
-    if (!formData.unit_of_measure)           errors.unit_of_measure = "Unit of measure is required";
     if (!formData.mrp || toNumber(formData.mrp) <= 0)
       errors.mrp = "MRP is required and must be > 0";
     if (!formData.special_price || toNumber(formData.special_price) <= 0)
       errors.special_price = "Special price is required";
-    if (!formData.purchase_price || toNumber(formData.purchase_price) <= 0)
-      errors.purchase_price = "Purchase price is required";
-    if (!formData.expenses || toNumber(formData.expenses) < 0)
+    if (formData.purchase_price && toNumber(formData.purchase_price) < 0)
+      errors.purchase_price = "Purchase price cannot be negative";
+    if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
       errors.expenses = "Expenses is required";
     return errors;
   };

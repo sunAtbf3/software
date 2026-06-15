@@ -69,17 +69,13 @@ export default function ProductEditForm({
   const validate = () => {
     const errors = {};
     if (!formData.name?.trim())          errors.name = "Product name is required";
-    if (!formData.primary_vendor_id)     errors.primary_vendor_id = "Vendor is required";
-    if (!formData.category_id)           errors.category_id = "Category is required";
-    if (!formData.hsn_code?.trim())      errors.hsn_code = "HSN code is required";
-    if (!formData.unit_of_measure)       errors.unit_of_measure = "Unit of measure is required";
     if (!formData.mrp || toNumber(formData.mrp) <= 0)
       errors.mrp = "MRP is required and must be > 0";
     if (!formData.special_price || toNumber(formData.special_price) <= 0)
       errors.special_price = "Special price is required";
-    if (!formData.purchase_price || toNumber(formData.purchase_price) <= 0)
-      errors.purchase_price = "Purchase price is required";
-    if (!formData.expenses || toNumber(formData.expenses) < 0)
+    if (formData.purchase_price && toNumber(formData.purchase_price) < 0)
+      errors.purchase_price = "Purchase price cannot be negative";
+    if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
       errors.expenses = "Expenses is required";
     return errors;
   };
@@ -118,15 +114,17 @@ export default function ProductEditForm({
         title:             formData.title?.trim() || undefined,
         description:       formData.description?.trim()   || undefined,
         brand_name:        formData.brand_name?.trim()    || undefined,
-        primary_vendor_id: formData.primary_vendor_id     || undefined,
-        category_id:       formData.category_id           || undefined,
-        hsn_code:          formData.hsn_code.trim(),
-        gst_percent:       toNumber(formData.gst_percent),
-        gst_type:          formData.gst_type,
-        unit_of_measure:   formData.unit_of_measure,
+        primary_vendor_id: formData.primary_vendor_id || null,
+        category_id:       formData.category_id || null,
+        hsn_code:          formData.hsn_code?.trim() || "",
+        gst_percent:       formData.gst_percent !== "" && formData.gst_percent != null
+          ? toNumber(formData.gst_percent)
+          : 0,
+        gst_type:          formData.gst_type || "EXEMPT",
+        unit_of_measure:   formData.unit_of_measure || "",
         mrp:               toNumber(formData.mrp),
         special_price:     toNumber(formData.special_price),
-        purchase_price:    toNumber(formData.purchase_price),
+        purchase_price:    formData.purchase_price ? toNumber(formData.purchase_price) : 0,
         expenses:          toNumber(formData.expenses),
         online_price:      formData.online_price  ? toNumber(formData.online_price)  : undefined,
         purchase_cost:     formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,
