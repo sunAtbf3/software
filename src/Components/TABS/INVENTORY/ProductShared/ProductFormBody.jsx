@@ -255,7 +255,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
           </div> */}
 
         </div>
-        <p className="text-xs text-gray-400 mt-2">Purchase Code = (Purchase Price + Expenses + 1986) — auto-generated</p>
+      
       </div>
 
       {/* ── Section 4: Shipping ───────────────────────────────────────────── */}
