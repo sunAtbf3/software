@@ -45,8 +45,12 @@ AxiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Only intercept 401 — but NOT the refresh endpoint itself
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes("/auth/refresh")) {
+    // Only intercept 401 — but NOT for public/unauthenticated auth endpoints
+    const isExcludedRoute = ["/auth/login", "/auth/register", "/auth/refresh"].some(route =>
+      originalRequest.url?.includes(route)
+    );
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isExcludedRoute) {
 
       if (isRefreshing) {
         // Queue requests while refresh is in progress

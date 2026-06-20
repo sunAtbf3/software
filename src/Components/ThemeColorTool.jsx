@@ -4,7 +4,8 @@ const STORAGE_KEY = 'app-theme-v1';
 
 const DEFAULT_VALUES = {
   accent: '#0284c7',
-  sidebar: '#162f53',
+  // sidebar: '#011669',
+  sidebar: '#01104e',
   appBg: '#f0f9ff'
 };
 
