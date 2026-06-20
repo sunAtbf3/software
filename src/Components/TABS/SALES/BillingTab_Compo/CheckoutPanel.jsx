@@ -279,7 +279,7 @@ export default function CheckoutPanel({ shop_id }) {
         page: 1,
         limit: 50,
     }, {
-        skip: !selectedCustomer?.customer_id || !shop_id || !isOnline,
+        skip: !selectedCustomer?.customer_id || !shop_id || !isOnline || isNonListedBill(billType),
     });
 
     const availableCreditNotes = creditNotesData?.creditNotes || [];

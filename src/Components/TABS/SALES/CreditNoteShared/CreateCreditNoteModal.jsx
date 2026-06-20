@@ -6,10 +6,9 @@
 import React, { useState } from "react";
 import { X, Search, User, Receipt } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
-import { useCreateCreditNoteMutation } from "../../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
+import { useCreateCreditNoteMutation, useGetBillsForCreditNoteQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
 import { useLazySearchCustomersQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi"
 import { normalizeCustomerSearchResults } from "../../../../utils/customerForm.utils";
-import { useGetBillsQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingApi";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -29,11 +28,12 @@ export default function CreateCreditNoteModal({ shop_id, onSuccess, onClose }) {
     
     // Step 2: Bill Selection
     const [selectedBill, setSelectedBill] = useState(null);
-    const { data: billsData } = useGetBillsQuery({
+    const { data: billsData } = useGetBillsForCreditNoteQuery({
         page: 1,
         limit: 50,
-        shop_id: shop_id,
-    }, { skip: !selectedCustomer });
+        shop_id,
+        customer_id: selectedCustomer?.customer_id || "",
+    }, { skip: !selectedCustomer?.customer_id });
     
     // Step 3: Item Selection
     const [selectedItems, setSelectedItems] = useState([]);

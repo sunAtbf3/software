@@ -154,11 +154,16 @@ export const creditNoteApi = createApi({
 
         // GET /bills — get bills for credit note creation (filter unpaid/not fully returned)
         getBillsForCreditNote: builder.query({
-            query: ({ shop_id, page = 1, limit = 20 }) => ({
-                url: "/bills",
-                method: "GET",
-                params: { page, limit, shop_id },
-            }),
+            query: ({ shop_id, customer_id = "", customer_mobile = "", page = 1, limit = 20 }) => {
+                const params = { page, limit, shop_id, exclude_non_listed: true };
+                if (customer_id) params.customer_id = customer_id;
+                if (customer_mobile) params.customer_mobile = customer_mobile;
+                return {
+                    url: "/bills",
+                    method: "GET",
+                    params,
+                };
+            },
             providesTags: ["CreditNote"],
             transformResponse: (response) => ({
                 bills: response.data || [],
