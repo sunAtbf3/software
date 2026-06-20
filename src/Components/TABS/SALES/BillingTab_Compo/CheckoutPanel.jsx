@@ -118,29 +118,29 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                             <p className="text-sm font-medium text-gray-700 mb-2">Items ({totalQty})</p>
                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
-                                <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
-                                    <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Qty</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Price</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th></tr></thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {bill.items?.map((item, idx) => (
-                                            <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name || item.manual_item_name}</p><p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
-                                        ))}
-                                    </tbody>
-                                    <tfoot className="bg-gray-50">
-                                        <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold">Subtotal:</td><td className="px-3 py-2 text-right">₹{toNumber(bill.subtotal).toFixed(2)}</td></tr>
-                                        <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold">GST:</td><td className="px-3 py-2 text-right">₹{toNumber(bill.gst_amount).toFixed(2)}</td></tr>
-                                        {bill.tax_summary?.cgst > 0 && (
-                                            <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">CGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.cgst).toFixed(2)}</td></tr>
-                                        )}
-                                        {bill.tax_summary?.sgst > 0 && (
-                                            <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">SGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.sgst).toFixed(2)}</td></tr>
-                                        )}
-                                        {bill.tax_summary?.igst > 0 && (
-                                            <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">IGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.igst).toFixed(2)}</td></tr>
-                                        )}
-                                        {bill.credit_applied > 0 && <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold text-green-600">Credit Applied:</td><td className="px-3 py-2 text-right text-green-600">-₹{toNumber(bill.credit_applied).toFixed(2)}</td></tr>}
-                                        <tr className="border-t border-gray-200"><td colSpan="3" className="px-3 py-2 text-right font-bold text-lg">Total:</td><td className="px-3 py-2 text-right font-bold text-lg text-blue-600">₹{toNumber(bill.total_amount).toFixed(2)}</td></tr>
-                                    </tfoot>
-                                </table>
+                                    <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
+                                        <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Qty</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Price</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th></tr></thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {bill.items?.map((item, idx) => (
+                                                <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name || item.manual_item_name}</p><p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot className="bg-gray-50">
+                                            <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold">Subtotal:</td><td className="px-3 py-2 text-right">₹{toNumber(bill.subtotal).toFixed(2)}</td></tr>
+                                            <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold">GST:</td><td className="px-3 py-2 text-right">₹{toNumber(bill.gst_amount).toFixed(2)}</td></tr>
+                                            {bill.tax_summary?.cgst > 0 && (
+                                                <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">CGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.cgst).toFixed(2)}</td></tr>
+                                            )}
+                                            {bill.tax_summary?.sgst > 0 && (
+                                                <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">SGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.sgst).toFixed(2)}</td></tr>
+                                            )}
+                                            {bill.tax_summary?.igst > 0 && (
+                                                <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">IGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.igst).toFixed(2)}</td></tr>
+                                            )}
+                                            {bill.credit_applied > 0 && <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold text-green-600">Credit Applied:</td><td className="px-3 py-2 text-right text-green-600">-₹{toNumber(bill.credit_applied).toFixed(2)}</td></tr>}
+                                            <tr className="border-t border-gray-200"><td colSpan="3" className="px-3 py-2 text-right font-bold text-lg">Total:</td><td className="px-3 py-2 text-right font-bold text-lg text-blue-600">₹{toNumber(bill.total_amount).toFixed(2)}</td></tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -263,6 +263,8 @@ export default function CheckoutPanel({ shop_id }) {
     const [showUpiModal, setShowUpiModal] = useState(false);
     const [showUpiQrBill, setShowUpiQrBill] = useState(null);
     const [selectedStaffCodeId, setSelectedStaffCodeId] = useState("");
+    const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
+    const [whatsAppManualPhone, setWhatsAppManualPhone] = useState("");
 
 
 
@@ -543,8 +545,8 @@ export default function CheckoutPanel({ shop_id }) {
     };
 
     const handleCreateBill = async () => {
-        const isCartEmpty = billType === BILL_TYPES.NON_LISTED 
-            ? manualCart.length === 0 
+        const isCartEmpty = billType === BILL_TYPES.NON_LISTED
+            ? manualCart.length === 0
             : cart.length === 0;
 
         if (isCartEmpty) {
@@ -614,6 +616,73 @@ export default function CheckoutPanel({ shop_id }) {
         await printBill(bill);
     };
 
+    const handleSendWhatsApp = (bill) => {
+        // Resolve phone: bill object first, then Redux selected customer
+        const rawPhone = bill.customer_mobile || selectedCustomer?.mobile || "";
+        const cleanPhone = String(rawPhone).replace(/\D/g, "");
+
+        if (cleanPhone.length >= 10) {
+            const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            const billNum = bill.bill_number || bill.offline_bill_number || "—";
+            const amount = toNumber(bill.total_amount || bill.total).toFixed(2);
+            const date = new Date(bill.created_at || Date.now()).toLocaleDateString("en-IN");
+            const name = bill.customer_name || "";
+
+            const msg = [
+                `Hello${name ? ` ${name}` : ""}!`,
+                ``,
+                `Your bill has been created successfully.`,
+                ``,
+                `*Bill No:* ${billNum}`,
+                `*Amount:* ₹${amount}`,
+                `*Date:* ${date}`,
+                ``,
+                `Thank you for your purchase!`,
+            ].join("\n");
+
+            window.open(
+                `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`,
+                "_blank",
+                "noopener,noreferrer"
+            );
+        } else {
+            // No phone on bill — show inline input
+            setShowWhatsAppInput(true);
+        }
+    };
+
+    const handleSendWhatsAppManual = () => {
+        const bill = createdBillData || lastCreatedBill;
+        const cleanPhone = whatsAppManualPhone.replace(/\D/g, "");
+        if (cleanPhone.length !== 10) {
+            toast.error("Please enter a valid 10-digit mobile number");
+            return;
+        }
+        const billNum = bill.bill_number || bill.offline_bill_number || "—";
+        const amount = toNumber(bill.total_amount || bill.total).toFixed(2);
+        const date = new Date(bill.created_at || Date.now()).toLocaleDateString("en-IN");
+
+        const msg = [
+            `Hello! 👋`,
+            ``,
+            `Your bill has been created successfully.`,
+            ``,
+            `📄 *Bill No:* ${billNum}`,
+            `💰 *Amount:* ₹${amount}`,
+            `📅 *Date:* ${date}`,
+            ``,
+            `Thank you for your purchase! 🙏`,
+        ].join("\n");
+
+        window.open(
+            `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`,
+            "_blank",
+            "noopener,noreferrer"
+        );
+        setShowWhatsAppInput(false);
+        setWhatsAppManualPhone("");
+    };
+
     const handleNewBill = () => {
         setCreatedBillData(null);
         dispatch(clearLastCreatedBill());
@@ -622,6 +691,8 @@ export default function CheckoutPanel({ shop_id }) {
         setCreditNoteSearchInput("");
         setShowCreditAlert(false);
         setDismissedCredit(false);
+        setShowWhatsAppInput(false);
+        setWhatsAppManualPhone("");
         setGstForm(EMPTY_GST_FORM);
         setSaveGstToCustomer(false);
     };
@@ -685,8 +756,47 @@ export default function CheckoutPanel({ shop_id }) {
                             )}
                             <button onClick={handlePrintBill} disabled={docBusy} className="flex-1 min-w-[120px] py-2 border border-green-400 text-green-800 rounded-lg text-sm font-medium hover:bg-green-100 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print"}</button>
                             <button onClick={handleDownloadPdf} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"><Download size={14} /> {isPdfLoading ? "Loading..." : "Download PDF"}</button>
+                            <button
+                                type="button"
+                                onClick={() => handleSendWhatsApp(bill)}
+                                className="flex-1 min-w-[120px] py-2 bg-[#25D366] text-white rounded-lg text-sm font-medium hover:bg-[#1ebe5a] flex items-center justify-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
+                                WhatsApp
+                            </button>
                             <button onClick={handleNewBill} className="flex-1 min-w-[120px] py-2 border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 flex items-center justify-center gap-2"><PlusCircle size={14} /> New Bill</button>
                         </div>
+                        {showWhatsAppInput && (
+                            <div className="mt-3 p-3 bg-green-50 border border-green-300 rounded-lg text-left">
+                                <p className="text-xs font-semibold text-green-800 mb-2">📱 Enter customer's WhatsApp number:</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="tel"
+                                        value={whatsAppManualPhone}
+                                        onChange={(e) => setWhatsAppManualPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                                        placeholder="10-digit mobile number"
+                                        className="flex-1 px-3 py-2 border border-green-300 rounded-lg text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        autoFocus
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleSendWhatsAppManual}
+                                        className="px-3 py-2 bg-[#25D366] text-white text-sm rounded-lg hover:bg-[#1ebe5a] font-medium whitespace-nowrap"
+                                    >
+                                        Send
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowWhatsAppInput(false); setWhatsAppManualPhone(""); }}
+                                        className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 whitespace-nowrap"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <UpiQrDisplayModal

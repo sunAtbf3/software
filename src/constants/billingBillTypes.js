@@ -8,7 +8,7 @@ export const BILL_TYPES = {
 
 export const getBillTypeLabel = (billType) => {
   if (billType === BILL_TYPES.WITH_GST) return "GST Tax Invoice";
-  if (billType === BILL_TYPES.ESTIMATE) return "Estimate";
+  if (billType === BILL_TYPES.ESTIMATE) return "Receipt";
   if (billType === BILL_TYPES.NON_LISTED) return "Non-Listed Bill";
   return "Non-GST Bill";
 };

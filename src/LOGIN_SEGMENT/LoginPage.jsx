@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useLoginMutation } from "../REDUX_FEATURES/REDUX_SLICES/Login_Api/authApi";
 import { setCredentials } from "../REDUX_FEATURES/REDUX_SLICES/Login_Api/authSlice";
 import LOGO from "../assets/removebg.png";
-import { toast } from "../Components/shared/ToastConfig"; // Globally configured modular explicit path toast instance import
+import { toast } from "../Components/shared/ToastConfig";
 
 const getErrorMessage = (error) =>
   error?.data?.message || error?.error || "Unable to login. Please try again.";
