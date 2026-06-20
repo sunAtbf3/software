@@ -174,9 +174,6 @@ const LoginPage = () => {
                 <label htmlFor="password" className="block text-[13px] font-bold text-slate-700 tracking-wider uppercase">
                   Password
                 </label>
-                <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">
-                  Forgot password?
-                </a>
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
