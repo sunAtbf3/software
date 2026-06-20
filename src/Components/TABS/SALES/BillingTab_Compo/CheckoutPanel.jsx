@@ -6,6 +6,7 @@
 // ADDED: Credit Note integration with customer auto-detection
 // FIXED: Changed `remaining_amount` to `balance` to match backend API
 // UPDATED: Bill type values to match backend enum (GST_INVOICE | NON_GST_INVOICE)
+// UPDATED: Per-bill GST details form + save-to-customer option
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,17 +29,19 @@ import {
 } from "../../../../offline/sync/shopStockSync.service";
 import { useOfflineShopConfig } from "../../../../offline/hooks/useOfflineShopConfig";
 import UpiPaymentModal from "./UpiPaymentModal";
+import BillTypeSection from "./BillTypeSection";
 import UpiQrDisplayModal from "../../../Billing/UpiQrDisplayModal";
 import { formatBankAccountLabel } from "../../../../utils/upiPayment";
 import { canShowBillUpiQr } from "../../../../utils/upiQr";
 import { formatStaffCodeLabel } from "../../../../utils/staffCode";
 import {
     clearCart,
+    clearManualCart,
     clearSelectedCustomer,
-    setBillType,
     setPaymentMethod,
     setLastCreatedBill,
     clearLastCreatedBill,
+    openEditCustomer,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import {
     selectCartSubtotal,
@@ -47,7 +50,7 @@ import {
     selectCartTaxSummary,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { getStateName } from "../../../../constants/indianStateCodes";
-import { BILL_TYPES, getBillTypeLabel, isWithGstBill } from "../../../../constants/billingBillTypes";
+import { BILL_TYPES, getBillTypeLabel, isWithGstBill, isNonListedBill } from "../../../../constants/billingBillTypes";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -119,7 +122,7 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                                     <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Qty</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Price</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th></tr></thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {bill.items?.map((item, idx) => (
-                                            <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name}</p><p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
+                                            <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name || item.manual_item_name}</p><p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
                                         ))}
                                     </tbody>
                                     <tfoot className="bg-gray-50">
@@ -181,6 +184,7 @@ export default function CheckoutPanel({ shop_id }) {
     const { user } = useSelector((state) => state.auth);
     const {
         cart,
+        manualCart,
         selectedCustomer,
         customerMobileInput,
         billType,
@@ -259,6 +263,8 @@ export default function CheckoutPanel({ shop_id }) {
     const [showUpiModal, setShowUpiModal] = useState(false);
     const [showUpiQrBill, setShowUpiQrBill] = useState(null);
     const [selectedStaffCodeId, setSelectedStaffCodeId] = useState("");
+
+
 
     const [lookupCreditNote, { isFetching: isLookingUpCn }] = useLazyLookupCreditNoteQuery();
 
@@ -384,12 +390,19 @@ export default function CheckoutPanel({ shop_id }) {
     };
 
     const buildBillPayload = (extra = {}) => {
-        const items = cart.map((item) => ({
-            variant_id: item.variant_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            price_type: item.price_type,
-        }));
+        const items = billType === BILL_TYPES.NON_LISTED
+            ? manualCart.map((item) => ({
+                item_name: item.item_name,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                mrp: item.mrp,
+            }))
+            : cart.map((item) => ({
+                variant_id: item.variant_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                price_type: item.price_type,
+            }));
 
         const payload = {
             shop_id,
@@ -406,6 +419,16 @@ export default function CheckoutPanel({ shop_id }) {
         } else {
             payload.customer_name = customerMobileInput ? customerMobileInput : "Walk-in Customer";
             if (customerMobileInput) payload.customer_mobile = customerMobileInput;
+        }
+
+        // Attach GST details for GST Invoice bills
+        if (billType === "GST_INVOICE") {
+            payload.customer_gstin = selectedCustomer?.gst_number?.trim().toUpperCase() || "";
+            payload.company_name = selectedCustomer?.company_name?.trim() || selectedCustomer?.name?.trim() || "";
+            payload.address = selectedCustomer?.address?.trim() || "";
+            payload.city = selectedCustomer?.city?.trim() || "";
+            payload.state_code = selectedCustomer?.state_code?.trim() || "";
+            payload.pincode = selectedCustomer?.pincode?.trim() || "";
         }
 
         if (finalPayable > 0 && paymentMethod) {
@@ -445,7 +468,7 @@ export default function CheckoutPanel({ shop_id }) {
                     user,
                     shopId: shop_id,
                     payload: offlinePayload,
-                    cart,
+                    cart: billType === BILL_TYPES.NON_LISTED ? manualCart : cart,
                     billType,
                     staffCodeId: (extra.staff_code_id ?? selectedStaffCodeId) || null,
                     offlineCustomerClientId: customerRef.offline_customer_client_id,
@@ -455,6 +478,7 @@ export default function CheckoutPanel({ shop_id }) {
                 setCreatedBillData(result);
                 dispatch(setLastCreatedBill(result));
                 dispatch(clearCart());
+                dispatch(clearManualCart());
                 dispatch(clearSelectedCustomer());
                 setSelectedCreditNoteIds([]);
                 setSearchedCreditNotes([]);
@@ -464,7 +488,7 @@ export default function CheckoutPanel({ shop_id }) {
                 return;
             }
 
-            const saleLines = saleLinesFromCart(cart);
+            const saleLines = billType === BILL_TYPES.NON_LISTED ? [] : saleLinesFromCart(cart);
 
             const result = await createBill({
                 idempotencyKey: `bill_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -472,7 +496,9 @@ export default function CheckoutPanel({ shop_id }) {
             }).unwrap();
 
             try {
-                await applyLocalSaleDeductions(shop_id, saleLines);
+                if (saleLines.length > 0) {
+                    await applyLocalSaleDeductions(shop_id, saleLines);
+                }
             } catch (stockErr) {
                 console.error("Local stock cache update after online bill:", stockErr);
             }
@@ -488,6 +514,7 @@ export default function CheckoutPanel({ shop_id }) {
             setCreatedBillData(result);
             dispatch(setLastCreatedBill(result));
             dispatch(clearCart());
+            dispatch(clearManualCart());
             // Refresh credit-note pool before clearing customer (skipped queries cannot refetch).
             if (selectedCustomer?.customer_id) {
                 refetchCreditNotes();
@@ -516,12 +543,38 @@ export default function CheckoutPanel({ shop_id }) {
     };
 
     const handleCreateBill = async () => {
-        if (cart.length === 0) {
+        const isCartEmpty = billType === BILL_TYPES.NON_LISTED 
+            ? manualCart.length === 0 
+            : cart.length === 0;
+
+        if (isCartEmpty) {
             toast.error("Cart is empty");
             return;
         }
 
         if (!assertStaffCodeSelected()) return;
+
+        // Validate GST fields client-side before hitting the server
+        if (billType === "GST_INVOICE") {
+            if (!selectedCustomer) {
+                toast.error("Please select a customer for GST Invoice");
+                return;
+            }
+            if (!selectedCustomer.is_gst_registered) {
+                toast.error("Selected customer is not GST registered. Please upgrade to GST.");
+                dispatch(openEditCustomer());
+                return;
+            }
+            const gn = (selectedCustomer.gst_number || "").trim().toUpperCase();
+            const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!selectedCustomer.company_name?.trim()) { toast.error("Company name is required on customer profile for GST Invoice"); return; }
+            if (!gn) { toast.error("GST number is required on customer profile for GST Invoice"); return; }
+            if (gn.length !== 15 || !GST_REGEX.test(gn)) { toast.error("Invalid GST number format on customer profile (15 characters, e.g. 22AAAAA0000A1Z5)"); return; }
+            if (!selectedCustomer.address?.trim()) { toast.error("Address is required on customer profile for GST Invoice"); return; }
+            if (!selectedCustomer.city?.trim()) { toast.error("City is required on customer profile for GST Invoice"); return; }
+            if (!/^\d{2}$/.test((selectedCustomer.state_code || "").trim())) { toast.error("State code must be 2 digits (e.g. 27 for Maharashtra)"); return; }
+            if (!/^\d{6}$/.test((selectedCustomer.pincode || "").trim())) { toast.error("Pincode must be 6 digits"); return; }
+        }
 
         if (!isOnline && selectedCreditNoteIds.length) {
             toast.error("Credit notes cannot be applied while offline");
@@ -569,6 +622,8 @@ export default function CheckoutPanel({ shop_id }) {
         setCreditNoteSearchInput("");
         setShowCreditAlert(false);
         setDismissedCredit(false);
+        setGstForm(EMPTY_GST_FORM);
+        setSaveGstToCustomer(false);
     };
 
     const handleApplyAllCredit = () => {
@@ -766,45 +821,25 @@ export default function CheckoutPanel({ shop_id }) {
                 </div>
 
 
-                {/* RIGHT SIDE: Changed container to column layout */}
-                <div className="flex flex-col gap-2">
-                    <p className="text-xs font-semibold text-gray-600 mb-1">Bill type</p>
+                <BillTypeSection />
+            </div>
 
-                    {/* 2. Kept your exact buttons & classes but removed the description spans */}
+            {/* Warning alert if selected customer is not GST registered */}
+            {billType === "GST_INVOICE" && selectedCustomer && !selectedCustomer.is_gst_registered && (
+                <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+                    <div className="text-xs text-amber-800">
+                        <span className="font-semibold block mb-0.5">GST Details Required</span>
+                        This customer is not registered for GST. You need to upgrade them to create a GST Invoice.
+                    </div>
                     <button
                         type="button"
-                        onClick={() => dispatch(setBillType(BILL_TYPES.WITH_GST))}
-                        className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border transition-all text-left ${billType === BILL_TYPES.WITH_GST
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
+                        onClick={() => dispatch(openEditCustomer())}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg shadow-sm shrink-0 ml-3 cursor-pointer"
                     >
-                        <span className="block">GST Tax Invoice</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => dispatch(setBillType(BILL_TYPES.WITHOUT_GST))}
-                        className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border transition-all text-left ${billType === BILL_TYPES.WITHOUT_GST
-                            ? "bg-blue-600 text-white border-gray-800"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
-                    >
-                        <span className="block">Non-GST Bill</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => dispatch(setBillType(BILL_TYPES.ESTIMATE))}
-                        className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border transition-all text-left ${billType === BILL_TYPES.ESTIMATE
-                            ? "bg-amber-600 text-white border-amber-600"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                            }`}
-                    >
-                        <span className="block">Estimate / Fake Bill</span>
+                        Upgrade Customer
                     </button>
                 </div>
-            </div>
+            )}
 
             {/* Top Phase: Price Calculation Matrix */}
             <div className="space-y-1 mb-3">
@@ -901,8 +936,8 @@ export default function CheckoutPanel({ shop_id }) {
                         /* Column 2 Alternative: Inline Action button for Cash & Card selection types */
                         <button
                             onClick={handleCreateBill}
-                            disabled={cart.length === 0 || isCreatingBill}
-                            className={`w-full py-2.5 rounded-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${cart.length === 0 ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700"
+                            disabled={(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) || isCreatingBill}
+                            className={`w-full py-2.5 rounded-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700"
                                 }`}
                         >
                             {isCreatingBill ? (
@@ -918,8 +953,8 @@ export default function CheckoutPanel({ shop_id }) {
                 {paymentMethod === "UPI" && finalPayable > 0 && (
                     <button
                         onClick={handleCreateBill}
-                        disabled={cart.length === 0 || isCreatingBill}
-                        className={`w-full py-3 rounded-xl font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${cart.length === 0 ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700 hover:shadow-lg"
+                        disabled={(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) || isCreatingBill}
+                        className={`w-full py-3 rounded-xl font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700 hover:shadow-lg"
                             }`}
                     >
                         {isCreatingBill ? (

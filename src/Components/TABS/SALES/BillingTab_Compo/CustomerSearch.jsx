@@ -1,27 +1,18 @@
 // TABS/SALES/BillingTab_Compo/CustomerSearch.jsx
 //
 // Customer search component for billing - finds customer by mobile
-// Shows loyalty tier, total spend, and option to create new customer
-//
-// FIX 1: Removed redundant setSelectedCustomer(null) dispatch from handleMobileChange
-//         — the slice's setCustomerMobileInput reducer already clears selectedCustomer
-//         when mobile doesn't match. Double-dispatching caused a race where the
-//         auto-select useEffect would immediately re-set the customer, locking the input.
-//
-// FIX 2: Added `isChanging` ref to suppress auto-select after "Change" is clicked.
-//         Without this, the RTK Query cache still holds foundCustomer, so the
-//         auto-select effect fires instantly and re-locks the customer card.
+// UPDATED: Explicit "Select Customer" button; uses is_gst_registered boolean
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { User, ShoppingBag } from "lucide-react";
+import { User, ShoppingBag, Building2, UserCheck } from "lucide-react";
 import {
     setCustomerMobileInput,
     setSelectedCustomer,
     openCreateCustomer,
+    openEditCustomer,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
-import { useLazySearchCustomersQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi";
-import { searchOfflineCustomerByMobile } from "../../../../offline/billing/offlineCustomer.service";
+import { useCustomerSearch } from "../../../../hooks/useCustomerSearch";
 
 const getLoyaltyBadge = (tier) => {
     switch (tier) {
@@ -38,62 +29,24 @@ const getLoyaltyBadge = (tier) => {
 
 export default function CustomerSearch() {
     const dispatch = useDispatch();
-    const isOnline = useSelector((state) => state.offline.isOnline);
     const { customerMobileInput, selectedCustomer } = useSelector((state) => state.billing);
-    const [triggerSearch, { data: searchResults, isLoading, reset: resetSearch }] = useLazySearchCustomersQuery();
-    const [offlineCustomer, setOfflineCustomer] = useState(null);
-    const [offlineSearching, setOfflineSearching] = useState(false);
-
-    const suppressAutoSelect = useRef(false);
-
-    useEffect(() => {
-        if (customerMobileInput && customerMobileInput.length === 10) {
-            suppressAutoSelect.current = false;
-
-            if (!isOnline) {
-                setOfflineSearching(true);
-                searchOfflineCustomerByMobile(customerMobileInput)
-                    .then((row) => setOfflineCustomer(row))
-                    .finally(() => setOfflineSearching(false));
-                return;
-            }
-
-            setOfflineCustomer(null);
-            triggerSearch({ mobile: customerMobileInput });
-        } else {
-            setOfflineCustomer(null);
-        }
-    }, [customerMobileInput, triggerSearch, isOnline]);
-
-    const foundCustomer = isOnline ? searchResults?.[0] : offlineCustomer;
-
-    // Auto-select customer if found — guarded by suppressAutoSelect ref
-    useEffect(() => {
-        if (suppressAutoSelect.current) return;
-        if (foundCustomer && !selectedCustomer) {
-            dispatch(setSelectedCustomer(foundCustomer));
-        }
-    }, [foundCustomer, selectedCustomer, dispatch]);
+    const { foundCustomer, isSearching, clearSearch } = useCustomerSearch(customerMobileInput);
 
     const handleMobileChange = (e) => {
         const value = e.target.value;
-        // FIX: Removed the `if (value.length <= 10)` guard — it was blocking backspace
-        // from 10 chars (e.g. trying to delete the 10th digit was silently dropped because
-        // the new value of length 9 passed the check but the dispatch was inside the same
-        // block as the stale length check in some edge cases).
-        // Also removed the redundant `dispatch(setSelectedCustomer(null))` — the slice's
-        // setCustomerMobileInput reducer already handles clearing selectedCustomer.
         if (/^\d{0,10}$/.test(value)) {
             dispatch(setCustomerMobileInput(value));
         }
     };
 
+    const handleSelectCustomer = () => {
+        if (foundCustomer) {
+            dispatch(setSelectedCustomer(foundCustomer));
+        }
+    };
+
     const handleClearCustomer = () => {
-        // FIX: Set suppressAutoSelect BEFORE dispatching so the useEffect guarding
-        // auto-select doesn't fire between the two dispatches and re-lock the customer.
-        suppressAutoSelect.current = true;
-        resetSearch();
-        setOfflineCustomer(null);
+        clearSearch();
         dispatch(setSelectedCustomer(null));
         dispatch(setCustomerMobileInput(""));
     };
@@ -119,30 +72,40 @@ export default function CustomerSearch() {
                 )}
             </div>
 
-            {/* Loading */}
-            {(isLoading || offlineSearching) && customerMobileInput.length === 10 && (
+            {(isSearching) && customerMobileInput.length === 10 && (
                 <div className="mt-2 text-center">
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin inline-block" />
                     <span className="text-xs text-gray-500 ml-2">Searching...</span>
                 </div>
             )}
 
-            {/* Customer Found */}
-            {foundCustomer && selectedCustomer && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            {/* Found but not yet selected: show "Select" button */}
+            {foundCustomer && !selectedCustomer && (
+                <div className="mt-3 p-3 border border-blue-200 bg-blue-50 rounded-lg">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
-                            <User size={16} className="text-blue-600 shrink-0" />
+                            {foundCustomer.is_gst_registered ? (
+                                <Building2 size={16} className="text-green-700 shrink-0" />
+                            ) : (
+                                <User size={16} className="text-blue-600 shrink-0" />
+                            )}
                             <p className="font-semibold text-gray-800 truncate">{foundCustomer.name}</p>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${getLoyaltyBadge(foundCustomer.loyalty_tier)}`}>
-                                {foundCustomer.loyalty_tier}
-                            </span>
+                            {foundCustomer.is_gst_registered && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium shrink-0 bg-green-100 text-green-700 border border-green-200">
+                                    GST Registered
+                                </span>
+                            )}
+                            {getLoyaltyBadge(foundCustomer.loyalty_tier) && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${getLoyaltyBadge(foundCustomer.loyalty_tier)}`}>
+                                    {foundCustomer.loyalty_tier}
+                                </span>
+                            )}
                         </div>
                         <button
-                            onClick={handleClearCustomer}
-                            className="text-xs text-red-500 hover:text-red-700 shrink-0 self-start sm:self-auto"
+                            onClick={handleSelectCustomer}
+                            className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-start sm:self-auto"
                         >
-                            Change
+                            <UserCheck size={12} /> Select
                         </button>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600">
@@ -150,11 +113,68 @@ export default function CustomerSearch() {
                         <span>💰 Total: ₹{foundCustomer.total_spent?.toFixed(2) || "0"}</span>
                         <span>📦 Orders: {foundCustomer.total_orders || 0}</span>
                     </div>
+                    {foundCustomer.is_gst_registered && foundCustomer.gst_number && (
+                        <p className="text-xs text-gray-600 mt-1">GST: {foundCustomer.gst_number}</p>
+                    )}
                 </div>
             )}
 
-            {/* No Customer Found */}
-            {customerMobileInput.length === 10 && !foundCustomer && !isLoading && !offlineSearching && (
+            {/* Selected customer card */}
+            {selectedCustomer && (
+                <div className={`mt-3 p-3 border rounded-lg ${
+                    selectedCustomer.is_gst_registered
+                        ? "bg-green-50 border-green-200"
+                        : "bg-blue-50 border-blue-200"
+                }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                            {selectedCustomer.is_gst_registered ? (
+                                <Building2 size={16} className="text-green-700 shrink-0" />
+                            ) : (
+                                <User size={16} className="text-blue-600 shrink-0" />
+                            )}
+                            <p className="font-semibold text-gray-800 truncate">{selectedCustomer.name}</p>
+                            {selectedCustomer.is_gst_registered && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium shrink-0 bg-green-100 text-green-700 border border-green-200">
+                                    GST Registered
+                                </span>
+                            )}
+                            {getLoyaltyBadge(selectedCustomer.loyalty_tier) && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${getLoyaltyBadge(selectedCustomer.loyalty_tier)}`}>
+                                    {selectedCustomer.loyalty_tier}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex gap-2.5 shrink-0 self-start sm:self-auto items-center">
+                            <button
+                                type="button"
+                                onClick={() => dispatch(openEditCustomer())}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                            >
+                                Edit Details
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                                type="button"
+                                onClick={handleClearCustomer}
+                                className="text-xs text-red-500 hover:text-red-700 cursor-pointer"
+                            >
+                                Change
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600">
+                        <span>📞 {selectedCustomer.mobile}</span>
+                        <span>💰 Total: ₹{selectedCustomer.total_spent?.toFixed(2) || "0"}</span>
+                        <span>📦 Orders: {selectedCustomer.total_orders || 0}</span>
+                    </div>
+                    {selectedCustomer.is_gst_registered && selectedCustomer.gst_number && (
+                        <p className="text-xs text-gray-600 mt-1">GST: {selectedCustomer.gst_number}</p>
+                    )}
+                </div>
+            )}
+
+            {customerMobileInput.length === 10 && !foundCustomer && !isSearching && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
                         <p className="text-sm text-yellow-800 font-medium">New Customer</p>
@@ -169,11 +189,10 @@ export default function CustomerSearch() {
                 </div>
             )}
 
-            {/* Walk-in Customer Note */}
             {!customerMobileInput && !selectedCustomer && (
                 <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
                     <ShoppingBag size={12} />
-                    <span>Leave empty for walk-in customer</span>
+                    <span>Enter mobile to search or create a customer</span>
                 </div>
             )}
         </div>

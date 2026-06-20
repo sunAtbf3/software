@@ -17,6 +17,7 @@ import {
     useCreateCreditNoteMutation,
 } from "../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
 import { useLazySearchCustomersQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi";
+import { normalizeCustomerSearchResults } from "../../../utils/customerForm.utils";
 import { useGetBillsQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingApi";
 import {
     setStatusFilter,
@@ -90,7 +91,7 @@ export default function CreditNotesTab() {
     }, { skip: !selectedCustomerForCreate });
 
     const bills = billsData?.bills || [];
-    const customers = searchResults || [];
+    const customers = normalizeCustomerSearchResults(searchResults);
 
     const handleSearchCustomer = () => {
         if (searchMobile.length === 10) {

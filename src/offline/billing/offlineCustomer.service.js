@@ -3,6 +3,8 @@ import { enqueueMutation } from '../sync/pushService';
 import { getUserShopId } from '../constants';
 import { broadcastPendingCounts } from '../sync/offlineSyncState.service';
 
+import { CUSTOMER_TYPES } from '../../constants/customerTypes';
+
 const nowIso = () => new Date().toISOString();
 
 const normalizeMobile = (mobile) => String(mobile || '').replace(/\D/g, '');
@@ -30,6 +32,8 @@ export const createOfflineCustomer = async ({ user, shopId, data }) => {
     mobile,
     name: String(data.name).trim(),
     email: data.email?.trim() || null,
+    customer_type: data.customer_type || CUSTOMER_TYPES.WALK_IN,
+    company_name: data.company_name?.trim() || null,
     gst_number: data.gst_number?.trim() || null,
     address: data.address?.trim() || null,
     city: data.city?.trim() || null,
@@ -56,6 +60,8 @@ export const createOfflineCustomer = async ({ user, shopId, data }) => {
       mobile: customer.mobile,
       name: customer.name,
       email: customer.email,
+      customer_type: customer.customer_type,
+      company_name: customer.company_name,
       gst_number: customer.gst_number,
       address: customer.address,
       city: customer.city,

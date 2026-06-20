@@ -14,11 +14,15 @@ import CartPanel from "./BillingTab_Compo/CartPanel";
 import CheckoutPanel from "./BillingTab_Compo/CheckoutPanel";
 import VariantPickerModal from "./BillingTab_Compo/VariantPickerModal";
 import CreateCustomerModal from "./BillingTab_Compo/CreateCustomerModal";
+import UpgradeGSTModal from "./BillingTab_Compo/UpgradeGSTModal";
+import EditCustomerModal from "./BillingTab_Compo/EditCustomerModal";
+import ManualItemsPanel from "./BillingTab_Compo/ManualItemsPanel";
+import { BILL_TYPES } from "../../../constants/billingBillTypes";
 
 export default function BillingTab() {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { cart } = useSelector((state) => state.billing);
+    const { cart, billType } = useSelector((state) => state.billing);
     const shop_id = getUserShopId(user) || "";
     const { data: myShop } = useGetMyShopQuery(undefined, { skip: !shop_id });
 
@@ -35,7 +39,11 @@ export default function BillingTab() {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 lg:h-[calc(100vh-7rem)]">
             <div className="col-span-1 lg:col-span-6 bg-white border border-gray-300 rounded flex flex-col min-h-[320px] lg:h-full p-3">
-                <ProductPicker shop_id={shop_id} cart={cart} />
+                {billType === BILL_TYPES.NON_LISTED ? (
+                    <ManualItemsPanel />
+                ) : (
+                    <ProductPicker shop_id={shop_id} cart={cart} />
+                )}
             </div>
 
             <div className="col-span-1 lg:col-span-6 bg-white border border-gray-300 rounded flex flex-col min-h-[320px] lg:h-full p-3">
@@ -47,6 +55,8 @@ export default function BillingTab() {
             {/* Modals */}
             <VariantPickerModal />
             <CreateCustomerModal />
+            <UpgradeGSTModal />
+            <EditCustomerModal />
         </div>
     );
 }

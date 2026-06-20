@@ -1,16 +1,14 @@
-// TABS/SALES/BillingTab_Compo/CreateCustomerModal.jsx
+// TABS/SALES/BillingTab_Compo/EditCustomerModal.jsx
 //
-// Modal for creating new customer during billing (GST or Walk-in)
+// Modal for editing/updating customer details during billing
 
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X, Save, Building2, UserRound } from "lucide-react";
+import { X, Save, Building2, UserRound, CloudOff } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
-import { useCreateCustomerMutation } from "../../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi";
-import { createOfflineCustomer } from "../../../../offline/billing/offlineCustomer.service";
-import { getUserShopId } from "../../../../offline";
+import { useUpdateCustomerMutation } from "../../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi";
 import {
-    closeCreateCustomer,
+    closeEditCustomer,
     setSelectedCustomer,
     setCustomerMobileInput,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
@@ -37,28 +35,33 @@ const emptyForm = {
     remarks: "",
 };
 
-export default function CreateCustomerModal() {
+export default function EditCustomerModal() {
     const dispatch = useDispatch();
     const isOnline = useSelector((state) => state.offline.isOnline);
-    const { user } = useSelector((state) => state.auth);
-    const { showCreateCustomer, customerMobileInput } = useSelector((state) => state.billing);
-    const [createCustomer, { isLoading: isOnlineLoading }] = useCreateCustomerMutation();
-    const [isOfflineSaving, setIsOfflineSaving] = useState(false);
-    const isLoading = isOnline ? isOnlineLoading : isOfflineSaving;
+    const { showEditCustomer, selectedCustomer } = useSelector((state) => state.billing);
+    const [updateCustomer, { isLoading }] = useUpdateCustomerMutation();
 
     const [formData, setFormData] = useState(emptyForm);
     const [errors, setErrors] = useState({});
 
     React.useEffect(() => {
-        if (showCreateCustomer) {
-            setFormData((prev) => ({
-                ...emptyForm,
-                mobile: customerMobileInput || "",
-                customer_type: prev.customer_type || CUSTOMER_TYPES.WALK_IN,
-            }));
+        if (showEditCustomer && selectedCustomer) {
+            setFormData({
+                customer_type: selectedCustomer.is_gst_registered ? CUSTOMER_TYPES.GST : CUSTOMER_TYPES.WALK_IN,
+                mobile: selectedCustomer.mobile || "",
+                name: selectedCustomer.name || "",
+                email: selectedCustomer.email || "",
+                company_name: selectedCustomer.company_name || "",
+                gst_number: selectedCustomer.gst_number || "",
+                address: selectedCustomer.address || "",
+                city: selectedCustomer.city || "",
+                state_code: selectedCustomer.state_code || "",
+                pincode: selectedCustomer.pincode || "",
+                remarks: selectedCustomer.remarks || "",
+            });
             setErrors({});
         }
-    }, [showCreateCustomer, customerMobileInput]);
+    }, [showEditCustomer, selectedCustomer]);
 
     const handleChange = (field, value) => {
         setFormData((prev) => {
@@ -80,7 +83,12 @@ export default function CreateCustomerModal() {
     };
 
     const handleSubmit = async () => {
-        const fieldErrors = validateCustomerForm(formData);
+        if (!isOnline) {
+            toast.error("Connect to the internet to update customer details");
+            return;
+        }
+
+        const fieldErrors = validateCustomerForm(formData, { requireMobile: true, mode: "edit" });
         if (hasCustomerFormErrors(fieldErrors)) {
             setErrors(fieldErrors);
             toast.error("Please fill all required fields");
@@ -88,28 +96,20 @@ export default function CreateCustomerModal() {
         }
 
         try {
-            const payload = buildCustomerSubmitPayload(formData);
-            let result;
+            const payload = buildCustomerSubmitPayload(formData, { isUpdate: true });
+            
+            // We use the updateCustomer endpoint. Note that it expects customerId and the fields.
+            const result = await updateCustomer({
+                customerId: selectedCustomer.customer_id,
+                ...payload,
+            }).unwrap();
 
-            if (!isOnline) {
-                setIsOfflineSaving(true);
-                result = await createOfflineCustomer({
-                    user,
-                    shopId: getUserShopId(user),
-                    data: payload,
-                });
-                toast.success(`Customer ${result.name} saved offline — will sync when online`);
-            } else {
-                result = await createCustomer(payload).unwrap();
-                toast.success(`Customer ${result.name} created successfully`);
-            }
-
+            toast.success(`Customer ${result.name} updated successfully`);
             dispatch(setSelectedCustomer(result));
             dispatch(setCustomerMobileInput(result.mobile));
-            dispatch(closeCreateCustomer());
-            setFormData(emptyForm);
+            dispatch(closeEditCustomer());
         } catch (err) {
-            if (isOnline && err?.data?.errors?.length) {
+            if (err?.data?.errors?.length) {
                 const fieldErrors = {};
                 err.data.errors.forEach(({ field, message }) => {
                     fieldErrors[field] = message;
@@ -117,14 +117,12 @@ export default function CreateCustomerModal() {
                 setErrors(fieldErrors);
                 toast.error("Please fix the errors");
             } else {
-                toast.error(err?.data?.message || err?.message || "Failed to create customer");
+                toast.error(err?.data?.message || err?.message || "Failed to update customer");
             }
-        } finally {
-            setIsOfflineSaving(false);
         }
     };
 
-    if (!showCreateCustomer) return null;
+    if (!showEditCustomer || !selectedCustomer) return null;
 
     const isGst = formData.customer_type === CUSTOMER_TYPES.GST;
 
@@ -136,13 +134,20 @@ export default function CreateCustomerModal() {
                 <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
                     <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between">
                         <div>
-                            <h3 className="text-base font-semibold text-gray-800">New Customer</h3>
-                            <p className="text-xs text-gray-400 mt-0.5">Create customer account</p>
+                            <h3 className="text-base font-semibold text-gray-800">Edit Customer Details</h3>
+                            <p className="text-xs text-gray-400 mt-0.5">Update account information</p>
                         </div>
-                        <button onClick={() => dispatch(closeCreateCustomer())} className="text-gray-400 hover:text-gray-600">
+                        <button onClick={() => dispatch(closeEditCustomer())} className="text-gray-400 hover:text-gray-600">
                             <X size={20} />
                         </button>
                     </div>
+
+                    {!isOnline && (
+                        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800">
+                            <CloudOff size={16} className="shrink-0" />
+                            Updating customer details requires an active internet connection.
+                        </div>
+                    )}
 
                     <div className="p-6 space-y-4">
                         <div>
@@ -310,25 +315,25 @@ export default function CreateCustomerModal() {
 
                     <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
                         <button
-                            onClick={() => dispatch(closeCreateCustomer())}
+                            onClick={() => dispatch(closeEditCustomer())}
                             className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={isLoading}
+                            disabled={isLoading || !isOnline}
                             className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
                         >
                             {isLoading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Creating...
+                                    Saving...
                                 </>
                             ) : (
                                 <>
                                     <Save size={14} />
-                                    Create Customer
+                                    Save Changes
                                 </>
                             )}
                         </button>

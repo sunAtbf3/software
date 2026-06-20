@@ -48,7 +48,24 @@ const buildBillSnapshot = ({
   bank_account_id: payload.bank_account_id || null,
   bank_account: bankSnapshot,
   gst_config_id: payload.gst_config_id || null,
-  items: cart.map((item) => ({
+  items: cart.map((item) => payload.bill_type === BILL_TYPES.NON_LISTED ? {
+    variant_id: null,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    mrp_unit_price: item.mrp ?? item.unit_price,
+    price_type: 'SPECIAL',
+    line_total: item.unit_price * item.quantity,
+    tax_amount: 0,
+    gst_amount: 0,
+    gst_percent: 0,
+    gst_type: 'EXEMPT',
+    hsn_code: '',
+    variant: {
+      sku: '',
+      mrp: item.mrp ?? item.unit_price,
+      product: { name: item.item_name || item.product_name || 'Non-Listed Item' },
+    },
+  } : {
     variant_id: item.variant_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
@@ -65,7 +82,7 @@ const buildBillSnapshot = ({
       mrp: item.mrp ?? item.unit_price,
       product: { name: item.product_name },
     },
-  })),
+  }),
   payments: payload.payment_amount > 0 && payload.payment_method
     ? [{
         amount: payload.payment_amount,
@@ -127,17 +144,22 @@ export const createOfflineBill = async ({
     }
   }
 
-  const taxSummary = aggregateCartTax(cart, billType);
-  const subtotal = cart.reduce((sum, item) => sum + item.line_total, 0);
+  const taxSummary = billType === BILL_TYPES.NON_LISTED
+    ? { subtotal: cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0), gst_amount: 0, total_amount: cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0), cgst: 0, sgst: 0, igst: 0, tax_mode: "EXEMPT" }
+    : aggregateCartTax(cart, billType);
+  const subtotal = billType === BILL_TYPES.NON_LISTED
+    ? cart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
+    : cart.reduce((sum, item) => sum + item.line_total, 0);
   const gstAmount = billType === BILL_TYPES.WITH_GST ? taxSummary.gst_amount : 0;
   const total = subtotal + gstAmount;
 
-  const lines = cart.map((item) => ({
-    variant_id: item.variant_id,
-    quantity: item.quantity,
-  }));
-
-  await applyLocalSaleDeductions(resolvedShopId, lines);
+  if (billType !== BILL_TYPES.NON_LISTED) {
+    const lines = cart.map((item) => ({
+      variant_id: item.variant_id,
+      quantity: item.quantity,
+    }));
+    await applyLocalSaleDeductions(resolvedShopId, lines);
+  }
 
   const clientBillId = crypto.randomUUID();
   const billNumber = await offlineBillNumberService.nextBillNumber(resolvedShopId, shopCode);
@@ -146,12 +168,19 @@ export const createOfflineBill = async ({
     ...payload,
     shop_id: resolvedShopId,
     bill_type: billType,
-    items: cart.map((item) => ({
-      variant_id: item.variant_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      price_type: item.price_type,
-    })),
+    items: billType === BILL_TYPES.NON_LISTED
+      ? cart.map((item) => ({
+          item_name: item.item_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          mrp: item.mrp,
+        }))
+      : cart.map((item) => ({
+          variant_id: item.variant_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          price_type: item.price_type,
+        })),
     offline_bill_number: billNumber,
     offline_customer_client_id: offlineCustomerClientId || null,
     staff_code_id: staffCodeId || null,

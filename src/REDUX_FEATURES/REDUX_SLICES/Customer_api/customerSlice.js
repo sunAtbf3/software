@@ -4,6 +4,21 @@
 // Not used in BillingTab — that uses billingSlice for customer selection
 
 import { createSlice } from "@reduxjs/toolkit";
+import { CUSTOMER_TYPES } from "../../../constants/customerTypes";
+
+const emptyCustomerForm = {
+    customer_type: CUSTOMER_TYPES.WALK_IN,
+    mobile: "",
+    name: "",
+    email: "",
+    company_name: "",
+    gst_number: "",
+    address: "",
+    city: "",
+    state_code: "",
+    pincode: "",
+    remarks: "",
+};
 
 const initialState = {
     // Filters & Pagination
@@ -19,28 +34,8 @@ const initialState = {
     selectedCustomer: null,
 
     // Form States
-    addForm: {
-        mobile: "",
-        name: "",
-        email: "",
-        gst_number: "",
-        address: "",
-        city: "",
-        state_code: "",
-        pincode: "",
-        remarks: "",
-    },
-    editForm: {
-        mobile: "",
-        name: "",
-        email: "",
-        gst_number: "",
-        address: "",
-        city: "",
-        state_code: "",
-        pincode: "",
-        remarks: "",
-    },
+    addForm: { ...emptyCustomerForm },
+    editForm: { ...emptyCustomerForm },
 
     // Errors
     formErrors: {},
@@ -75,22 +70,12 @@ const customerSlice = createSlice({
         // Add Modal
         openAddModal: (state) => {
             state.showAddModal = true;
-            state.addForm = {
-                mobile: "",
-                name: "",
-                email: "",
-                gst_number: "",
-                address: "",
-                city: "",
-                state_code: "",
-                pincode: "",
-                remarks: "",
-            };
+            state.addForm = { ...emptyCustomerForm };
             state.formErrors = {};
         },
         closeAddModal: (state) => {
             state.showAddModal = false;
-            state.addForm = initialState.addForm;
+            state.addForm = { ...emptyCustomerForm };
             state.formErrors = {};
         },
         updateAddForm: (state, action) => {
@@ -108,9 +93,11 @@ const customerSlice = createSlice({
             state.showEditModal = true;
             state.selectedCustomer = customer;
             state.editForm = {
+                customer_type: customer.customer_type || CUSTOMER_TYPES.WALK_IN,
                 mobile: customer.mobile || "",
                 name: customer.name || "",
                 email: customer.email || "",
+                company_name: customer.company_name || "",
                 gst_number: customer.gst_number || "",
                 address: customer.address || "",
                 city: customer.city || "",
@@ -123,7 +110,7 @@ const customerSlice = createSlice({
         closeEditModal: (state) => {
             state.showEditModal = false;
             state.selectedCustomer = null;
-            state.editForm = initialState.editForm;
+            state.editForm = { ...emptyCustomerForm };
             state.formErrors = {};
         },
         updateEditForm: (state, action) => {

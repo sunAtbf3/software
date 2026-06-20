@@ -29,10 +29,10 @@ export const customerApi = createApi({
 
         // GET /customers/search?mobile=xxx — search customer by mobile
         searchCustomers: builder.query({
-            query: ({ mobile }) => ({
+            query: ({ mobile, name }) => ({
                 url: "/customers/search",
                 method: "GET",
-                params: { mobile },
+                params: { mobile, name },
             }),
             providesTags: ["Customer"],
             transformResponse: (response) => response.data,
@@ -111,6 +111,20 @@ export const customerApi = createApi({
             transformResponse: (response) => response.data,
         }),
 
+        // PUT /customers/:customerId/upgrade — upgrade walk-in to GST
+        upgradeCustomerToGst: builder.mutation({
+            query: ({ customerId, ...data }) => ({
+                url: `/customers/${customerId}/upgrade`,
+                method: "PUT",
+                data,
+            }),
+            invalidatesTags: (result, error, { customerId }) => [
+                { type: "Customer", id: customerId },
+                { type: "Customer", id: "LIST" },
+            ],
+            transformResponse: (response) => response.data,
+        }),
+
         // DELETE /customers/:customerId — delete customer
         deleteCustomer: builder.mutation({
             query: (customerId) => ({
@@ -132,5 +146,6 @@ export const {
     useGetCustomerBillsQuery,
     useCreateCustomerMutation,
     useUpdateCustomerMutation,
+    useUpgradeCustomerToGstMutation,
     useDeleteCustomerMutation,
 } = customerApi;

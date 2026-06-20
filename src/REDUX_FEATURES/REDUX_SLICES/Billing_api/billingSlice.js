@@ -7,6 +7,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { aggregateCartTax } from "../../../utils/billingTax";
 import { BILL_TYPES } from "../../../constants/billingBillTypes";
+import { CUSTOMER_TYPES } from "../../../constants/customerTypes";
 import { calculateGstOnAmount } from "../../../utils/billingCart.utils";
 
 // Helper: calculate line total
@@ -28,6 +29,9 @@ const initialState = {
     // Cart items
     cart: [],
 
+    // Manual items for NON_LISTED_BILL
+    manualCart: [],
+
     // Customer selection
     selectedCustomer: null,
     customerMobileInput: "",
@@ -42,6 +46,8 @@ const initialState = {
     showVariantPicker: false,
     variantPickerTarget: null,
     showCreateCustomer: false,
+    showUpgradeGst: false,
+    showEditCustomer: false,
     lastCreatedBill: null,
 };
 
@@ -151,6 +157,33 @@ const billingSlice = createSlice({
             state.cart = [];
         },
 
+        clearManualCart: (state) => {
+            state.manualCart = [];
+        },
+
+        addManualItem: (state, action) => {
+            const { id, item_name, quantity, unit_price, mrp } = action.payload;
+            const existing = state.manualCart.find((i) => i.id === id);
+            if (existing) {
+                existing.item_name = item_name;
+                existing.quantity = quantity;
+                existing.unit_price = unit_price;
+                existing.mrp = mrp;
+            } else {
+                state.manualCart.push({ id, item_name, quantity, unit_price, mrp });
+            }
+        },
+
+        removeManualItem: (state, action) => {
+            state.manualCart = state.manualCart.filter((i) => i.id !== action.payload);
+        },
+
+        updateManualItem: (state, action) => {
+            const { id, ...fields } = action.payload;
+            const item = state.manualCart.find((i) => i.id === id);
+            if (item) Object.assign(item, fields);
+        },
+
         /** Re-apply GST math on all lines (e.g. after formula fix or page reload). */
         recalculateCartGst: (state) => {
             state.cart.forEach((item) => applyLineGst(item, state.billType));
@@ -161,6 +194,7 @@ const billingSlice = createSlice({
             state.selectedCustomer = action.payload;
             if (action.payload) {
                 state.customerMobileInput = action.payload.mobile || "";
+                state.cart.forEach((item) => applyLineGst(item, state.billType));
             }
         },
 
@@ -210,6 +244,22 @@ const billingSlice = createSlice({
             state.showCreateCustomer = false;
         },
 
+        openUpgradeGst: (state) => {
+            state.showUpgradeGst = true;
+        },
+
+        closeUpgradeGst: (state) => {
+            state.showUpgradeGst = false;
+        },
+
+        openEditCustomer: (state) => {
+            state.showEditCustomer = true;
+        },
+
+        closeEditCustomer: (state) => {
+            state.showEditCustomer = false;
+        },
+
         setLastCreatedBill: (state, action) => {
             state.lastCreatedBill = action.payload;
         },
@@ -222,10 +272,14 @@ const billingSlice = createSlice({
 
 // ── Selectors (computed values) ─────────────────────────────────────
 export const selectCartSubtotal = (state) => {
+    if (state.billing.billType === BILL_TYPES.NON_LISTED) {
+        return state.billing.manualCart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+    }
     return state.billing.cart.reduce((sum, item) => sum + item.line_total, 0);
 };
 
 export const selectCartGst = (state) => {
+    if (state.billing.billType === BILL_TYPES.NON_LISTED) return 0;
     if (state.billing.billType !== BILL_TYPES.WITH_GST) return 0;
     return state.billing.cart.reduce((sum, item) => sum + (item.gst_amount || 0), 0);
 };
@@ -235,11 +289,26 @@ export const selectCartTotal = (state) => {
 };
 
 export const selectCartItemCount = (state) => {
+    if (state.billing.billType === BILL_TYPES.NON_LISTED) {
+        return state.billing.manualCart.reduce((sum, item) => sum + item.quantity, 0);
+    }
     return state.billing.cart.reduce((sum, item) => sum + item.quantity, 0);
 };
 
 export const selectCartTaxSummary = (state) => {
-    const { cart, billType } = state.billing;
+    const { cart, manualCart, billType } = state.billing;
+    if (billType === BILL_TYPES.NON_LISTED) {
+        const subtotal = manualCart.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+        return {
+            subtotal,
+            gst_amount: 0,
+            total_amount: subtotal,
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+            tax_mode: "EXEMPT",
+        };
+    }
     return aggregateCartTax(cart, billType);
 };
 
@@ -249,6 +318,10 @@ export const {
     updateCartQty,
     updatePriceType,
     clearCart,
+    clearManualCart,
+    addManualItem,
+    removeManualItem,
+    updateManualItem,
     recalculateCartGst,
     setSelectedCustomer,
     clearSelectedCustomer,
@@ -260,6 +333,10 @@ export const {
     closeVariantPicker,
     openCreateCustomer,
     closeCreateCustomer,
+    openUpgradeGst,
+    closeUpgradeGst,
+    openEditCustomer,
+    closeEditCustomer,
     setLastCreatedBill,
     clearLastCreatedBill,
 } = billingSlice.actions;

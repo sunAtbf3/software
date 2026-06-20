@@ -30,7 +30,8 @@ export default function BillInvoiceDocument({ bill }) {
   if (!bill) return null;
 
   const billType = bill.bill_type || BILL_TYPES.WITHOUT_GST;
-  const isNonGst = billType === BILL_TYPES.WITHOUT_GST;
+  const isNonListed = billType === BILL_TYPES.NON_LISTED;
+  const isNonGst = billType === BILL_TYPES.WITHOUT_GST || isNonListed;
   const isEstimate = billType === BILL_TYPES.ESTIMATE;
   const shop = bill.shop || {};
   const items = bill.items || [];
@@ -40,7 +41,7 @@ export default function BillInvoiceDocument({ bill }) {
   const gstSplit = buildTaxSummaryFromLines(items);
   const taxRates = getTaxRatePercents(items, gstSplit.tax_mode);
   const cust = bill.customer || {};
-  const showStateCode = !isNonGst;
+  const showStateCode = !isNonGst && !isNonListed;
   const posName = displayVal(
     formatCityStateLabel(cust.city, cust.state_code || bill.place_of_supply_state_code, {
       withCode: showStateCode,
@@ -89,6 +90,7 @@ export default function BillInvoiceDocument({ bill }) {
       )}
 
       {!isNonGst && <div className="bi-title">GST INVOICE</div>}
+      {isNonListed && <div className="bi-title">NON-LISTED BILL</div>}
 
       {isEstimate ? (
         <div className="bi-shop-name">Receipt</div>

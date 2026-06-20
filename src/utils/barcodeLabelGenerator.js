@@ -145,7 +145,7 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             ctx.font = `bold ${config.text.fontSize.large}px ${config.text.fontFamily}`;
             ctx.fillStyle = "#E53E3E";
             const salePrice = variant.special_price || product?.special_price || 0;
-            ctx.fillText(`Sale Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width / 2, currentY);
+            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width / 2, currentY);
             
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
