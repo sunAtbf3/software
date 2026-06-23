@@ -76,7 +76,7 @@ export default function BillTypeSection() {
                             : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                     }`}
                 >
-                    <span className="block">Estimate</span>
+                    <span className="block">Receipt</span>
                 </button>
 
                 {canCreateNonListedBill && (

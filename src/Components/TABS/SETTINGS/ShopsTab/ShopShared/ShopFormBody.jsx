@@ -9,7 +9,7 @@ import { SALES_CHANNELS } from "../../../../../REDUX_FEATURES/REDUX_SLICES/Shop_
 import IndianStatePicker from "../../../../shared/IndianStatePicker";
 const CHANNEL_LABELS = {
     WALK_IN: "Walk-in Store",
-    ONLINE: "Online Store", 
+    ONLINE: "Online Store",
     WHOLESALE: "Wholesale",
     MHM: "MHM",
     OWB: "OWB (Online Wholesale)",
@@ -26,8 +26,7 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
     const shopOwners = ownersData?.users || [];
 
     const inputCls = (name) =>
-        `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            formErrors[name] ? "border-red-400" : "border-gray-300"
+        `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${formErrors[name] ? "border-red-400" : "border-gray-300"
         }`;
 
     const errorMsg = (name) =>
@@ -46,7 +45,7 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
 
     return (
         <div className="grid grid-cols-2 gap-4">
-            
+
             {/* Shop Code */}
             <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -153,7 +152,7 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
                     type="email"
                     value={formData.email || ""}
                     onChange={(e) => onChange({ email: e.target.value })}
-                    placeholder="shop@vyaapar.com"
+                    placeholder="shop@mail.com"
                     className={inputCls("email")}
                 />
                 {errorMsg("email")}

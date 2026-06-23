@@ -114,7 +114,7 @@ export const SUB_TAB_PERMISSIONS = {
     // Utilities internal horizontal tabs (from utilitiesTabRegistry.js)
     "utilities.internal.importitems": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "utilities.internal.setUpbillperforma": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "utilities.internal.pettycashbook": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "utilities.internal.pettycashbook": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
 
     // Purchase internal horizontal tabs (from purchaseTabRegistry.js)
     "purchase.internal.purchase-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
@@ -287,7 +287,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.WH_MANAGER]: ["dashboard", "warehouses", "transfers", "inventory", "archive", "purchase", "parties", "settings", "vendors", "reports", "cashbank", "teammembers", "backup", "utilities"],
     [ROLES.WH_STOCK_LISTER]: ["dashboard", "warehouses", "transfers", "inventory", "purchase", "parties", "settings", "vendors", "reports", "backup", "utilities"],
     [ROLES.SHOP_OWNER]: ["dashboard", "sales", "inventory", "transfers", "parties", "reports", "settings", "cashbank", "teammembers", "backup"],
-    [ROLES.SHOP_STOCK_LISTER]: ["dashboard", "sales", "purchase", "inventory", "transfers", "parties", "reports", "backup"],
+    [ROLES.SHOP_STOCK_LISTER]: ["dashboard", "sales", "purchase", "inventory", "parties", "reports", "backup"],
 };
 
 export const ROLE_LABELS = {
