@@ -30,8 +30,8 @@ export default function BillInvoiceDocument({ bill }) {
 
   const billType = bill.bill_type || BILL_TYPES.WITHOUT_GST;
   const isNonListed = billType === BILL_TYPES.NON_LISTED;
-  const isNonGst = billType === BILL_TYPES.WITHOUT_GST || isNonListed;
   const isEstimate = billType === BILL_TYPES.ESTIMATE;
+  const isNonGst = billType === BILL_TYPES.WITHOUT_GST || isNonListed || isEstimate;
   const shop = bill.shop || {};
   const items = bill.items || [];
   const gst = shopGstin(bill);

@@ -27,10 +27,6 @@ const mountBillDocument = (preparedBill) => {
     "position:fixed;left:-9999px;top:0;width:210mm;pointer-events:none;z-index:-1;background:#fff;";
   document.body.appendChild(host);
 
-  const styleEl = document.createElement("style");
-  styleEl.textContent = getBillInvoiceStyles();
-  host.appendChild(styleEl);
-
   const root = createRoot(host);
   flushSync(() => {
     root.render(createElement(BillInvoiceDocument, { bill: preparedBill }));
@@ -42,6 +38,10 @@ const mountBillDocument = (preparedBill) => {
     host.remove();
     throw new Error("Failed to render bill document");
   }
+
+  const styleEl = document.createElement("style");
+  styleEl.textContent = getBillInvoiceStyles();
+  content.appendChild(styleEl);
 
   return { host, root, content, styleEl };
 };
