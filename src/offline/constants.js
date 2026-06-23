@@ -27,6 +27,7 @@ export const OUTBOX_STATUS = Object.freeze({
 
 export const SYNC_ENTITY_TYPES = Object.freeze([
   'customer',
+  'customer_update',
   'bill',
   'bill_payment',
   'credit_note',

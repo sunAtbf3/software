@@ -88,6 +88,19 @@ export const pushPendingOutbox = async (shopId, { batchSize = 50 } = {}) => {
         );
       }
     }
+
+    if (result.entity_type === 'customer_update') {
+      const serverCustomer = result.server_response?.data;
+      if (serverCustomer?.customer_id) {
+        // Overwrite the cached record with the server's canonical version
+        await customerRepository.bulkUpsert([{
+          ...serverCustomer,
+          is_offline_pending: false,
+          client_id: null,
+          cached_at: new Date().toISOString(),
+        }]);
+      }
+    }
   }
 
   await metaRepository.updateSyncState({

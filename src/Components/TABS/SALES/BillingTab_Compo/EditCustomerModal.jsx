@@ -1,12 +1,15 @@
 // TABS/SALES/BillingTab_Compo/EditCustomerModal.jsx
 //
 // Modal for editing/updating customer details during billing
+// Supports BOTH online (direct API) and offline (IndexedDB + outbox queue) modes.
 
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X, Save, Building2, UserRound, CloudOff } from "lucide-react";
+import { X, Save, Building2, UserRound, CloudOff, WifiOff } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { useUpdateCustomerMutation } from "../../../../REDUX_FEATURES/REDUX_SLICES/Customer_api/customerApi";
+import { updateOfflineCustomer } from "../../../../offline/billing/offlineCustomer.service";
+import { getUserShopId } from "../../../../offline";
 import {
     closeEditCustomer,
     setSelectedCustomer,
@@ -38,8 +41,13 @@ const emptyForm = {
 export default function EditCustomerModal() {
     const dispatch = useDispatch();
     const isOnline = useSelector((state) => state.offline.isOnline);
+    const { user } = useSelector((state) => state.auth);
     const { showEditCustomer, selectedCustomer } = useSelector((state) => state.billing);
-    const [updateCustomer, { isLoading }] = useUpdateCustomerMutation();
+    const [updateCustomer, { isLoading: isOnlineLoading }] = useUpdateCustomerMutation();
+    const [isOfflineSaving, setIsOfflineSaving] = useState(false);
+
+    // Combined loading flag — tracks whichever path is active
+    const isLoading = isOnline ? isOnlineLoading : isOfflineSaving;
 
     const [formData, setFormData] = useState(emptyForm);
     const [errors, setErrors] = useState({});
@@ -83,11 +91,6 @@ export default function EditCustomerModal() {
     };
 
     const handleSubmit = async () => {
-        if (!isOnline) {
-            toast.error("Connect to the internet to update customer details");
-            return;
-        }
-
         const fieldErrors = validateCustomerForm(formData, { requireMobile: true, mode: "edit" });
         if (hasCustomerFormErrors(fieldErrors)) {
             setErrors(fieldErrors);
@@ -95,10 +98,34 @@ export default function EditCustomerModal() {
             return;
         }
 
+        const payload = buildCustomerSubmitPayload(formData, { isUpdate: true });
+
+        // ── Offline path ──────────────────────────────────────────────────────
+        if (!isOnline) {
+            setIsOfflineSaving(true);
+            try {
+                const result = await updateOfflineCustomer({
+                    user,
+                    shopId: getUserShopId(user),
+                    customerId: selectedCustomer.customer_id,
+                    data: payload,
+                });
+                toast.success(
+                    `Customer ${result.name} updated offline — changes will sync when you reconnect`
+                );
+                dispatch(setSelectedCustomer(result));
+                dispatch(setCustomerMobileInput(result.mobile));
+                dispatch(closeEditCustomer());
+            } catch (err) {
+                toast.error(err?.message || "Failed to save customer details offline");
+            } finally {
+                setIsOfflineSaving(false);
+            }
+            return;
+        }
+
+        // ── Online path ───────────────────────────────────────────────────────
         try {
-            const payload = buildCustomerSubmitPayload(formData, { isUpdate: true });
-            
-            // We use the updateCustomer endpoint. Note that it expects customerId and the fields.
             const result = await updateCustomer({
                 customerId: selectedCustomer.customer_id,
                 ...payload,
@@ -142,10 +169,14 @@ export default function EditCustomerModal() {
                         </button>
                     </div>
 
+                    {/* ── Offline info banner (non-blocking) ──────────────────────── */}
                     {!isOnline && (
-                        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800">
-                            <CloudOff size={16} className="shrink-0" />
-                            Updating customer details requires an active internet connection.
+                        <div className="mx-6 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2 text-xs text-amber-800">
+                            <WifiOff size={16} className="shrink-0 mt-0.5" />
+                            <span>
+                                <strong>You're offline.</strong> Changes will be saved locally and
+                                synced to the server automatically when internet is restored.
+                            </span>
                         </div>
                     )}
 
@@ -322,18 +353,18 @@ export default function EditCustomerModal() {
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={isLoading || !isOnline}
+                            disabled={isLoading}
                             className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
                         >
                             {isLoading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    Saving...
+                                    {isOnline ? "Saving..." : "Saving offline..."}
                                 </>
                             ) : (
                                 <>
                                     <Save size={14} />
-                                    Save Changes
+                                    {isOnline ? "Save Changes" : "Save Offline"}
                                 </>
                             )}
                         </button>

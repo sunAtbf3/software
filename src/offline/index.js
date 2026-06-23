@@ -13,6 +13,7 @@ export {
 export { createOfflineBill, shouldUseOfflineBilling, mapSyncedLocalBillToUi, refreshBillIfSynced, isBillAwaitingSync } from './billing/offlineBilling.service';
 export {
   createOfflineCustomer,
+  updateOfflineCustomer,
   searchOfflineCustomerByMobile,
   resolveCustomerForBill,
 } from './billing/offlineCustomer.service';
