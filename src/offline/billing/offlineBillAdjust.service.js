@@ -123,12 +123,17 @@ export const adjustOfflineBillQuantities = async ({ clientBillId, shopId, itemAd
 
   await localBillsRepository.save(updatedBill);
 
-  const syncItems = updatedItems.map((item) => ({
+  const syncItems = updatedItems.map((item) => bill.bill_type === BILL_TYPES.NON_LISTED ? {
+    item_name: item.manual_item_name || item.item_name || item.variant?.product?.name || 'Non-Listed Item',
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    mrp: item.mrp_unit_price ?? item.mrp,
+  } : {
     variant_id: item.variant_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
     price_type: item.price_type,
-  }));
+  });
 
   await outboxRepository.updateEntry(clientBillId, {
     payload: {

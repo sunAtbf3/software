@@ -163,6 +163,9 @@ export default function BillInvoiceDocument({ bill }) {
             const name =
               item.variant?.product?.name ||
               item.product?.name ||
+              item.manual_item_name ||
+              item.item_name ||
+              item.product_name ||
               item.variant?.sku ||
               "Item";
             const cells = isNonGst

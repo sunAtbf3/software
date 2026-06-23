@@ -168,7 +168,14 @@ const BillDetailModal = ({ row, onClose, onPrint, onDownloadPdf, onShowUpiQr, is
                                         {(bill.items || []).map((item, idx) => (
                                             <tr key={idx}>
                                                 <td className="px-3 py-2">
-                                                    <p className="font-medium">{item.variant?.product?.name || "Item"}</p>
+                                                    <p className="font-medium">
+                                                        {item.variant?.product?.name ||
+                                                         item.product?.name ||
+                                                         item.manual_item_name ||
+                                                         item.item_name ||
+                                                         item.product_name ||
+                                                         "Item"}
+                                                    </p>
                                                     <p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p>
                                                 </td>
                                                 <td className="px-3 py-2 text-right">{item.quantity}</td>

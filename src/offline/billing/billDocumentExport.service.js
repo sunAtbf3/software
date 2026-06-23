@@ -20,8 +20,11 @@ html, body {
 const mountBillDocument = (preparedBill) => {
   const host = document.createElement("div");
   host.className = "bill-print-host";
+  // NOTE: Use left:-9999px instead of opacity:0.
+  // opacity:0 causes html2canvas to render a blank canvas (invisible = no pixels captured).
+  // Positioning off-screen keeps it hidden to the user while still being capturable by html2canvas.
   host.style.cssText =
-    "position:fixed;left:0;top:0;width:210mm;opacity:0;pointer-events:none;z-index:-1;background:#fff;";
+    "position:fixed;left:-9999px;top:0;width:210mm;pointer-events:none;z-index:-1;background:#fff;";
   document.body.appendChild(host);
 
   const styleEl = document.createElement("style");
@@ -163,7 +166,11 @@ export const downloadBillPdfDocument = async (bill) => {
   const mount = mountBillDocument(prepared);
 
   try {
-    // html2canvas needs the styled host (inline CSS + invoice node), not the inner div alone
+    // Use mount.content (.bill-invoice-doc) not mount.host.
+    // mount.host is positioned off-screen so html2canvas CAN capture it, but its wrapper
+    // div adds extra whitespace. mount.content is the actual invoice element.
+    // The <style> tag injected into mount.host applies globally to the document,
+    // so mount.content is correctly styled even when passed directly to html2pdf.
     await html2pdf()
       .set({
         margin: [10, 10, 10, 10],
@@ -180,7 +187,7 @@ export const downloadBillPdfDocument = async (bill) => {
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
-      .from(mount.host)
+      .from(mount.content)
       .save();
   } finally {
     cleanupMount(mount);

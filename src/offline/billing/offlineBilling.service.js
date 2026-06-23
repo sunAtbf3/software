@@ -50,6 +50,7 @@ const buildBillSnapshot = ({
   gst_config_id: payload.gst_config_id || null,
   items: cart.map((item) => payload.bill_type === BILL_TYPES.NON_LISTED ? {
     variant_id: null,
+    manual_item_name: item.item_name || item.product_name || 'Non-Listed Item',
     quantity: item.quantity,
     unit_price: item.unit_price,
     mrp_unit_price: item.mrp ?? item.unit_price,
