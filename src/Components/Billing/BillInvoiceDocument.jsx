@@ -18,6 +18,7 @@ import "./billInvoice.styles.css";
 
 const shopGstin = (bill) => bill.gst_config?.gst_number?.trim() || "";
 
+
 const LabelValue = ({ label, value, className = "" }) => (
   <div className={`bi-field ${className}`}>
     <span className="bi-label">{label} : </span>
@@ -92,18 +93,18 @@ export default function BillInvoiceDocument({ bill }) {
   const bank = bill.bank_account;
   const bankRows = bank
     ? [
-        ["Account Holder Name", displayVal(bank.account_holder_name)],
-        ["Bank Name", displayVal(bank.bank_name)],
-        [
-          "Account No.",
-          bank.account_number
-            ? maskAccountNumber(bank.account_number)
-            : bank.account_number_masked || "",
-        ],
-        ["IFSC Code", displayVal(bank.ifsc_code)],
-        ["Branch", displayVal(bank.branch_name)],
-        ...(bank.upi_id ? [["UPI ID", displayVal(bank.upi_id)]] : []),
-      ]
+      ["Account Holder Name", displayVal(bank.account_holder_name)],
+      ["Bank Name", displayVal(bank.bank_name)],
+      [
+        "Account No.",
+        bank.account_number
+          ? maskAccountNumber(bank.account_number)
+          : bank.account_number_masked || "",
+      ],
+      ["IFSC Code", displayVal(bank.ifsc_code)],
+      ["Branch", displayVal(bank.branch_name)],
+      ...(bank.upi_id ? [["UPI ID", displayVal(bank.upi_id)]] : []),
+    ]
     : [];
 
   return (
@@ -187,22 +188,22 @@ export default function BillInvoiceDocument({ bill }) {
           <tr>
             {(isNonGst
               ? [
-                  { label: "S.No.", width: "5.35%" },
-                  { label: "Product Name", width: "41.3%" },
-                  { label: "Qty", width: "6.12%" },
-                  { label: "MRP", width: "13%" },
-                  { label: "Special Price", width: "14.5%" },
-                  { label: "Total", width: "19.73%" }
-                ]
+                { label: "S.No.", width: "5.35%" },
+                { label: "Product Name", width: "41.3%" },
+                { label: "Qty", width: "6.12%" },
+                { label: "MRP", width: "13%" },
+                { label: "Special Price", width: "14.5%" },
+                { label: "Total", width: "19.73%" }
+              ]
               : [
-                  { label: "S.No.", width: "5.35%" },
-                  { label: "Product Name", width: "32.12%" },
-                  { label: "HSN Code", width: "9.17%" },
-                  { label: "Qty", width: "6.12%" },
-                  { label: "MRP", width: "13%" },
-                  { label: "Special Price", width: "14.5%" },
-                  { label: "Total", width: "19.74%" }
-                ]
+                { label: "S.No.", width: "5.35%" },
+                { label: "Product Name", width: "32.12%" },
+                { label: "HSN Code", width: "9.17%" },
+                { label: "Qty", width: "6.12%" },
+                { label: "MRP", width: "13%" },
+                { label: "Special Price", width: "14.5%" },
+                { label: "Total", width: "19.74%" }
+              ]
             ).map((col) => (
               <th key={col.label} style={{ width: col.width }}>
                 {col.label}
@@ -222,22 +223,22 @@ export default function BillInvoiceDocument({ bill }) {
               "Item";
             const cells = isNonGst
               ? [
-                  idx + 1,
-                  name,
-                  item.quantity,
-                  fmtNum(lineMrp(item)),
-                  fmtNum(item.unit_price),
-                  fmtNum(lineSpecialTotal(item)),
-                ]
+                idx + 1,
+                name,
+                item.quantity,
+                fmtNum(lineMrp(item)),
+                fmtNum(item.unit_price),
+                fmtNum(lineSpecialTotal(item)),
+              ]
               : [
-                  idx + 1,
-                  name,
-                  displayVal(item.hsn_code),
-                  item.quantity,
-                  fmtNum(lineMrp(item)),
-                  fmtNum(item.unit_price),
-                  fmtNum(lineSpecialTotal(item)),
-                ];
+                idx + 1,
+                name,
+                displayVal(item.hsn_code),
+                item.quantity,
+                fmtNum(lineMrp(item)),
+                fmtNum(item.unit_price),
+                fmtNum(lineSpecialTotal(item)),
+              ];
             return (
               <tr key={item.variant_id || idx}>
                 {cells.map((cell, cellIdx) => (
