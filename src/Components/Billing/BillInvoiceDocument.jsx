@@ -1,4 +1,3 @@
-import React from "react";
 import { getStateName } from "../../constants/indianStateCodes";
 import { BILL_TYPES } from "../../constants/billingBillTypes";
 import {
@@ -50,7 +49,9 @@ export default function BillInvoiceDocument({ bill }) {
   const dispatchName = displayVal(
     formatCityStateLabel(shop.city, shop.state_code, { withCode: showStateCode })
   );
-  const showBankDetails = !isNonGst && !isEstimate && Boolean(bill.bank_account);
+
+  // Bank details visibility logic: only if NOT non-gst, estimate, or non-listed
+  const showBankDetails = !isNonGst && !isEstimate && !isNonListed && Boolean(bill.bank_account);
 
   const custCity = [cust.city, getStateName(cust.state_code), cust.pincode]
     .filter(Boolean)
@@ -62,6 +63,31 @@ export default function BillInvoiceDocument({ bill }) {
     const code = String(stateCode).trim().padStart(2, "0").slice(-2);
     return `${getStateName(code)} (${code})`;
   })();
+
+  // Customer display label logic: M/S for GST bills; empty/none for Non-GST/Estimate/Non-listed
+  const isGstBill = billType === BILL_TYPES.WITH_GST;
+  let customerDisplayName;
+  let displayLabel;
+
+  if (isGstBill) {
+    displayLabel = "M/S";
+    if (cust.company_name && cust.company_name.trim()) {
+      customerDisplayName = cust.company_name.trim();
+    } else if (bill.customer_name && bill.customer_name.trim()) {
+      customerDisplayName = bill.customer_name.trim();
+    } else {
+      customerDisplayName = "Walk-in Customer";
+    }
+  } else {
+    displayLabel = "";
+    if (bill.customer_name && bill.customer_name.trim()) {
+      customerDisplayName = bill.customer_name.trim();
+    } else if (cust.name && cust.name.trim()) {
+      customerDisplayName = cust.name.trim();
+    } else {
+      customerDisplayName = "Walk-in Customer";
+    }
+  }
 
   const bank = bill.bank_account;
   const bankRows = bank
@@ -82,6 +108,7 @@ export default function BillInvoiceDocument({ bill }) {
 
   return (
     <div className="bill-invoice-doc">
+      {/* Top GSTIN and original note row for GST invoices only */}
       {!isNonGst && (
         <div className="bi-top-row">
           <LabelValue label="GSTIN" value={gst} />
@@ -89,12 +116,14 @@ export default function BillInvoiceDocument({ bill }) {
         </div>
       )}
 
+      {/* Center header / title logic */}
       {!isNonGst && <div className="bi-title">GST INVOICE</div>}
-      {isNonListed && <div className="bi-title">NON-LISTED BILL</div>}
 
-      {isEstimate ? (
-        <div className="bi-shop-name">Receipt</div>
+      {isEstimate || isNonListed ? (
+        // Estimate and Non-listed bills show centered title "Receipt" and hide shop details entirely
+        <div className="bi-shop-name-receipt">Receipt</div>
       ) : (
+        // GST and Non-GST bills show shop details
         <>
           <div className="bi-shop-name">{shop.shop_name || "Shop"}</div>
           <div className="bi-center-line">
@@ -119,10 +148,15 @@ export default function BillInvoiceDocument({ bill }) {
 
       <div className="bi-divider" />
 
+      {/* Bill To & Invoice Info */}
       <div className="bi-info-box">
         <div className="bi-info-col">
           <div className="bi-label bi-underline">Bill To :</div>
-          <LabelValue label="M/S" value={bill.customer_name || "Walk-in Customer"} />
+          {displayLabel ? (
+            <LabelValue label={displayLabel} value={customerDisplayName} />
+          ) : (
+            <div className="bi-field">{customerDisplayName}</div>
+          )}
           {cust.address && <div className="bi-field">{cust.address}</div>}
           {custCity && <div className="bi-field">{custCity}</div>}
           <LabelValue label="Mobile" value={bill.customer_mobile} />
@@ -147,23 +181,41 @@ export default function BillInvoiceDocument({ bill }) {
         </div>
       </div>
 
+      {/* Product table with strict column width percentages to match backend PDFKit */}
       <table className="bi-table">
         <thead>
           <tr>
             {(isNonGst
-              ? ["S.No.", "Product Name", "Qty", "MRP", "Special Price", "Total"]
-              : ["S.No.", "Product Name", "HSN Code", "Qty", "MRP", "Special Price", "Total"]
-            ).map((label) => (
-              <th key={label}>{label}</th>
+              ? [
+                  { label: "S.No.", width: "5.35%" },
+                  { label: "Product Name", width: "41.3%" },
+                  { label: "Qty", width: "6.12%" },
+                  { label: "MRP", width: "13%" },
+                  { label: "Special Price", width: "14.5%" },
+                  { label: "Total", width: "19.73%" }
+                ]
+              : [
+                  { label: "S.No.", width: "5.35%" },
+                  { label: "Product Name", width: "32.12%" },
+                  { label: "HSN Code", width: "9.17%" },
+                  { label: "Qty", width: "6.12%" },
+                  { label: "MRP", width: "13%" },
+                  { label: "Special Price", width: "14.5%" },
+                  { label: "Total", width: "19.74%" }
+                ]
+            ).map((col) => (
+              <th key={col.label} style={{ width: col.width }}>
+                {col.label}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {items.map((item, idx) => {
             const name =
+              item.manual_item_name ||
               item.variant?.product?.name ||
               item.product?.name ||
-              item.manual_item_name ||
               item.item_name ||
               item.product_name ||
               item.variant?.sku ||
@@ -197,6 +249,7 @@ export default function BillInvoiceDocument({ bill }) {
         </tbody>
       </table>
 
+      {/* Totals & Optional Bank Details */}
       <div className={`bi-fin-box${showBankDetails ? "" : " single-col"}`}>
         {showBankDetails && (
           <div className="bi-fin-col">
@@ -280,7 +333,8 @@ export default function BillInvoiceDocument({ bill }) {
         <div>{amountInWords(bill.total_amount)}</div>
       </div>
 
-      {!isEstimate && (
+      {/* Footer blocks: declaration, terms, note, signatures are hidden for Estimate and Non-Listed bills */}
+      {!isEstimate && !isNonListed && (
         <>
           <div className="bi-decl-box">
             <div className="bi-label">Declaration :</div>

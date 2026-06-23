@@ -46,6 +46,13 @@
   margin: 0 0 6px;
 }
 
+.bill-invoice-doc .bi-shop-name-receipt {
+  text-align: center;
+  font-size: 16pt;
+  font-weight: 700;
+  margin: 0 0 34px;
+}
+
 .bill-invoice-doc .bi-center-line {
   text-align: center;
   margin: 2px 0;

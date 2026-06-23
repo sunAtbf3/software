@@ -173,7 +173,7 @@ export const downloadBillPdfDocument = async (bill) => {
     // so mount.content is correctly styled even when passed directly to html2pdf.
     await html2pdf()
       .set({
-        margin: [10, 10, 10, 10],
+        margin: 0,
         filename: buildFilename(prepared),
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
