@@ -18,6 +18,7 @@ const EMPTY_SHOP_FORM = {
     gst_number: "",
     owner_user_id: "",
     sales_channels: [],
+    shop_type: "OWNER",
     remarks: "",
     is_active: true,
 };
@@ -82,6 +83,7 @@ const shopSlice = createSlice({
                 gst_number: shop.gst_number || "",
                 owner_user_id: shop.owner_user_id || "",
                 sales_channels: shop.sales_channels || [],
+                shop_type: shop.shop_type || "OWNER",
                 remarks: shop.remarks || "",
                 is_active: shop.is_active ?? true,
             };

@@ -202,6 +202,25 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
                 <p className="text-xs text-gray-400 mt-1">User must have SHOP_OWNER role</p>
             </div>
 
+            {/* Shop Type */}
+            <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Shop Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                    value={formData.shop_type || "OWNER"}
+                    onChange={(e) => onChange({ shop_type: e.target.value })}
+                    className={inputCls("shop_type")}
+                >
+                    <option value="OWNER">Owner Shop</option>
+                    <option value="FRANCHISE">Franchise Shop</option>
+                </select>
+                {errorMsg("shop_type")}
+                <p className="text-xs text-gray-400 mt-1">
+                    Franchise shops cannot create non-listed bills
+                </p>
+            </div>
+
             {/* Sales Channels */}
             <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-2">Sales Channels</label>

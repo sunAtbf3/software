@@ -53,6 +53,7 @@ export default function ShopAddForm({ onSuccess }) {
                 gst_number: formData.gst_number?.trim() || null,
                 owner_user_id: formData.owner_user_id?.trim() || null,
                 sales_channels: formData.sales_channels || [],
+                shop_type: formData.shop_type || "OWNER",
                 remarks: formData.remarks?.trim() || null,
             };
 
