@@ -781,7 +781,7 @@ export default function CheckoutPanel({ shop_id }) {
                             <p className="text-xs text-purple-600 mt-1">Credit Applied: -₹{toNumber(bill.credit_applied).toFixed(2)}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-4">
-                            <button onClick={() => handlePrintBill("80mm")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal (80mm)"}</button>
+                            <button onClick={() => handlePrintBill("80mm")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal"}</button>
                             {canShowBillUpiQr(bill) && (
                                 <button type="button" onClick={() => setShowUpiQrBill(bill)} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center justify-center gap-2">📱 UPI QR</button>
                             )}
