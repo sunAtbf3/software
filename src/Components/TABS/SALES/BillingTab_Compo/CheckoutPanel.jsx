@@ -622,6 +622,15 @@ export default function CheckoutPanel({ shop_id }) {
         const cleanPhone = String(rawPhone).replace(/\D/g, "");
 
         if (cleanPhone.length >= 10) {
+            // Check if public token exists (indicates the bill is online/synced)
+            if (!bill.public_invoice_token) {
+                toast.warn("WhatsApp sharing requires the bill to be synced online. Please sync this bill or download/print the PDF instead.");
+                return;
+            }
+
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://api.bizcentro.cloud/api/v1";
+            const shareUrl = `${apiBaseUrl}/bills/public/${bill.public_invoice_token}`;
+
             const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
             const billNum = bill.bill_number || bill.offline_bill_number || "—";
             const amount = toNumber(bill.total_amount || bill.total).toFixed(2);
@@ -636,6 +645,8 @@ export default function CheckoutPanel({ shop_id }) {
                 `*Bill No:* ${billNum}`,
                 `*Amount:* ₹${amount}`,
                 `*Date:* ${date}`,
+                ``,
+                `🔗 *View/Download Invoice:* ${shareUrl}`,
                 ``,
                 `Thank you for your purchase!`,
             ].join("\n");
@@ -658,6 +669,16 @@ export default function CheckoutPanel({ shop_id }) {
             toast.error("Please enter a valid 10-digit mobile number");
             return;
         }
+
+        // Check if public token exists
+        if (!bill || !bill.public_invoice_token) {
+            toast.warn("WhatsApp sharing requires the bill to be synced online. Please sync this bill or download/print the PDF instead.");
+            return;
+        }
+
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://api.bizcentro.cloud/api/v1";
+        const shareUrl = `${apiBaseUrl}/bills/public/${bill.public_invoice_token}`;
+
         const billNum = bill.bill_number || bill.offline_bill_number || "—";
         const amount = toNumber(bill.total_amount || bill.total).toFixed(2);
         const date = new Date(bill.created_at || Date.now()).toLocaleDateString("en-IN");
@@ -670,6 +691,8 @@ export default function CheckoutPanel({ shop_id }) {
             `📄 *Bill No:* ${billNum}`,
             `💰 *Amount:* ₹${amount}`,
             `📅 *Date:* ${date}`,
+            ``,
+            `🔗 *View/Download Invoice:* ${shareUrl}`,
             ``,
             `Thank you for your purchase! 🙏`,
         ].join("\n");
