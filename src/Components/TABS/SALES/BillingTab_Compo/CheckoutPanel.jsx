@@ -151,18 +151,26 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                             <div className="bg-purple-50 rounded-lg p-3"><p className="text-xs font-medium text-purple-800 mb-2">Credit Notes Applied</p>{bill.credit_notes_applied.map((cn, idx) => (<div key={idx} className="flex justify-between text-sm"><span>{cn.credit_note_number}</span><span className="font-medium">₹{toNumber(cn.amount_applied).toFixed(2)}</span></div>))}</div>
                         )}
                     </div>
-                    <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-2">
+                    <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-2 flex-wrap">
                         <button
                             type="button"
-                            onClick={() => onPrint?.(bill)}
+                            onClick={() => onPrint?.(bill, { printFormat: "80mm" })}
                             disabled={isPrinting || isPdfLoading}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-60"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-60"
                         >
-                            <Printer size={14} /> {isPrinting ? "Printing…" : "Print"}
+                            <Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal"}
                         </button>
                         <button
                             type="button"
-                            onClick={() => onDownloadPdf?.(bill)}
+                            onClick={() => onPrint?.(bill, { printFormat: "A4" })}
+                            disabled={isPrinting || isPdfLoading}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-60"
+                        >
+                            <Printer size={14} /> {isPrinting ? "Printing…" : "Print A4"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onDownloadPdf?.(bill, { printFormat: "A4" })}
                             disabled={isPrinting || isPdfLoading}
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
                         >
@@ -606,14 +614,14 @@ export default function CheckoutPanel({ shop_id }) {
         });
     };
 
-    const handleDownloadPdf = async () => {
+    const handleDownloadPdf = async (printFormat = "A4") => {
         const bill = createdBillData || lastCreatedBill;
-        await downloadPdf(bill);
+        await downloadPdf(bill, { printFormat });
     };
 
-    const handlePrintBill = async () => {
+    const handlePrintBill = async (printFormat = "A4") => {
         const bill = createdBillData || lastCreatedBill;
-        await printBill(bill);
+        await printBill(bill, { printFormat });
     };
 
     const handleSendWhatsApp = (bill) => {
@@ -773,12 +781,12 @@ export default function CheckoutPanel({ shop_id }) {
                             <p className="text-xs text-purple-600 mt-1">Credit Applied: -₹{toNumber(bill.credit_applied).toFixed(2)}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-4">
-                            <button onClick={() => handleViewBill(bill.server_bill_id || bill.bill_id || bill.client_bill_id || bill.bill_id)} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center justify-center gap-2"><Eye size={14} /> View Bill</button>
+                            <button onClick={() => handlePrintBill("80mm")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal (80mm)"}</button>
                             {canShowBillUpiQr(bill) && (
                                 <button type="button" onClick={() => setShowUpiQrBill(bill)} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center justify-center gap-2">📱 UPI QR</button>
                             )}
-                            <button onClick={handlePrintBill} disabled={docBusy} className="flex-1 min-w-[120px] py-2 border border-green-400 text-green-800 rounded-lg text-sm font-medium hover:bg-green-100 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print"}</button>
-                            <button onClick={handleDownloadPdf} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"><Download size={14} /> {isPdfLoading ? "Loading..." : "Download PDF"}</button>
+                            <button onClick={() => handlePrintBill("A4")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 border border-green-400 text-green-800 rounded-lg text-sm font-medium hover:bg-green-100 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print A4"}</button>
+                            <button onClick={() => handleDownloadPdf("A4")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"><Download size={14} /> {isPdfLoading ? "Loading..." : "Download PDF"}</button>
                             <button
                                 type="button"
                                 onClick={() => handleSendWhatsApp(bill)}

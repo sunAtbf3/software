@@ -9,14 +9,14 @@ export const useBillDocumentActions = ({ triggerServerPdf, isOnline } = {}) => {
   const [busyAction, setBusyAction] = useState(null);
 
   const printBill = useCallback(
-    async (bill) => {
+    async (bill, { printFormat = "A4" } = {}) => {
       if (!bill) {
         toast.error("No bill available to print");
         return;
       }
       setBusyAction("print");
       try {
-        await printBillPdfSmart(bill, { isOnline, triggerServerPdf });
+        await printBillPdfSmart(bill, { isOnline, triggerServerPdf, printFormat });
       } catch (err) {
         console.error("Print bill error:", err);
         toast.error(err?.message || "Failed to print bill");
@@ -28,7 +28,7 @@ export const useBillDocumentActions = ({ triggerServerPdf, isOnline } = {}) => {
   );
 
   const downloadPdf = useCallback(
-    async (bill) => {
+    async (bill, { printFormat = "A4" } = {}) => {
       if (!bill) {
         toast.error("No bill available to download");
         return;
@@ -38,6 +38,7 @@ export const useBillDocumentActions = ({ triggerServerPdf, isOnline } = {}) => {
         const { source } = await downloadBillPdfSmart(bill, {
           isOnline,
           triggerServerPdf,
+          printFormat,
         });
         toast.success(
           source === "server" ? "PDF downloaded from server" : "PDF downloaded"

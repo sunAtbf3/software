@@ -640,6 +640,33 @@ export default function CustomersTab() {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-2">Customer Type</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => dispatch(updateEditForm({ customer_type: CUSTOMER_TYPES.GST }))}
+                                        className={`py-2 px-3 rounded-lg border text-xs font-semibold ${
+                                            editForm.customer_type === CUSTOMER_TYPES.GST
+                                                ? "bg-blue-600 text-white border-blue-600"
+                                                : "bg-white text-gray-600 border-gray-200"
+                                        }`}
+                                    >
+                                        GST Customer
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => dispatch(updateEditForm({ customer_type: CUSTOMER_TYPES.WALK_IN }))}
+                                        className={`py-2 px-3 rounded-lg border text-xs font-semibold ${
+                                            editForm.customer_type === CUSTOMER_TYPES.WALK_IN
+                                                ? "bg-blue-600 text-white border-blue-600"
+                                                : "bg-white text-gray-600 border-gray-200"
+                                        }`}
+                                    >
+                                        Walk-in Customer
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
                                     Mobile Number
                                 </label>
@@ -676,81 +703,101 @@ export default function CustomersTab() {
                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">GST Number (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={editForm.gst_number}
-                                    onChange={(e) => {
-                                        const gst_number = e.target.value;
-                                        const patch = { gst_number };
-                                        const fromGst = stateCodeFromGstin(gst_number);
-                                        if (fromGst) patch.state_code = fromGst;
-                                        dispatch(updateEditForm(patch));
-                                    }}
-                                    placeholder="22AAAAA0000A1Z"
-                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
-                                        formErrors.gst_number ? "border-red-400" : "border-gray-200"
-                                    }`}
-                                />
-                                {formErrors.gst_number && (
-                                    <p className="text-xs text-red-500 mt-1">{formErrors.gst_number}</p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Address <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editForm.address}
-                                    onChange={(e) => dispatch(updateEditForm({ address: e.target.value }))}
-                                    placeholder="Street address"
-                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
-                                        formErrors.address ? "border-red-400" : "border-gray-200"
-                                    }`}
-                                />
-                                {formErrors.address && <p className="text-xs text-red-500 mt-1">{formErrors.address}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    City <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={editForm.city}
-                                    onChange={(e) => dispatch(updateEditForm({ city: e.target.value }))}
-                                    placeholder="City"
-                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
-                                        formErrors.city ? "border-red-400" : "border-gray-200"
-                                    }`}
-                                />
-                                {formErrors.city && <p className="text-xs text-red-500 mt-1">{formErrors.city}</p>}
-                            </div>
-                            <IndianStatePicker
-                                label="State"
-                                required
-                                value={editForm.state_code}
-                                onChange={(code) => dispatch(updateEditForm({ state_code: code }))}
-                                error={formErrors.state_code}
-                            />
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Pincode <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={6}
-                                    value={editForm.pincode}
-                                    onChange={(e) => dispatch(updateEditForm({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-                                    placeholder="6-digit pincode"
-                                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
-                                        formErrors.pincode ? "border-red-400" : "border-gray-200"
-                                    }`}
-                                />
-                                {formErrors.pincode && <p className="text-xs text-red-500 mt-1">{formErrors.pincode}</p>}
-                            </div>
+                            {editForm.customer_type === CUSTOMER_TYPES.GST && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            Company Name <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editForm.company_name}
+                                            onChange={(e) => dispatch(updateEditForm({ company_name: e.target.value }))}
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                                                formErrors.company_name ? "border-red-400" : "border-gray-200"
+                                            }`}
+                                        />
+                                        {formErrors.company_name && <p className="text-xs text-red-500 mt-1">{formErrors.company_name}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            GST Number <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editForm.gst_number}
+                                            onChange={(e) => {
+                                                const gst_number = e.target.value.toUpperCase();
+                                                const patch = { gst_number };
+                                                const fromGst = stateCodeFromGstin(gst_number);
+                                                if (fromGst) patch.state_code = fromGst;
+                                                dispatch(updateEditForm(patch));
+                                            }}
+                                            placeholder="22AAAAA0000A1Z"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                                                formErrors.gst_number ? "border-red-400" : "border-gray-200"
+                                            }`}
+                                        />
+                                        {formErrors.gst_number && (
+                                            <p className="text-xs text-red-500 mt-1">{formErrors.gst_number}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            Address <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editForm.address}
+                                            onChange={(e) => dispatch(updateEditForm({ address: e.target.value }))}
+                                            placeholder="Street address"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                                                formErrors.address ? "border-red-400" : "border-gray-200"
+                                            }`}
+                                        />
+                                        {formErrors.address && <p className="text-xs text-red-500 mt-1">{formErrors.address}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            City <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editForm.city}
+                                            onChange={(e) => dispatch(updateEditForm({ city: e.target.value }))}
+                                            placeholder="City"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                                                formErrors.city ? "border-red-400" : "border-gray-200"
+                                            }`}
+                                        />
+                                        {formErrors.city && <p className="text-xs text-red-500 mt-1">{formErrors.city}</p>}
+                                    </div>
+                                    <IndianStatePicker
+                                        label="State"
+                                        required
+                                        value={editForm.state_code}
+                                        onChange={(code) => dispatch(updateEditForm({ state_code: code }))}
+                                        error={formErrors.state_code}
+                                    />
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            Pincode <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={6}
+                                            value={editForm.pincode}
+                                            onChange={(e) => dispatch(updateEditForm({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                                            placeholder="6-digit pincode"
+                                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                                                formErrors.pincode ? "border-red-400" : "border-gray-200"
+                                            }`}
+                                        />
+                                        {formErrors.pincode && <p className="text-xs text-red-500 mt-1">{formErrors.pincode}</p>}
+                                    </div>
+                                </>
+                            )}
                         </div>
                         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
                             <button onClick={() => dispatch(closeEditModal())} className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Cancel</button>

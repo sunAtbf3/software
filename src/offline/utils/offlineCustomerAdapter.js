@@ -10,6 +10,9 @@ export const mapLocalCustomerToApiRow = (row) => {
     mobile: row.mobile,
     name: row.name,
     email: row.email || null,
+    // is_gst_registered: prefer the stored boolean; fall back to truthy gst_number
+    is_gst_registered: row.is_gst_registered === true || Boolean(row.gst_number),
+    company_name: row.company_name || null,
     gst_number: row.gst_number || null,
     address: row.address || null,
     city: row.city || null,

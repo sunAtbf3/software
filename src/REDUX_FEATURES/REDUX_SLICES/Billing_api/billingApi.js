@@ -136,9 +136,10 @@ export const billingApi = createApi({
         // transformResponse is also removed because with responseType "blob", result.data
         // IS the Blob — no transformation needed.
         getBillPdf: builder.query({
-            query: (billId) => ({
+            query: ({ billId, printFormat = "A4" }) => ({
                 url: `/bills/${billId}/pdf`,
                 method: "GET",
+                params: { printFormat },
                 responseType: "blob", // FIX: tells Axios to return binary data as a Blob
             }),
             keepUnusedDataFor: 0,

@@ -17,19 +17,20 @@ html, body {
 }
 `;
 
-const mountBillDocument = (preparedBill) => {
+const mountBillDocument = (preparedBill, printFormat = "A4") => {
   const host = document.createElement("div");
   host.className = "bill-print-host";
   // NOTE: Use left:-9999px instead of opacity:0.
   // opacity:0 causes html2canvas to render a blank canvas (invisible = no pixels captured).
   // Positioning off-screen keeps it hidden to the user while still being capturable by html2canvas.
+  const width = printFormat === "80mm" ? "80mm" : "210mm";
   host.style.cssText =
-    "position:fixed;left:-9999px;top:0;width:210mm;pointer-events:none;z-index:-1;background:#fff;";
+    `position:fixed;left:-9999px;top:0;width:${width};pointer-events:none;z-index:-1;background:#fff;`;
   document.body.appendChild(host);
 
   const root = createRoot(host);
   flushSync(() => {
-    root.render(createElement(BillInvoiceDocument, { bill: preparedBill }));
+    root.render(createElement(BillInvoiceDocument, { bill: preparedBill, printFormat }));
   });
 
   const content = host.querySelector(".bill-invoice-doc");
@@ -40,7 +41,7 @@ const mountBillDocument = (preparedBill) => {
   }
 
   const styleEl = document.createElement("style");
-  styleEl.textContent = getBillInvoiceStyles();
+  styleEl.textContent = getBillInvoiceStyles(printFormat);
   content.appendChild(styleEl);
 
   return { host, root, content, styleEl };
@@ -61,13 +62,35 @@ const buildFilename = (bill) => {
 };
 
 /** Full invoice CSS embedded for print/PDF — works in PWA standalone windows. */
-const getBillInvoiceStyles = () => `${PRINT_BASE_STYLES}\n${billInvoiceStyles || ""}`;
+const getBillInvoiceStyles = (printFormat = "A4") => {
+  let styles = `${PRINT_BASE_STYLES}\n${billInvoiceStyles || ""}`;
+  if (printFormat === "80mm") {
+    styles += `
+    @page {
+      size: 80mm auto;
+      margin: 0;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 80mm;
+      background: #fff;
+    }
+    .bill-invoice-doc {
+      width: 80mm;
+      padding: 2mm 1mm;
+      margin: 0;
+    }
+    `;
+  }
+  return styles;
+};
 
-const buildPrintHtml = (prepared, bodyHtml) => `<!DOCTYPE html>
+const buildPrintHtml = (prepared, bodyHtml, printFormat = "A4") => `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8" />
 <title>Invoice ${prepared.bill_number || ""}</title>
-<style>${getBillInvoiceStyles()}</style>
+<style>${getBillInvoiceStyles(printFormat)}</style>
 </head><body>${bodyHtml}</body></html>`;
 
 const openPrintWindow = (html) =>
@@ -128,25 +151,25 @@ const printPdfBlob = (blob) =>
     setTimeout(triggerPrint, 600);
   });
 
-export const printBillDocument = async (bill) => {
+export const printBillDocument = async (bill, { printFormat = "A4" } = {}) => {
   const prepared = await prepareBillForDocument(bill);
-  const mount = mountBillDocument(prepared);
+  const mount = mountBillDocument(prepared, printFormat);
 
   try {
-    await openPrintWindow(buildPrintHtml(prepared, mount.content.outerHTML));
+    await openPrintWindow(buildPrintHtml(prepared, mount.content.outerHTML, printFormat));
   } finally {
     cleanupMount(mount);
   }
 };
 
-export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf } = {}) => {
+export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf, printFormat = "A4" } = {}) => {
   const awaitingSync = isBillAwaitingSync(bill);
   const serverBillId =
     bill.server_bill_id || (!awaitingSync && !bill.is_offline ? bill.bill_id : null);
 
   if (isOnline && serverBillId && typeof triggerServerPdf === "function") {
     try {
-      const response = await triggerServerPdf(serverBillId).unwrap();
+      const response = await triggerServerPdf({ billId: serverBillId, printFormat }).unwrap();
       const blob = resolveServerPdfBlob(response);
       if (blob) {
         await printPdfBlob(blob);
@@ -157,13 +180,13 @@ export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf } = {
     }
   }
 
-  await printBillDocument(bill);
+  await printBillDocument(bill, { printFormat });
   return { source: "client" };
 };
 
-export const downloadBillPdfDocument = async (bill) => {
+export const downloadBillPdfDocument = async (bill, { printFormat = "A4" } = {}) => {
   const prepared = await prepareBillForDocument(bill);
-  const mount = mountBillDocument(prepared);
+  const mount = mountBillDocument(prepared, printFormat);
 
   try {
     // Use mount.content (.bill-invoice-doc) not mount.host.
@@ -171,6 +194,16 @@ export const downloadBillPdfDocument = async (bill) => {
     // div adds extra whitespace. mount.content is the actual invoice element.
     // The <style> tag injected into mount.host applies globally to the document,
     // so mount.content is correctly styled even when passed directly to html2pdf.
+    const isThermal = printFormat === "80mm";
+    // For thermal: measure the actual rendered height so the PDF page grows with content.
+    // For A4: use standard a4 size.
+    let jsPdfFormat = "a4";
+    if (isThermal) {
+      const contentHeightPx = mount.content.scrollHeight || mount.content.offsetHeight || 0;
+      // Convert px → mm (96 dpi: 1px = 0.2646mm) then add a 10mm safety margin
+      const contentHeightMm = Math.ceil(contentHeightPx * 0.2646) + 10;
+      jsPdfFormat = [80, Math.max(100, contentHeightMm)];
+    }
     await html2pdf()
       .set({
         margin: 0,
@@ -182,9 +215,9 @@ export const downloadBillPdfDocument = async (bill) => {
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowWidth: 794,
+          windowWidth: isThermal ? 302 : 794,
         },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        jsPDF: { unit: "mm", format: jsPdfFormat, orientation: "portrait" },
         pagebreak: { mode: ["avoid-all", "css", "legacy"] },
       })
       .from(mount.content)
@@ -197,14 +230,14 @@ export const downloadBillPdfDocument = async (bill) => {
 /**
  * Prefer server PDF when bill is synced and online; otherwise render client template (works offline).
  */
-export const downloadBillPdfSmart = async (bill, { isOnline, triggerServerPdf } = {}) => {
+export const downloadBillPdfSmart = async (bill, { isOnline, triggerServerPdf, printFormat = "A4" } = {}) => {
   const awaitingSync = isBillAwaitingSync(bill);
   const serverBillId =
     bill.server_bill_id || (!awaitingSync && !bill.is_offline ? bill.bill_id : null);
 
   if (isOnline && serverBillId && typeof triggerServerPdf === "function") {
     try {
-      const response = await triggerServerPdf(serverBillId).unwrap();
+      const response = await triggerServerPdf({ billId: serverBillId, printFormat }).unwrap();
       const blob = resolveServerPdfBlob(response);
       if (blob) {
         const url = window.URL.createObjectURL(blob);
@@ -224,7 +257,7 @@ export const downloadBillPdfSmart = async (bill, { isOnline, triggerServerPdf } 
     }
   }
 
-  await downloadBillPdfDocument(bill);
+  await downloadBillPdfDocument(bill, { printFormat });
   return { source: "client" };
 };
 

@@ -1,3 +1,4 @@
+import React, { Fragment } from "react";
 import { getStateName } from "../../constants/indianStateCodes";
 import { BILL_TYPES } from "../../constants/billingBillTypes";
 import {
@@ -26,8 +27,10 @@ const LabelValue = ({ label, value, className = "" }) => (
   </div>
 );
 
-export default function BillInvoiceDocument({ bill }) {
+export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat }) {
   if (!bill) return null;
+
+  const printFormat = propPrintFormat || (typeof window !== "undefined" && localStorage.getItem("vy_bill_print_format")) || "A4";
 
   const billType = bill.bill_type || BILL_TYPES.WITHOUT_GST;
   const isNonListed = billType === BILL_TYPES.NON_LISTED;
@@ -107,6 +110,187 @@ export default function BillInvoiceDocument({ bill }) {
     ]
     : [];
 
+  if (printFormat === "80mm") {
+    return (
+      <div className="bill-invoice-doc thermal">
+        {/* Header Section (Centered) */}
+        {isEstimate || isNonListed ? (
+          <>
+            <div className="bi-shop-name-receipt">Receipt</div>
+            {bill.staff_code_value && (
+              <div style={{ textAlign: "center", fontSize: "7.5pt", marginTop: "2px" }}>
+                Billed By: {bill.staff_code_value}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="bi-shop-name">{shop.shop_name || "Shop"}</div>
+            {shop.address && (
+              <div className="bi-center-line">{shop.address}</div>
+            )}
+            {(shop.city || shop.pincode) && (
+              <div className="bi-center-line">
+                {[shop.city, shop.pincode].filter(Boolean).join(" - ")}
+              </div>
+            )}
+            {shop.phone && (
+              <div className="bi-center-line">Ph: {shop.phone}</div>
+            )}
+            {gst && (
+              <div className="bi-center-line" style={{ fontWeight: "bold" }}>GSTIN: {gst}</div>
+            )}
+          </>
+        )}
+
+        <div className="bi-divider" />
+        {!isEstimate && !isNonListed && (
+          <>
+            <div className="bi-title">
+              {!isNonGst ? "GST INVOICE" : "INVOICE"}
+            </div>
+            {bill.staff_code_value && (
+              <div style={{ textAlign: "center", fontSize: "7.5pt", marginBottom: "2px" }}>
+                Billed By: {bill.staff_code_value}
+              </div>
+            )}
+            <div className="bi-divider" />
+          </>
+        )}
+
+        {/* Invoice details */}
+        <div className="bi-flex-row">
+          <span>Invoice No :</span>
+          <span>{bill.bill_number}</span>
+        </div>
+        <div className="bi-flex-row">
+          <span>Date :</span>
+          <span>{fmtDate(bill.created_at)}</span>
+        </div>
+        <div className="bi-flex-row">
+          <span>Payment :</span>
+          <span>{bill.payment_method || "CASH"}</span>
+        </div>
+
+        <div className="bi-divider" />
+
+        {/* Bill To */}
+        <div className="bi-bill-to">
+          <div className="bi-label">Bill To:</div>
+          <div>{displayLabel ? `${displayLabel}: ${customerDisplayName}` : customerDisplayName}</div>
+          {bill.customer_mobile && <div>Mob: {bill.customer_mobile}</div>}
+          {!isNonGst && bill.customer_gstin && <div>GSTIN: {bill.customer_gstin}</div>}
+        </div>
+
+        <div className="bi-divider" />
+
+        {/* Items Table */}
+        <table className="bi-table-thermal">
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", width: "42%" }}>Item</th>
+              <th style={{ textAlign: "center", width: "13%" }}>Qty</th>
+              <th style={{ textAlign: "right", width: "25%" }}>Spl.Price</th>
+              <th style={{ textAlign: "right", width: "20%" }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, idx) => {
+              const name =
+                item.manual_item_name ||
+                item.variant?.product?.name ||
+                item.product?.name ||
+                item.item_name ||
+                item.product_name ||
+                item.variant?.sku ||
+                "Item";
+              return (
+                <Fragment key={idx}>
+                  <tr style={{ fontWeight: "bold" }}>
+                    <td colSpan={4} style={{ paddingTop: "4px" }}>{name}</td>
+                  </tr>
+                  <tr style={{ borderBottom: "1px dashed #eee" }}>
+                    <td style={{ textAlign: "left" }}>MRP: ₹{fmtNum(lineMrp(item))}</td>
+                    <td style={{ textAlign: "center" }}>{item.quantity}</td>
+                    <td style={{ textAlign: "right" }}>₹{fmtNum(item.unit_price)}</td>
+                    <td style={{ textAlign: "right" }}>₹{fmtNum(lineSpecialTotal(item))}</td>
+                  </tr>
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="bi-divider" />
+
+        {/* Totals */}
+        <div>
+          <div className="bi-flex-row">
+            <span>Subtotal</span>
+            <span>₹{fmtNum(bill.subtotal)}</span>
+          </div>
+          {mrpDiscount > 0 && (
+            <div className="bi-flex-row">
+              <span>Discount</span>
+              <span>- ₹{fmtNum(mrpDiscount)}</span>
+            </div>
+          )}
+          {!isNonGst && (
+            <>
+              <div className="bi-flex-row">
+                <span>Taxable Amt</span>
+                <span>₹{fmtNum(bill.taxable_amount)}</span>
+              </div>
+              {gstSplit.tax_mode === "CGST_SGST" && gstSplit.cgst > 0 && (
+                <div className="bi-flex-row">
+                  <span>CGST ({taxRates.cgstPercent}%)</span>
+                  <span>+ ₹{fmtNum(gstSplit.cgst)}</span>
+                </div>
+              )}
+              {gstSplit.tax_mode === "CGST_SGST" && gstSplit.sgst > 0 && (
+                <div className="bi-flex-row">
+                  <span>SGST ({taxRates.sgstPercent}%)</span>
+                  <span>+ ₹{fmtNum(gstSplit.sgst)}</span>
+                </div>
+              )}
+              {gstSplit.igst > 0 && (
+                <div className="bi-flex-row">
+                  <span>IGST ({taxRates.igstPercent}%)</span>
+                  <span>+ ₹{fmtNum(gstSplit.igst)}</span>
+                </div>
+              )}
+              {bill.gst_amount > 0 && (
+                <div className="bi-flex-row">
+                  <span>Total Tax</span>
+                  <span>₹{fmtNum(bill.gst_amount)}</span>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="bi-divider" />
+          <div className="bi-flex-row" style={{ fontSize: "9pt", fontWeight: "bold" }}>
+            <span>TOTAL PAYABLE</span>
+            <span>{fmtMoney(bill.total_amount)}</span>
+          </div>
+        </div>
+
+        <div className="bi-divider" />
+
+        {/* Amount in words */}
+        <div style={{ textAlign: "center", fontStyle: "italic" }}>
+          {amountInWords(bill.total_amount)}
+        </div>
+
+        <div className="bi-divider" />
+
+        <div style={{ textAlign: "center", fontStyle: "italic", marginTop: "4px" }}>
+          Thank you for shopping with us!
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bill-invoice-doc">
       {/* Top GSTIN and original note row for GST invoices only */}
@@ -119,6 +303,11 @@ export default function BillInvoiceDocument({ bill }) {
 
       {/* Center header / title logic */}
       {!isNonGst && <div className="bi-title">GST INVOICE</div>}
+      {bill.staff_code_value && (
+        <div className="bi-center-line" style={{ fontSize: "8pt" }}>
+          Billed By: {bill.staff_code_value}
+        </div>
+      )}
 
       {isEstimate || isNonListed ? (
         // Estimate and Non-listed bills show centered title "Receipt" and hide shop details entirely
