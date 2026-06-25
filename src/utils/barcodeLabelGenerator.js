@@ -12,34 +12,32 @@ import JsBarcode from "jsbarcode";
 
 // Label configuration
 export const LABEL_CONFIG = {
-    // Standard 50mm x 30mm label (common thermal label size)
-    width: 500,  // pixels at 300dpi ~ 50mm
-    height: 300, // pixels at 300dpi ~ 30mm
-    margin: 20,
+    // Standard 50mm x 25mm label (5 cm x 2.5 cm thermal label size)
+    width: 500,  // pixels ~ 50mm (5 cm)
+    height: 250, // pixels ~ 25mm (2.5 cm)
+    margin: 10,  // Reduced to 10 to allow maximum content scaling
     barcode: {
-        width: 2,
-        height: 100,
+        width: 3,
+        height: 65,  // Reduced to 65 to make room for extra-large text
         fontSize: 14,
         margin: 5,
     },
     text: {
         fontSize: {
-            small: 10,
-            medium: 12,
-            large: 14,
-            xlarge: 18,
+            small: 18,
+            medium: 24,  // Product name
+            large: 30,   // Product code & Sale price
+            xlarge: 38,  // Purchase code (top)
         },
         fontFamily: "'Courier New', monospace",
     },
 };
 
 /**
- * Calculate Purchase Code (fixed value 1986)
+ * 
  * @returns {number}
  */
-// export function calculatePurchaseCode() {
-//     return 1986;
-// }
+
 
 /**
  * Generate a single barcode label as Canvas
@@ -94,6 +92,9 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const centerX = (canvas.width - barcodeWidth) / 2;
             let currentY = config.margin;
 
+            // Set baseline to top for predictable programmatic spacing
+            ctx.textBaseline = "top";
+
             // ============================================
             // 1. PURCHASE CODE (TOP - Most Important)
             // ============================================
@@ -107,21 +108,22 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             ctx.fillStyle = "#000000";
             ctx.textAlign = "center";
             ctx.fillText(`#${purchaseCode}`, canvas.width / 2, currentY);
-            currentY += 35;
+            currentY += config.text.fontSize.xlarge + 8;
 
             // ============================================
             // 2. BARCODE IMAGE
             // ============================================
             ctx.drawImage(barcodeCanvas, centerX, currentY);
-            currentY += barcodeHeight + 15;
+            currentY += barcodeHeight + 10;
 
             // ============================================
             // 3. PRODUCT CODE
             // ============================================
-            ctx.font = `${config.text.fontSize.medium}px ${config.text.fontFamily}`;
-            ctx.fillStyle = "#333333";
-            ctx.fillText(`${variant.product_code || variant.sku || "—"}`, canvas.width / 2, currentY);
-            currentY += 22;
+            ctx.font = `bold ${config.text.fontSize.large}px ${config.text.fontFamily}`;
+            ctx.fillStyle = "#000000";
+            ctx.textAlign = "center";
+            ctx.fillText(`P.C- ${variant.product_code || variant.sku || "—"}`, canvas.width / 2, currentY);
+            currentY += config.text.fontSize.large + 6;
 
             // ============================================
             // 4. PRODUCT NAME (using 'name' field, not 'title')
@@ -129,30 +131,41 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const productName = product?.name || "Unknown Product";
             ctx.font = `bold ${config.text.fontSize.medium}px ${config.text.fontFamily}`;
             ctx.fillStyle = "#000000";
+            ctx.textAlign = "center";
             
             // Handle long names - wrap if needed
-            const maxChars = 35;
+            const maxChars = 28;
             let displayName = productName;
             if (productName.length > maxChars) {
                 displayName = productName.substring(0, maxChars - 3) + "...";
             }
             ctx.fillText(displayName, canvas.width / 2, currentY);
-            currentY += 22;
+            currentY += config.text.fontSize.medium + 6;
 
             // ============================================
-            // 5. SALE PRICE (Special Price)
+            // 5. SALE & MRP PRICES (Left: MRP, Right: Special Price)
             // ============================================
-            ctx.font = `bold ${config.text.fontSize.large}px ${config.text.fontFamily}`;
-            ctx.fillStyle = "#E53E3E";
+            ctx.font = `bold ${config.text.fontSize.medium}px ${config.text.fontFamily}`; // Using medium (24px) to prevent side-by-side overflow
+            
+            const mrp = variant.mrp || product?.mrp || 0;
             const salePrice = variant.special_price || product?.special_price || 0;
-            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width / 2, currentY);
+
+            // Draw MRP on the left corner
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#555555";
+            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, config.margin, currentY);
+
+            // Draw Special Price on the right corner
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#E53E3E";
+            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - config.margin, currentY);
             
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(config.margin, canvas.height - 15);
-            ctx.lineTo(canvas.width - config.margin, canvas.height - 15);
+            ctx.moveTo(config.margin, canvas.height - 10);
+            ctx.lineTo(canvas.width - config.margin, canvas.height - 10);
             ctx.stroke();
 
             resolve(canvas);
@@ -267,11 +280,27 @@ export function printCanvas(canvas) {
         <head>
             <title>Print Barcode Labels</title>
             <style>
-                body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: white; }
-                img { max-width: 100%; height: auto; }
+                html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: white; }
+                body { display: flex; justify-content: center; align-items: center; }
+                img { max-width: 100%; max-height: 100%; object-fit: contain; }
                 @media print {
-                    body { margin: 0; padding: 0; }
-                    img { max-width: 100%; page-break-after: avoid; }
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        display: block;
+                        min-height: auto;
+                    }
+                    img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: contain;
+                        display: block;
+                        page-break-after: avoid;
+                    }
                 }
             </style>
         </head>

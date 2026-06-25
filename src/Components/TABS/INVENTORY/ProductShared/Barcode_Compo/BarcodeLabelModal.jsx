@@ -438,7 +438,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
                     <div className="flex items-center justify-between px-6 py-3.5 bg-gray-50">
                         <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>System Dimension: Standard 50×30mm Thermal Matrix</span>
+                            <span>System Dimension: Standard 50×25mm Thermal Matrix</span>
                         </div>
                         <div className="flex items-center gap-2">
                             {totalVariants === 1 && (
@@ -835,7 +835,7 @@ export default BarcodeLabelModal;
 //                     <div className="flex items-center justify-between px-6 py-3.5 bg-gray-50">
 //                         <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
 //                             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-//                             <span>System Dimension: Standard 50×30mm Thermal Matrix</span>
+//                             <span>System Dimension: Standard 50×25mm Thermal Matrix</span>
 //                         </div>
 //                         <div className="flex items-center gap-2">
 //                             {variantsWithProducts.length === 1 && (
