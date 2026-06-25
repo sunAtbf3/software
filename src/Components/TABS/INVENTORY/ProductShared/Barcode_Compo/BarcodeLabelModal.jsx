@@ -165,15 +165,39 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
         }
     };
 
+    // ── Generate Print-Optimized Canvases (Always 1 Row per Page) ─────────
+    const getPrintOptimizedCanvases = async (items) => {
+        // Enforce 2-up thermal standard: exactly 2 labels per row (page)
+        const layoutOptions = { labelsPerRow: 2, labelsPerColumn: 1 };
+        const pages = Math.ceil(items.length / 2);
+        const canvases = [];
+        
+        for (let i = 0; i < pages; i++) {
+            const pageItems = items.slice(i * 2, (i + 1) * 2);
+            const pageCanvas = await generateBatchLabels(pageItems, layoutOptions);
+            canvases.push(pageCanvas);
+        }
+        return canvases;
+    };
+
     const handlePrint = async () => {
         setGenerating(true);
         try {
-            if (variantsWithProducts.length === 1 && previewCanvas) {
-                printCanvas(previewCanvas);
-            } else if (batchCanvases.length > 0) {
-                printCanvas(batchCanvases[currentPage]);
+            let itemsToPrint = [];
+            if (isSoloView) {
+                // Print only current single label, but properly positioned on a 2-up strip
+                const currentItem = individualImages[currentPage];
+                if (currentItem) itemsToPrint = [currentItem];
+            } else {
+                // Grid view: print only the items visible on current page
+                itemsToPrint = pagedIndividualItems;
             }
-            toast.success("Print job sent");
+            
+            if (itemsToPrint.length > 0) {
+                const printCanvases = await getPrintOptimizedCanvases(itemsToPrint);
+                printCanvas(printCanvases);
+                toast.success("Print job sent");
+            }
         } catch (error) {
             console.error("Print failed:", error);
             toast.error(`Print failed: ${error.message}`);
@@ -183,31 +207,13 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     };
 
     const handlePrintAll = async () => {
-        if (batchCanvases.length <= 1) {
-            handlePrint();
-            return;
-        }
         setGenerating(true);
         try {
-            const totalHeight = batchCanvases.reduce((sum, canvas) => sum + canvas.height, 0);
-            const maxWidth = Math.max(...batchCanvases.map(c => c.width));
-
-            const combinedCanvas = document.createElement("canvas");
-            combinedCanvas.width = maxWidth;
-            combinedCanvas.height = totalHeight;
-            const ctx = combinedCanvas.getContext("2d");
-
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, maxWidth, totalHeight);
-
-            let yOffset = 0;
-            for (const canvas of batchCanvases) {
-                ctx.drawImage(canvas, 0, yOffset);
-                yOffset += canvas.height;
+            if (individualImages.length > 0) {
+                const printCanvases = await getPrintOptimizedCanvases(individualImages);
+                printCanvas(printCanvases);
+                toast.success(`Printing ${individualImages.length} labels`);
             }
-
-            printCanvas(combinedCanvas);
-            toast.success(`Printing ${batchCanvases.length} pages`);
         } catch (error) {
             console.error("Print all failed:", error);
             toast.error(`Print failed: ${error.message}`);

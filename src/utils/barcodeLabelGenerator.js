@@ -190,13 +190,13 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
             
             const labelWidth = 500;  // Standard 50mm (5 cm)
             const labelHeight = 250; // Standard 25mm (2.5 cm)
-            const gapX = 10;
-            const gapY = 10;
-            const marginX = 15;
-            const marginY = 15;
+            const gapX = 20;
+            const gapY = 20;
+            const marginX = 0;
+            const marginY = 0;
 
-            const pageWidth = labelsPerRow * labelWidth + (labelsPerRow - 1) * gapX + 2 * marginX;
-            const pageHeight = labelsPerColumn * labelHeight + (labelsPerColumn - 1) * gapY + 2 * marginY;
+            const pageWidth = (labelsPerRow * labelWidth) + ((labelsPerRow - 1) * gapX);
+            const pageHeight = (labelsPerColumn * labelHeight) + ((labelsPerColumn - 1) * gapY);
             
             // Create page canvas
             const pageCanvas = document.createElement("canvas");
@@ -270,11 +270,14 @@ export function downloadCanvasAsPNG(canvas, filename) {
  * Print canvas directly
  * @param {HTMLCanvasElement} canvas 
  */
-export function printCanvas(canvas) {
+export function printCanvas(canvases) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
         throw new Error("Popup blocked. Please allow popups for this site.");
     }
+    
+    const canvasArray = Array.isArray(canvases) ? canvases : [canvases];
+    const imgTags = canvasArray.map(c => `<img src="${c.toDataURL("image/png")}" />`).join('\\n');
     
     printWindow.document.write(`
         <!DOCTYPE html>
@@ -282,9 +285,9 @@ export function printCanvas(canvas) {
         <head>
             <title>Print Barcode Labels</title>
             <style>
-                html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: white; }
-                body { display: flex; justify-content: center; align-items: center; }
-                img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                html, body { margin: 0; padding: 0; background: white; width: 100%; }
+                body { display: flex; flex-direction: column; align-items: flex-start; }
+                img { max-width: 100%; object-fit: contain; object-position: left top; }
                 @media print {
                     @page {
                         margin: 0;
@@ -294,24 +297,27 @@ export function printCanvas(canvas) {
                         margin: 0;
                         padding: 0;
                         display: block;
-                        min-height: auto;
                     }
                     img {
                         width: 100%;
-                        height: 100%;
+                        height: auto;
+                        max-height: 100vh;
                         object-fit: contain;
+                        object-position: left top;
                         display: block;
-                        page-break-after: avoid;
+                        page-break-after: always;
                     }
                 }
             </style>
         </head>
         <body>
-            <img src="${canvas.toDataURL("image/png")}" />
+            ${imgTags}
             <script>
                 window.onload = () => {
-                    window.print();
-                    window.onafterprint = () => window.close();
+                    setTimeout(() => {
+                        window.print();
+                        window.onafterprint = () => window.close();
+                    }, 300);
                 };
             </script>
         </body>
