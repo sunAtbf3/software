@@ -175,12 +175,6 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
     });
 }
 
-/**
- * Generate multiple labels on a single canvas (for batch printing)
- * @param {Array} variantsWithProducts - Array of {variant, product}
- * @param {Object} options - Configuration
- * @returns {Promise<HTMLCanvasElement>}
- */
 export async function generateBatchLabels(variantsWithProducts, options = {}) {
     return new Promise(async (resolve, reject) => {
         try {
@@ -188,14 +182,21 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
                 throw new Error("No variants provided");
             }
 
-            // Standard 2x4 labels per page for thermal printer
             const labelsPerRow = options.labelsPerRow || 2;
-            const labelsPerColumn = options.labelsPerColumn || 4;
-            const pageWidth = options.pageWidth || 1100;  // ~ 4 inches at 300dpi
-            const pageHeight = options.pageHeight || 1400; // ~ 5 inches at 300dpi
             
-            const labelWidth = Math.floor((pageWidth - 60) / labelsPerRow);
-            const labelHeight = Math.floor((pageHeight - 60) / labelsPerColumn);
+            // Calculate how many rows we actually need for this batch page
+            const totalLabelsOnPage = variantsWithProducts.length;
+            const labelsPerColumn = Math.min(options.labelsPerColumn || 4, Math.ceil(totalLabelsOnPage / labelsPerRow));
+            
+            const labelWidth = 500;  // Standard 50mm (5 cm)
+            const labelHeight = 250; // Standard 25mm (2.5 cm)
+            const gapX = 10;
+            const gapY = 10;
+            const marginX = 15;
+            const marginY = 15;
+
+            const pageWidth = labelsPerRow * labelWidth + (labelsPerRow - 1) * gapX + 2 * marginX;
+            const pageHeight = labelsPerColumn * labelHeight + (labelsPerColumn - 1) * gapY + 2 * marginY;
             
             // Create page canvas
             const pageCanvas = document.createElement("canvas");
@@ -215,24 +216,25 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
                 const row = Math.floor(index / labelsPerRow);
                 const col = index % labelsPerRow;
                 
-                const x = 30 + (col * labelWidth);
-                const y = 30 + (row * labelHeight);
+                const x = marginX + (col * (labelWidth + gapX));
+                const y = marginY + (row * (labelHeight + gapY));
                 
                 try {
                     const labelCanvas = await generateBarcodeLabel(
                         item.variant, 
                         item.product, 
-                        { width: labelWidth - 10, height: labelHeight - 10 }
+                        { width: labelWidth, height: labelHeight }
                     );
-                    ctx.drawImage(labelCanvas, x, y, labelWidth - 10, labelHeight - 10);
+                    ctx.drawImage(labelCanvas, x, y, labelWidth, labelHeight);
+                    labelCanvas.remove();
                 } catch (err) {
                     console.error(`Failed to generate label for variant ${item.variant?.variant_id}:`, err);
                     // Draw error placeholder
                     ctx.fillStyle = "#FEE2E2";
-                    ctx.fillRect(x, y, labelWidth - 10, labelHeight - 10);
+                    ctx.fillRect(x, y, labelWidth, labelHeight);
                     ctx.fillStyle = "#DC2626";
                     ctx.font = "12px monospace";
-                    ctx.fillText("Error generating label", x + 10, y + 50);
+                    ctx.fillText("Error", x + 10, y + 50);
                 }
                 
                 index++;
