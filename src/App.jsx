@@ -105,6 +105,7 @@ function App() {
           path="/login"
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />}
         />
+
         <Route
           path="/dashboard/*"
           element={
