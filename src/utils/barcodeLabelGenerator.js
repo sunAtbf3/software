@@ -90,7 +90,7 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const barcodeWidth = barcodeCanvas.width;
             const barcodeHeight = barcodeCanvas.height;
             const centerX = (canvas.width - barcodeWidth) / 2;
-            let currentY = config.margin;
+            let currentY = 20;
 
             // Set baseline to top for predictable programmatic spacing
             ctx.textBaseline = "top";
@@ -153,12 +153,12 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             // Draw MRP on the left corner
             ctx.textAlign = "left";
             ctx.fillStyle = "#000000";
-            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, config.margin, currentY);
+            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, 20, currentY);
 
             // Draw Special Price on the right corner
             ctx.textAlign = "right";
             ctx.fillStyle = "#000000";
-            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - config.margin, currentY);
+            ctx.fillText(`Spl. Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - 20, currentY);
             
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
@@ -191,7 +191,7 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
             const labelWidth = 500;  // Standard 50mm (5 cm)
             const labelHeight = 250; // Standard 25mm (2.5 cm)
             const gapX = 30;
-            const gapY = 20;
+            const gapY = 30;
             const marginX = 0;
             const marginY = 0;
 
