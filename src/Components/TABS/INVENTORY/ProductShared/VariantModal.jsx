@@ -117,12 +117,10 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
     }
     if (variantForm.expenses === undefined || variantForm.expenses === "") errors.expenses = "Expenses is required";
     // Shipping validation for multi-variant products
-    if (editingVariantIndex !== null) {
-      if (!variantForm.weight || toNumber(variantForm.weight) <= 0) errors.weight = "Weight is required";
-      if (!variantForm.length || toNumber(variantForm.length) <= 0) errors.length = "Length is required";
-      if (!variantForm.width || toNumber(variantForm.width) <= 0) errors.width = "Width is required";
-      if (!variantForm.height || toNumber(variantForm.height) <= 0) errors.height = "Height is required";
-    }
+    if (!variantForm.weight || toNumber(variantForm.weight) <= 0) errors.weight = "Weight is required";
+    if (!variantForm.length || toNumber(variantForm.length) <= 0) errors.length = "Length is required";
+    if (!variantForm.width || toNumber(variantForm.width) <= 0) errors.width = "Width is required";
+    if (!variantForm.height || toNumber(variantForm.height) <= 0) errors.height = "Height is required";
     return errors;
   };
 
@@ -265,10 +263,10 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
               <input type="number" step="0.01" {...field("expenses")} placeholder="Per Unit" className={inputCls("expenses")} />
               {errorMsg("expenses")}
             </div>
-            <div>
+            {/* <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Online Price</label>
               <input type="number" step="0.01" {...field("online_price")} placeholder="E-comm" className={inputCls("online_price")} />
-            </div>
+            </div> */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Cost</label>
               <input type="number" step="0.01" {...field("purchase_cost")} placeholder="Alternate" className={inputCls("purchase_cost")} />
@@ -278,26 +276,26 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
 
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Shipping <span className="text-gray-400 font-normal normal-case">(required for multi-variant)</span>
+            Shipping
           </p>
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" {...field("weight")} placeholder="0.25" className={inputCls("weight")} />
               {errorMsg("weight")}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" {...field("length")} placeholder="30" className={inputCls("length")} />
               {errorMsg("length")}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" {...field("width")} placeholder="20" className={inputCls("width")} />
               {errorMsg("width")}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" {...field("height")} placeholder="5" className={inputCls("height")} />
               {errorMsg("height")}
             </div>
@@ -317,7 +315,7 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
 
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Images <span className="text-gray-400 font-normal normal-case">(optional — max 4)</span>
+            Images <span className="text-gray-400 font-normal normal-case">(optional)</span>
           </p>
 
           {allImages.length > 0 && (
@@ -389,7 +387,6 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={allImages.length >= 4}
             className="px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-50 cursor-pointer disabled:opacity-40 transition-colors"
           >
             + Upload Images

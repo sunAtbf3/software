@@ -161,6 +161,14 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
       errors.purchase_price = "Purchase price cannot be negative";
     if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
       errors.expenses = "Expenses is required";
+    if (!formData.weight || toNumber(formData.weight) <= 0)
+      errors.weight = "Weight is required";
+    if (!formData.length || toNumber(formData.length) <= 0)
+      errors.length = "Length is required";
+    if (!formData.width || toNumber(formData.width) <= 0)
+      errors.width = "Width is required";
+    if (!formData.height || toNumber(formData.height) <= 0)
+      errors.height = "Height is required";
     return errors;
   };
 

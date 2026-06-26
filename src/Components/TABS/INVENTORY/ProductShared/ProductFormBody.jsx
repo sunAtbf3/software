@@ -261,24 +261,28 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
       {/* ── Section 4: Shipping ───────────────────────────────────────────── */}
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Shipping <span className="text-gray-400 font-normal normal-case">(required for multi-variant products)</span>
+          Shipping
         </p>
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
             <input type="number" step="0.01" {...field("weight")} placeholder="0.25" className={inputCls("weight")} />
+            {errorMsg("weight")}
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm) <span className="text-red-500">*</span></label>
             <input type="number" step="0.01" {...field("length")} placeholder="30" className={inputCls("length")} />
+            {errorMsg("length")}
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm) <span className="text-red-500">*</span></label>
             <input type="number" step="0.01" {...field("width")} placeholder="20" className={inputCls("width")} />
+            {errorMsg("width")}
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm) <span className="text-red-500">*</span></label>
             <input type="number" step="0.01" {...field("height")} placeholder="5" className={inputCls("height")} />
+            {errorMsg("height")}
           </div>
         </div>
       </div>
@@ -345,7 +349,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
       {/* ── Section 7: Images with Delete + Replace ───────────────────────── */}
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-          Images <span className="text-gray-400 font-normal normal-case">(optional — max 4)</span>
+          Images <span className="text-gray-400 font-normal normal-case">(optional)</span>
         </p>
 
         {allImages.length > 0 && (
@@ -431,7 +435,6 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={allImages.length >= 4}
           className="px-4 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:bg-gray-50 cursor-pointer disabled:opacity-40 transition-colors"
         >
           + Upload Images

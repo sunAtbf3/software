@@ -36,8 +36,15 @@ const STEPS = [
 ];
 
 const REQUIRED_COLS = [
-  "name","product_code","mrp","wholesale_price",
-  "retail_price","hsn_code","gst_percent","gst_type","unit_of_measure",
+  "name",
+  "product_code",
+  "mrp",
+  "special_price",
+  "expenses",
+  "weight",
+  "length",
+  "width",
+  "height",
 ];
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -150,8 +157,8 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
   };
 
   const downloadSample = () => {
-    const hdr = ["name","product_code","mrp","wholesale_price","retail_price","hsn_code","gst_percent","gst_type","unit_of_measure","quantity","title","description","brand_name","online_price","weight","length","width","height","vendor_name","category_name","sub_category_name","remarks"];
-    const row = ["Cotton T-Shirt","TSHIRT-001","999","599","799","61091000","18","IGST","PCS","100","Premium Cotton T-Shirt","High quality cotton","Nike","899","200","30","20","5","Nike Vendor","Apparel","T-Shirts","Summer collection"];
+    const hdr = ["name","product_code","mrp","wholesale_price","special_price","expenses","hsn_code","gst_percent","gst_type","unit_of_measure","quantity","title","description","brand_name","online_price","weight","length","width","height","vendor_name","category_name","sub_category_name","remarks"];
+    const row = ["Cotton T-Shirt","TSHIRT-001","999","599","799","50","61091000","18","IGST","PCS","100","Premium Cotton T-Shirt","High quality cotton","Nike","899","0.25","30","20","5","Nike Vendor","Apparel","T-Shirts","Summer collection"];
     const blob = new Blob([[hdr,row].map(r=>r.join(",")).join("\n")], { type:"text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "sample_bulk_upload.csv";
