@@ -158,7 +158,7 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             // Draw Special Price on the right corner
             ctx.textAlign = "right";
             ctx.fillStyle = "#000000";
-            ctx.fillText(`Spl. Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - 20, currentY);
+            ctx.fillText(`Spl.Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - 20, currentY);
             
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
@@ -191,7 +191,7 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
             const labelWidth = 500;  // Standard 50mm (5 cm)
             const labelHeight = 250; // Standard 25mm (2.5 cm)
             const gapX = 30;
-            const gapY = 30;
+            const gapY = 38;
             const marginX = 0;
             const marginY = 0;
 

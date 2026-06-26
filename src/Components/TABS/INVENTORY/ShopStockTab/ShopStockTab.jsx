@@ -455,14 +455,14 @@ export default function ShopStockTab() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Min/Max</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Suggested</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Updated</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Barcode</th>
+                            {/* <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Barcode</th> */}
                             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {(stocksLoading || stocksFetching) && (
                             <tr>
-                                <td colSpan={13} className="px-4 py-10 text-center">
+                                <td colSpan={12} className="px-4 py-10 text-center">
                                     <div className="flex justify-center">
                                         <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
                                     </div>
@@ -471,7 +471,7 @@ export default function ShopStockTab() {
                         )}
                         {!stocksLoading && !stocksFetching && groupedProducts.length === 0 && (
                             <tr>
-                                <td colSpan={13} className="px-4 py-14 text-center">
+                                <td colSpan={12} className="px-4 py-14 text-center">
                                     <Package size={32} className="text-gray-300 mx-auto mb-2" />
                                     <p className="text-gray-400 text-sm">No stock records found for your shop</p>
                                     <p className="text-xs text-gray-400 mt-1">Products will appear here when stock is added</p>
@@ -594,7 +594,7 @@ export default function ShopStockTab() {
                                         </td>
                                         
                                         {/* Barcode Action */}
-                                        <td className="px-4 py-3">
+                                        {/* <td className="px-4 py-3">
                                             {isMultiVariant ? (
                                                 <button
                                                     onClick={() => handleAllVariantsBarcode(group)}
@@ -620,20 +620,20 @@ export default function ShopStockTab() {
                                                     </button>
                                                 )
                                             )}
-                                        </td>
+                                        </td> */}
                                         
                                         {/* Actions */}
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-1">
                                                 {canEdit && firstVariant && (
                                                     <>
-                                                        <button 
+                                                        {/* <button 
                                                             onClick={() => handleVariantQuantity(firstVariant, group.name)} 
                                                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors" 
                                                             title="Adjust Quantity"
                                                         >
                                                             <Edit2 size={15} />
-                                                        </button>
+                                                        </button> */}
                                                         <button 
                                                             onClick={() => handleVariantMinMax(firstVariant)} 
                                                             className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40" 
@@ -651,7 +651,7 @@ export default function ShopStockTab() {
                                     {/* Expanded Row - ALL Variants with full capabilities */}
                                     {expandedProducts[group.product_id] && isMultiVariant && group.variants.length > 0 && (
                                         <tr>
-                                            <td colSpan={13} className="px-0 py-0 bg-gray-50">
+                                            <td colSpan={12} className="px-0 py-0 bg-gray-50">
                                                 <div className="p-4 pl-16 border-t border-gray-100">
                                                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                                                         <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
@@ -666,7 +666,7 @@ export default function ShopStockTab() {
                                                                     <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Available</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Min/Max</th>
-                                                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Barcode Action</th>
+                                                                    {/* <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Barcode Action</th> */}
                                                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-500">Actions</th>
                                                                 </tr>
                                                             </thead>
@@ -737,7 +737,7 @@ export default function ShopStockTab() {
                                                                                 )}
                                                                             </td>
                                                                             
-                                                                            <td className="px-4 py-2">
+                                                                            {/* <td className="px-4 py-2">
                                                                                 <button
                                                                                     onClick={() => handleSingleVariantBarcode(variant, {
                                                                                         product_id: group.product_id,
@@ -749,19 +749,19 @@ export default function ShopStockTab() {
                                                                                     <Barcode size={12} />
                                                                                     Get Barcode
                                                                                 </button>
-                                                                             </td>
+                                                                             </td> */}
                                                                             
                                                                             <td className="px-4 py-2 text-center">
                                                                                 <div className="flex items-center justify-center gap-1">
                                                                                     {canEdit && (
                                                                                         <>
-                                                                                            <button 
+                                                                                            {/* <button 
                                                                                                 onClick={() => handleVariantQuantity(variant, group.name)} 
                                                                                                 className="p-1 text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors" 
                                                                                                 title="Adjust Quantity"
                                                                                             >
                                                                                                 <Edit2 size={14} />
-                                                                                            </button>
+                                                                                            </button> */}
                                                                                             <button 
                                                                                                 onClick={() => handleVariantMinMax(variant)} 
                                                                                                 className="p-1 text-gray-400 hover:text-purple-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40" 
