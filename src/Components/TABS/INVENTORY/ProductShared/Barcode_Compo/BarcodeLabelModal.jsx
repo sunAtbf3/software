@@ -174,6 +174,10 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
         
         for (let i = 0; i < pages; i++) {
             const pageItems = items.slice(i * 2, (i + 1) * 2);
+            // If the row has only 1 item, duplicate it to fill the 2-Up row and avoid waste
+            if (pageItems.length === 1) {
+                pageItems.push(pageItems[0]);
+            }
             const pageCanvas = await generateBatchLabels(pageItems, layoutOptions);
             canvases.push(pageCanvas);
         }
