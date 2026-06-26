@@ -20,47 +20,28 @@ export default function WarehouseAddForm({ formData, formErrors, onSave }) {
     const dispatch = useDispatch();
     const [createWarehouse, { isLoading }] = useCreateWarehouseMutation();
 
-    // ── Client-side validation ─────────────────────────────────────────────────
+    // ── Client-side validation (simplified to required checks only) ───────────────────────────
     const validate = () => {
         const errors = {};
         const code = formData.warehouse_code?.trim();
         const name = formData.warehouse_name?.trim();
         const addr = formData.address?.trim();
         const city = formData.city?.trim();
-        const mgr = formData.manager_name?.trim();
-        const rem = formData.remarks?.trim();
 
         if (!code) {
             errors.warehouse_code = "Warehouse code is required";
         }
-        // else if (!/^[A-Z0-9_-]{3,20}$/.test(code)) {
-        //     errors.warehouse_code = "3–20 chars, uppercase letters, digits, _ or - only";
-        // }
 
         if (!name) {
             errors.warehouse_name = "Warehouse name is required";
-        } else if (name.length < 2 || name.length > 150) {
-            errors.warehouse_name = "Must be 2–150 characters";
         }
 
         if (!addr) {
             errors.address = "Address is required";
-        } else if (addr.length < 3 || addr.length > 500) {
-            errors.address = "Must be 3–500 characters";
         }
 
         if (!city) {
             errors.city = "City is required";
-        } else if (city.length < 2 || city.length > 100) {
-            errors.city = "Must be 2–100 characters";
-        }
-
-        if (mgr && (mgr.length < 2 || mgr.length > 100)) {
-            errors.manager_name = "Must be 2–100 characters";
-        }
-
-        if (rem && rem.length > 500) {
-            errors.remarks = "Max 500 characters";
         }
 
         return errors;
