@@ -152,12 +152,12 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
 
             // Draw MRP on the left corner
             ctx.textAlign = "left";
-            ctx.fillStyle = "#555555";
+            ctx.fillStyle = "#000000";
             ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, config.margin, currentY);
 
             // Draw Special Price on the right corner
             ctx.textAlign = "right";
-            ctx.fillStyle = "#E53E3E";
+            ctx.fillStyle = "#000000";
             ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - config.margin, currentY);
             
             // Draw separator line at bottom (optional)
