@@ -190,7 +190,7 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
             
             const labelWidth = 500;  // Standard 50mm (5 cm)
             const labelHeight = 250; // Standard 25mm (2.5 cm)
-            const gapX = 25;
+            const gapX = 30;
             const gapY = 20;
             const marginX = 0;
             const marginY = 0;
