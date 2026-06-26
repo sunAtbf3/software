@@ -150,15 +150,15 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const mrp = variant.mrp || product?.mrp || 0;
             const salePrice = variant.special_price || product?.special_price || 0;
 
-            // Draw MRP on the left corner (with extra margin for rounded corners)
+            // Draw MRP on the left corner
             ctx.textAlign = "left";
             ctx.fillStyle = "#000000";
-            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, config.margin + 15, currentY);
+            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, config.margin, currentY);
 
-            // Draw Special Price on the right corner (with extra margin for rounded corners)
+            // Draw Special Price on the right corner
             ctx.textAlign = "right";
             ctx.fillStyle = "#000000";
-            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - (config.margin + 15), currentY);
+            ctx.fillText(`Special Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - config.margin, currentY);
             
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
@@ -190,7 +190,7 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
             
             const labelWidth = 500;  // Standard 50mm (5 cm)
             const labelHeight = 250; // Standard 25mm (2.5 cm)
-            const gapX = 20;
+            const gapX = 25;
             const gapY = 20;
             const marginX = 0;
             const marginY = 0;
