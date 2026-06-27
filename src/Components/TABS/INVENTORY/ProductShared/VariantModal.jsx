@@ -99,7 +99,7 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
   const existingImages = variantForm.imagesToKeep || [];
   const newImages = variantForm.newImages || [];
   const allImages = [...existingImages, ...newImages];
-  
+
   const setPrimaryImage = (images, index) => {
     if (index === 0) return images;
     const reordered = [...images];
@@ -177,242 +177,242 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
       <div className="flex items-center justify-center min-h-screen px-4 py-8">
         <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xl p-6 space-y-5 max-h-[90vh] overflow-y-auto">
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-gray-800">
-              {isEditing ? "Edit Variant" : "Add Variant"}
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Fill prices, attributes, and shipping for this variant
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-gray-800">
+                {isEditing ? "Edit Variant" : "Add Variant"}
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Fill prices, attributes, and shipping for this variant
+              </p>
+            </div>
+            <button onClick={() => dispatch(closeVariantModal())} className="text-gray-400 hover:text-gray-600 text-lg cursor-pointer">✕</button>
           </div>
-          <button onClick={() => dispatch(closeVariantModal())} className="text-gray-400 hover:text-gray-600 text-lg cursor-pointer">✕</button>
-        </div>
 
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <div>
-            <span className="text-sm font-medium text-gray-700">Variant Active</span>
-            <p className="text-xs text-gray-400 mt-0.5">Inactive variants won't show</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => dispatch(updateVariantForm({ is_active: !variantForm.is_active }))}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${variantForm.is_active !== false ? "bg-indigo-500" : "bg-gray-300"}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${variantForm.is_active !== false ? "translate-x-6" : "translate-x-1"}`} />
-          </button>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Attributes</label>
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+              <span className="text-sm font-medium text-gray-700">Variant Active</span>
+              <p className="text-xs text-gray-400 mt-0.5">Inactive variants won't show</p>
+            </div>
             <button
               type="button"
-              onClick={() => dispatch(addVariantAttributeRow())}
-              className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
+              onClick={() => dispatch(updateVariantForm({ is_active: !variantForm.is_active }))}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${variantForm.is_active !== false ? "bg-indigo-500" : "bg-gray-300"}`}
             >
-              + Add Row
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${variantForm.is_active !== false ? "translate-x-6" : "translate-x-1"}`} />
             </button>
           </div>
-          <div className="space-y-2">
-            {(variantForm.attributes || [{ key: "", value: "" }]).map((attr, i) => (
-              <div key={i} className="flex gap-2 items-center">
-                <input
-                  value={attr.key}
-                  onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: e.target.value, value: attr.value }))}
-                  placeholder="e.g. Color"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  value={attr.value}
-                  onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: attr.key, value: e.target.value }))}
-                  placeholder="e.g. Red"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {(variantForm.attributes || []).length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => dispatch(removeVariantAttributeRow(i))}
-                    className="text-red-400 hover:text-red-600 text-sm cursor-pointer px-1"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prices</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">MRP <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("mrp")} placeholder="MRP" className={inputCls("mrp")} />
-              {errorMsg("mrp")}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Attributes</label>
+              <button
+                type="button"
+                onClick={() => dispatch(addVariantAttributeRow())}
+                className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
+              >
+                + Add Row
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Special Price <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("special_price")} placeholder="Selling Price" className={inputCls("special_price")} />
-              {errorMsg("special_price")}
+            <div className="space-y-2">
+              {(variantForm.attributes || [{ key: "", value: "" }]).map((attr, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    value={attr.key}
+                    onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: e.target.value, value: attr.value }))}
+                    placeholder="e.g. Color"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    value={attr.value}
+                    onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: attr.key, value: e.target.value }))}
+                    placeholder="e.g. Red"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {(variantForm.attributes || []).length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => dispatch(removeVariantAttributeRow(i))}
+                      className="text-red-400 hover:text-red-600 text-sm cursor-pointer px-1"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Price <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
-              {errorMsg("purchase_price")}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Expenses <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("expenses")} placeholder="Per Unit" className={inputCls("expenses")} />
-              {errorMsg("expenses")}
-            </div>
-            {/* <div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prices</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">MRP <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("mrp")} placeholder="MRP" className={inputCls("mrp")} />
+                {errorMsg("mrp")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Special Price <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("special_price")} placeholder="Selling Price" className={inputCls("special_price")} />
+                {errorMsg("special_price")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Price <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
+                {errorMsg("purchase_price")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Expenses <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("expenses")} placeholder="Per Unit" className={inputCls("expenses")} />
+                {errorMsg("expenses")}
+              </div>
+              {/* <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Online Price</label>
               <input type="number" step="0.01" {...field("online_price")} placeholder="E-comm" className={inputCls("online_price")} />
             </div> */}
-            <div>
+              {/* <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Cost</label>
               <input type="number" step="0.01" {...field("purchase_cost")} placeholder="Alternate" className={inputCls("purchase_cost")} />
+            </div> */}
             </div>
           </div>
-        </div>
 
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Shipping
-          </p>
-          <div className="grid grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("weight")} placeholder="0.25" className={inputCls("weight")} />
-              {errorMsg("weight")}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm) <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("length")} placeholder="30" className={inputCls("length")} />
-              {errorMsg("length")}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm) <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("width")} placeholder="20" className={inputCls("width")} />
-              {errorMsg("width")}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm) <span className="text-red-500">*</span></label>
-              <input type="number" step="0.01" {...field("height")} placeholder="5" className={inputCls("height")} />
-              {errorMsg("height")}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Low Stock Threshold <span className="text-red-500">*</span></label>
-            <input type="number" {...field("low_stock_threshold")} placeholder="10" className={inputCls("low_stock_threshold")} />
-            {errorMsg("low_stock_threshold")}
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              Shipping
+            </p>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Weight (kg) <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("weight")} placeholder="0.25" className={inputCls("weight")} />
+                {errorMsg("weight")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Length (cm) <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("length")} placeholder="30" className={inputCls("length")} />
+                {errorMsg("length")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Width (cm) <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("width")} placeholder="20" className={inputCls("width")} />
+                {errorMsg("width")}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Height (cm) <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("height")} placeholder="5" className={inputCls("height")} />
+                {errorMsg("height")}
+              </div>
+            </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Low Stock Threshold <span className="text-red-500">*</span></label>
+              <input type="number" {...field("low_stock_threshold")} placeholder="10" className={inputCls("low_stock_threshold")} />
+              {errorMsg("low_stock_threshold")}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+              <input {...field("remarks")} placeholder="Optional" className={inputCls("remarks")} />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
-            <input {...field("remarks")} placeholder="Optional" className={inputCls("remarks")} />
-          </div>
-        </div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Images <span className="text-gray-400 font-normal normal-case">(optional)</span>
+            </p>
 
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Images <span className="text-gray-400 font-normal normal-case">(optional)</span>
-          </p>
+            {allImages.length > 0 && (
+              <div className="flex gap-2 flex-wrap mb-2">
+                {allImages.map((img, i) => {
+                  const isExisting = i < existingImages.length;
+                  const imgSrc = getImageSrc(img, isExisting, !isExisting);
+                  const imageId = isExisting ? img.image_id : null;
+                  const isPrimary = i === 0;
 
-          {allImages.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-2">
-              {allImages.map((img, i) => {
-                const isExisting = i < existingImages.length;
-                const imgSrc = getImageSrc(img, isExisting, !isExisting);
-                const imageId = isExisting ? img.image_id : null;
-                const isPrimary = i === 0;
-
-                return (
-                  <div key={isExisting ? imageId || i : `new-${i}`} className="relative w-16 h-16 rounded-lg overflow-hidden border-2 group transition-all" style={{ borderColor: isPrimary ? '#F7A221' : '#e5e7eb' }}>
-                    {isPrimary && (
-                      <div className="absolute top-0 left-0 w-full bg-[#F7A221]/90 text-black text-[8px] font-bold text-center py-0.5 z-10">
-                        PRIMARY
-                      </div>
-                    )}
-
-                    <img src={imgSrc} alt={`v-img-${i}`} className="w-full h-full object-cover" />
-
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                      {!isPrimary && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const reordered = setPrimaryImage(allImages, i);
-                            if (isExisting) {
-                              const newKeep = setPrimaryImage(existingImages, i);
-                              dispatch(updateVariantForm({ imagesToKeep: newKeep, newImages: newImages }));
-                            } else {
-                              const newIdx = i - existingImages.length;
-                              const reorderedNew = setPrimaryImage(newImages, newIdx);
-                              dispatch(updateVariantForm({ imagesToKeep: existingImages, newImages: reorderedNew }));
-                            }
-                          }}
-                          className="px-1.5 py-0.5 bg-[#F7A221] text-black text-[9px] rounded font-medium hover:bg-[#e89510]"
-                        >
-                          Set Primary
-                        </button>
+                  return (
+                    <div key={isExisting ? imageId || i : `new-${i}`} className="relative w-16 h-16 rounded-lg overflow-hidden border-2 group transition-all" style={{ borderColor: isPrimary ? '#F7A221' : '#e5e7eb' }}>
+                      {isPrimary && (
+                        <div className="absolute top-0 left-0 w-full bg-[#F7A221]/90 text-black text-[8px] font-bold text-center py-0.5 z-10">
+                          PRIMARY
+                        </div>
                       )}
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(i, isExisting, imageId)}
-                          className="w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
-                          title="Delete image"
-                        >
-                          ×
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleReplaceClick(i, isExisting, imageId)}
-                          className="w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-blue-600"
-                          title="Replace image"
-                        >
-                          ↻
-                        </button>
+
+                      <img src={imgSrc} alt={`v-img-${i}`} className="w-full h-full object-cover" />
+
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                        {!isPrimary && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reordered = setPrimaryImage(allImages, i);
+                              if (isExisting) {
+                                const newKeep = setPrimaryImage(existingImages, i);
+                                dispatch(updateVariantForm({ imagesToKeep: newKeep, newImages: newImages }));
+                              } else {
+                                const newIdx = i - existingImages.length;
+                                const reorderedNew = setPrimaryImage(newImages, newIdx);
+                                dispatch(updateVariantForm({ imagesToKeep: existingImages, newImages: reorderedNew }));
+                              }
+                            }}
+                            className="px-1.5 py-0.5 bg-[#F7A221] text-black text-[9px] rounded font-medium hover:bg-[#e89510]"
+                          >
+                            Set Primary
+                          </button>
+                        )}
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(i, isExisting, imageId)}
+                            className="w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                            title="Delete image"
+                          >
+                            ×
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleReplaceClick(i, isExisting, imageId)}
+                            className="w-5 h-5 bg-blue-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-blue-600"
+                            title="Replace image"
+                          >
+                            ↻
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
 
-          <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
-          <input ref={replaceFileInputRef} type="file" accept="image/*" onChange={handleReplaceFileChange} className="hidden" />
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+            <input ref={replaceFileInputRef} type="file" accept="image/*" onChange={handleReplaceFileChange} className="hidden" />
 
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-50 cursor-pointer disabled:opacity-40 transition-colors"
-          >
-            + Upload Images
-          </button>
-          <p className="text-xs text-gray-400 mt-1">Hover over image to see Delete (×) and Replace (↻) buttons</p>
-        </div>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:bg-gray-50 cursor-pointer disabled:opacity-40 transition-colors"
+            >
+              + Upload Images
+            </button>
+            <p className="text-xs text-gray-400 mt-1">Hover over image to see Delete (×) and Replace (↻) buttons</p>
+          </div>
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button onClick={() => dispatch(closeVariantModal())} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
-            Cancel
-          </button>
-          <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
-            {isEditing ? "Update Variant" : "Save Variant"}
-          </button>
-        </div>
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button onClick={() => dispatch(closeVariantModal())} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 cursor-pointer">
+              Cancel
+            </button>
+            <button onClick={handleSave} className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer">
+              {isEditing ? "Update Variant" : "Save Variant"}
+            </button>
+          </div>
 
         </div>
       </div>
     </div>
   );
 }
-// upper code get upadted by the new price updates 
+// upper code get upadted by the new price updates
 
 // // TABS/INVENTORY/ProductShared/VariantModal.jsx
 
