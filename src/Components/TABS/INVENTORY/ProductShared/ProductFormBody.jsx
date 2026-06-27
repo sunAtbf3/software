@@ -325,8 +325,13 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
         </div>
       </div>
 
-      {/* ── Section 6: Status & Remarks ──────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* ── Section 6: Status, Threshold & Remarks ───────────────────────── */}
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Low Stock Threshold <span className="text-red-500">*</span></label>
+          <input type="number" {...field("low_stock_threshold")} placeholder="10" className={inputCls("low_stock_threshold")} />
+          {errorMsg("low_stock_threshold")}
+        </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
           <input {...field("remarks")} placeholder="Optional notes" className={inputCls("remarks")} />

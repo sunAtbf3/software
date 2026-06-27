@@ -77,6 +77,8 @@ export default function ProductEditForm({
       errors.purchase_price = "Purchase price is required";
     if (!formData.primary_vendor_id)     errors.primary_vendor_id = "Vendor is required";
     if (!formData.category_id)           errors.category_id = "Category is required";
+    if (formData.low_stock_threshold === undefined || formData.low_stock_threshold === "" || toNumber(formData.low_stock_threshold) < 0)
+      errors.low_stock_threshold = "Threshold is required";
     if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
       errors.expenses = "Expenses is required";
     if (!formData.weight || toNumber(formData.weight) <= 0)

@@ -44,6 +44,7 @@ const REQUIRED_COLS = [
   "expenses",
   "vendor_name",
   "category_name",
+  "low_stock_threshold",
   "weight",
   "length",
   "width",

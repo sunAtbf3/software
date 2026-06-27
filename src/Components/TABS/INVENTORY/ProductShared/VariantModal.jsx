@@ -115,6 +115,9 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
     if (variantForm.purchase_price === "" || variantForm.purchase_price == null || toNumber(variantForm.purchase_price) < 0) {
       errors.purchase_price = "Purchase price is required";
     }
+    if (variantForm.low_stock_threshold === undefined || variantForm.low_stock_threshold === "" || toNumber(variantForm.low_stock_threshold) < 0) {
+      errors.low_stock_threshold = "Threshold is required";
+    }
     if (variantForm.expenses === undefined || variantForm.expenses === "") errors.expenses = "Expenses is required";
     // Shipping validation for multi-variant products
     if (!variantForm.weight || toNumber(variantForm.weight) <= 0) errors.weight = "Weight is required";
@@ -304,8 +307,9 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Low Stock Threshold</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Low Stock Threshold <span className="text-red-500">*</span></label>
             <input type="number" {...field("low_stock_threshold")} placeholder="10" className={inputCls("low_stock_threshold")} />
+            {errorMsg("low_stock_threshold")}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
