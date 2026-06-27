@@ -190,6 +190,7 @@ export const ACTION_PERMISSIONS = {
     "productMs.archive": ["WH_MANAGER"],
     "productMs.bulk_upload": ["WH_MANAGER"],
     "productMs.category_add": ["SUPER_ADMIN"],
+    "product.permanent_delete": ["SUPER_ADMIN"],
     // Vendors                                         
     "vendor.read": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER",],
     "vendor.create": ["SUPER_ADMIN"],

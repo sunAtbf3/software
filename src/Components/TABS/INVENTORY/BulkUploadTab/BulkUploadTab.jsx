@@ -172,14 +172,65 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
     }
   };
 
-  const downloadFailedReport = async () => {
+  const downloadFailedReport = () => {
     try {
-      const res = await AxiosInstance.get("/products/bulk/failed-report", { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a"); a.href = url; a.download = "failed_products.csv";
-      document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
-      toast.success("Report downloaded");
-    } catch { toast.error("Failed to download report"); }
+      if (!result?.failed || result.failed.length === 0) {
+        toast.error("No failed products to report");
+        return;
+      }
+
+      // Extract clean, readable error from messy Prisma output
+      const cleanError = (raw) => {
+        if (!raw) return "Unknown error";
+        // 1. Strip ANSI escape codes
+        let msg = String(raw).replace(/\u001b\[[0-9;]*m/g, "");
+        // 2. Try to extract the final meaningful line after all the stack/code noise
+        //    Prisma errors end with lines like:
+        //    "Argument `purchase_price` is missing."
+        //    "Unique constraint failed on the fields: (`warehouse_id`,`product_code`)"
+        const patterns = [
+          /Argument\s+`?(\w+)`?\s+is missing/i,
+          /Unique constraint failed on the fields: \(([^)]+)\)/i,
+          /Foreign key constraint failed on the field: \(([^)]+)\)/i,
+          /The provided value .+ is not valid/i,
+          /Expected .+, provided .+/i,
+        ];
+        for (const pat of patterns) {
+          const match = msg.match(pat);
+          if (match) return match[0].trim();
+        }
+        // 3. Fallback: grab last non-empty line (usually has the real error)
+        const lines = msg.split("\n").map(l => l.trim()).filter(Boolean);
+        const lastLine = lines[lines.length - 1] || msg;
+        // Remove backticks decoration
+        return lastLine.replace(/`/g, "'").substring(0, 200);
+      };
+
+      const headers = ["Product Name", "Excel Row", "Error Message"];
+      const rows = result.failed.map(item => [
+        `"${String(item.product || '').replace(/"/g, '""')}"`,
+        `"${String(item.rows?.join(", ") || '').replace(/"/g, '""')}"`,
+        `"${cleanError(item.message).replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "failed_products_report.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Failed report downloaded");
+    } catch {
+      toast.error("Failed to download report");
+    }
   };
 
   const downloadSample = () => {
@@ -661,12 +712,37 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                       <XCircle size={13} className="text-red-500" />
                       <span className="text-xs font-semibold text-red-400">Failed ({result.failed.length})</span>
                     </div>
-                    <ul className="max-h-36 overflow-y-auto px-4 py-3 space-y-2">
-                      {result.failed.map((f, i) => (
-                        <li key={i} className="text-xs text-slate-400">
-                          <span className="text-slate-200 font-medium">{f.product}:</span> {f.error}
-                        </li>
-                      ))}
+                    <ul className="max-h-44 overflow-y-auto px-4 py-3 space-y-2">
+                      {result.failed.map((f, i) => {
+                        // Clean the Prisma error message for display
+                        const rawMsg = String(f.message || f.error || "Unknown error");
+                        const stripped = rawMsg.replace(/\u001b\[[0-9;]*m/g, "");
+                        const knownPatterns = [
+                          /Argument\s+`?(\w+)`?\s+is missing\.?/i,
+                          /Unique constraint failed on the fields: \(([^)]+)\)/i,
+                          /Foreign key constraint failed on the field: \(([^)]+)\)/i,
+                          /The provided value .+ is not valid\.?/i,
+                        ];
+                        let cleanMsg = "";
+                        for (const pat of knownPatterns) {
+                          const m = stripped.match(pat);
+                          if (m) { cleanMsg = m[0]; break; }
+                        }
+                        if (!cleanMsg) {
+                          const lines = stripped.split("\n").map(l => l.trim()).filter(Boolean);
+                          cleanMsg = (lines[lines.length - 1] || stripped).replace(/`/g, "'").substring(0, 150);
+                        }
+                        return (
+                          <li key={i} className="text-xs text-red-300/80 flex items-start gap-2">
+                            <span className="text-red-500 mt-0.5 shrink-0">•</span>
+                            <div>
+                              <span className="text-slate-200 font-medium">{f.product}</span>
+                              <span className="text-slate-500 ml-1">(Row {f.rows?.join(", ")})</span>
+                              <p className="text-red-400/90 mt-0.5">{cleanMsg}</p>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 )}
