@@ -184,8 +184,8 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
 
   const downloadSample = () => {
     const a = document.createElement("a");
-    a.href = "/bulk-product-upload-template-software-final.xlsx";
-    a.download = "bulk-product-upload-template-software-final.xlsx";
+    a.href = "/bulk-product-upload-template-software-final-with-validation.xlsx";
+    a.download = "bulk-product-upload-template-software-final-with-validation.xlsx";
     document.body.appendChild(a);
     a.click();
     a.remove();
