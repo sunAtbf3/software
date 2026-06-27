@@ -40,7 +40,10 @@ const REQUIRED_COLS = [
   "product_code",
   "mrp",
   "special_price",
+  "purchase_price",
   "expenses",
+  "vendor_name",
+  "category_name",
   "weight",
   "length",
   "width",
@@ -122,7 +125,29 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (e) => setCsvPct(e.total ? Math.round((e.loaded / e.total) * 100) : 0),
       });
-      dispatch(setPreviewData(res.data.data?.preview));
+      
+      const resData = res.data.data;
+
+      // Toast failed/invalid rows if any
+      if (resData?.failed && resData.failed.length > 0) {
+        resData.failed.forEach((fail) => {
+          toast.error(`[Row ${fail.rows?.join(", ") || "?"}] ${fail.product || "Product"}: ${fail.message}`, {
+            autoClose: 10000,
+          });
+        });
+      }
+
+      const validCount = resData?.preview?.valid || 0;
+
+      // If no valid rows found and there were validation failures, go back to upload step
+      if (validCount === 0 && resData?.failed && resData.failed.length > 0) {
+        const errorMsg = resData.failed.map(f => f.message).join(" | ");
+        dispatch(setCsvError(`Validation failed: ${errorMsg}`));
+        dispatch(setStep("upload"));
+        return;
+      }
+
+      dispatch(setPreviewData(resData?.preview));
     } catch (err) {
       dispatch(setCsvError(err.response?.data?.message || "Preview failed"));
       dispatch(setStep("upload"));
@@ -157,13 +182,13 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
   };
 
   const downloadSample = () => {
-    const hdr = ["name","product_code","mrp","wholesale_price","special_price","expenses","hsn_code","gst_percent","gst_type","unit_of_measure","quantity","title","description","brand_name","online_price","weight","length","width","height","vendor_name","category_name","sub_category_name","remarks"];
-    const row = ["Cotton T-Shirt","TSHIRT-001","999","599","799","50","61091000","18","IGST","PCS","100","Premium Cotton T-Shirt","High quality cotton","Nike","899","0.25","30","20","5","Nike Vendor","Apparel","T-Shirts","Summer collection"];
-    const blob = new Blob([[hdr,row].map(r=>r.join(",")).join("\n")], { type:"text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "sample_bulk_upload.csv";
-    document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
-    toast.success("Sample CSV downloaded");
+    const a = document.createElement("a");
+    a.href = "/bulk-product-upload-template-software-final.xlsx";
+    a.download = "bulk-product-upload-template-software-final.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast.success("Sample Excel template downloaded");
   };
 
   if (!isOpen) return null;

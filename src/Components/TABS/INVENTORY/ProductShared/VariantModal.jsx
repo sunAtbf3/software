@@ -112,8 +112,8 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
     const errors = {};
     if (!variantForm.mrp || toNumber(variantForm.mrp) <= 0) errors.mrp = "MRP is required";
     if (!variantForm.special_price || toNumber(variantForm.special_price) <= 0) errors.special_price = "Special price is required";
-    if (variantForm.purchase_price && toNumber(variantForm.purchase_price) < 0) {
-      errors.purchase_price = "Purchase price cannot be negative";
+    if (variantForm.purchase_price === "" || variantForm.purchase_price == null || toNumber(variantForm.purchase_price) < 0) {
+      errors.purchase_price = "Purchase price is required";
     }
     if (variantForm.expenses === undefined || variantForm.expenses === "") errors.expenses = "Expenses is required";
     // Shipping validation for multi-variant products
@@ -254,7 +254,7 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
               {errorMsg("special_price")}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Price <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Price <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
               {errorMsg("purchase_price")}
             </div>

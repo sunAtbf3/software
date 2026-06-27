@@ -299,7 +299,7 @@ export const ROLE_LABELS = {
     [ROLES.WH_MANAGER]: "Warehouse Manager",
     [ROLES.WH_STOCK_LISTER]: "Warehouse Stock Lister",
     [ROLES.SHOP_OWNER]: "Shop Owner",
-    [ROLES.SHOP_STOCK_LISTER]: "Shop Stock Lister",
+    [ROLES.SHOP_STOCK_LISTER]: "Shop Manager",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

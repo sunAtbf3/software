@@ -170,7 +170,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Primary Vendor <span className="text-gray-400 font-normal">(Optional)</span>
+              Primary Vendor <span className="text-red-500">*</span>
             </label>
             {vendorsLoading ? (
               <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-400">Loading vendors…</div>
@@ -187,7 +187,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Category <span className="text-gray-400 font-normal">(Optional)</span>
+              Category <span className="text-red-500">*</span>
             </label>
             {categoriesLoading ? (
               <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-400">Loading categories…</div>
@@ -230,7 +230,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Purchase Price <span className="text-gray-400 font-normal">(Optional)</span>
+              Purchase Price <span className="text-red-500">*</span>
             </label>
             <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
             {errorMsg("purchase_price")}

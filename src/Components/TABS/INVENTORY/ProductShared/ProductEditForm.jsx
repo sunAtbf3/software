@@ -73,8 +73,10 @@ export default function ProductEditForm({
       errors.mrp = "MRP is required and must be > 0";
     if (!formData.special_price || toNumber(formData.special_price) <= 0)
       errors.special_price = "Special price is required";
-    if (formData.purchase_price && toNumber(formData.purchase_price) < 0)
-      errors.purchase_price = "Purchase price cannot be negative";
+    if (formData.purchase_price === "" || formData.purchase_price == null || toNumber(formData.purchase_price) < 0)
+      errors.purchase_price = "Purchase price is required";
+    if (!formData.primary_vendor_id)     errors.primary_vendor_id = "Vendor is required";
+    if (!formData.category_id)           errors.category_id = "Category is required";
     if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
       errors.expenses = "Expenses is required";
     if (!formData.weight || toNumber(formData.weight) <= 0)

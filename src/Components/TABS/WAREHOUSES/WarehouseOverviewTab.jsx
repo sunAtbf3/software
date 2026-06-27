@@ -27,6 +27,7 @@ import {
 } from "../../../REDUX_FEATURES/REDUX_SLICES/Warehouse_api/warehouseSlice";
 import WarehouseAddForm from "./WarehouseShared/WarehouseAddForm";
 import WarehouseEditForm from "./WarehouseShared/WarehouseEditForm";
+import { can } from "../../roles";
 
 export default function WarehouseOverviewTab() {
   const dispatch = useDispatch();
@@ -105,12 +106,14 @@ export default function WarehouseOverviewTab() {
           <h2 className="text-xl font-semibold text-gray-900">Warehouse Overview</h2>
           <p className="text-sm text-gray-400 mt-0.5">All warehouse locations and their current status</p>
         </div>
-        <button
-          onClick={() => dispatch(openAddForm())}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          + Add Warehouse
-        </button>
+        {can("warehouse.create") && (
+          <button
+            onClick={() => dispatch(openAddForm())}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Add Warehouse
+          </button>
+        )}
       </div>
 
       {/* ── Summary Cards ───────────────────────────────────────────────── */}
@@ -246,13 +249,15 @@ export default function WarehouseOverviewTab() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => dispatch(openEditForm(wh))}
-                    className="text-xs border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors mr-1"
-                  >
-                    Edit
-                  </button>
-                  {wh.is_active && (
+                  {can("warehouse.edit") && (
+                    <button
+                      onClick={() => dispatch(openEditForm(wh))}
+                      className="text-xs border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors mr-1"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {wh.is_active && can("warehouse.delete") && (
                     <button
                       onClick={() => handleDeactivate(wh.warehouse_id)}
                       className="text-xs border border-red-100 text-red-500 px-3 py-1 rounded-lg hover:bg-red-50 transition-colors"

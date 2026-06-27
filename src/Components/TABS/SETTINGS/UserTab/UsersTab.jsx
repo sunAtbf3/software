@@ -48,6 +48,7 @@ const getRoleBreakdownBadgeClass = (value) => {
     if (value === "SUPER_ADMIN") return "bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "WH_MANAGER") return "bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "SHOP_OWNER") return "bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full text-xs font-medium";
+    if (value === "SHOP_STOCK_LISTER") return "bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full text-xs font-medium";
     return "bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full text-xs font-medium";
 };
 
@@ -239,95 +240,95 @@ export default function UsersTab() {
                     <span className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">{totalItems} records</span>
                 </div>
                 <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
-                <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-100">
-                        <tr>
-                            {["User", "Phone", "Role", "Assigned To", "Status", "Created", "Actions"].map(h => (
-                                <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">
-                                    {h}
-                                </th>
+                    <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                {["User", "Phone", "Role", "Assigned To", "Status", "Created", "Actions"].map(h => (
+                                    <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">
+                                        {h}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+
+                            {/* Loading rows */}
+                            {(isLoading || isFetching) && (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-10 text-center">
+                                        <div className="flex justify-center">
+                                            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* Empty state */}
+                            {!isLoading && !isFetching && users.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className="px-4 py-12 text-center">
+                                        <svg className="mx-auto h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <p className="mt-2 text-sm text-gray-400">No users found</p>
+                                    </td>
+                                </tr>
+                            )}
+
+                            {/* User rows */}
+                            {!isLoading && users.map(u => (
+                                <tr
+                                    key={u.user_id}
+                                    className={`hover:bg-gray-50 transition-colors ${!u.is_active ? "opacity-50" : ""}`}
+                                >
+                                    {/* User */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                                                {u.name?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{u.name}</p>
+                                                <p className="font-mono text-xs text-gray-400">{u.user_id}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {/* Phone */}
+                                    <td className="px-4 py-3 text-sm text-gray-500">{u.phone}</td>
+
+                                    {/* Role */}
+                                    <td className="px-4 py-3">{getRoleBadge(u.role)}</td>
+
+                                    {/* Assigned To */}
+                                    <td className="px-4 py-3">{getAssignedTo(u)}</td>
+
+                                    {/* Status */}
+                                    <td className="px-4 py-3">
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-100 text-gray-500 border border-gray-200"
+                                            }`}>
+                                            {u.is_active ? "Active" : "Inactive"}
+                                        </span>
+                                    </td>
+
+                                    {/* Created */}
+                                    <td className="px-4 py-3 text-xs text-gray-400">
+                                        {u.created_at ? new Date(u.created_at).toLocaleDateString("en-IN") : "—"}
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="px-4 py-3">
+                                        <button
+                                            onClick={() => dispatch(openEditForm(u))}
+                                            className="text-xs border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
                             ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-
-                        {/* Loading rows */}
-                        {(isLoading || isFetching) && (
-                            <tr>
-                                <td colSpan={7} className="px-4 py-10 text-center">
-                                    <div className="flex justify-center">
-                                        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* Empty state */}
-                        {!isLoading && !isFetching && users.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className="px-4 py-12 text-center">
-                                    <svg className="mx-auto h-8 w-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <p className="mt-2 text-sm text-gray-400">No users found</p>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* User rows */}
-                        {!isLoading && users.map(u => (
-                            <tr
-                                key={u.user_id}
-                                className={`hover:bg-gray-50 transition-colors ${!u.is_active ? "opacity-50" : ""}`}
-                            >
-                                {/* User */}
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                                            {u.name?.charAt(0)?.toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-800">{u.name}</p>
-                                            <p className="font-mono text-xs text-gray-400">{u.user_id}</p>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                {/* Phone */}
-                                <td className="px-4 py-3 text-sm text-gray-500">{u.phone}</td>
-
-                                {/* Role */}
-                                <td className="px-4 py-3">{getRoleBadge(u.role)}</td>
-
-                                {/* Assigned To */}
-                                <td className="px-4 py-3">{getAssignedTo(u)}</td>
-
-                                {/* Status */}
-                                <td className="px-4 py-3">
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.is_active ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-100 text-gray-500 border border-gray-200"
-                                        }`}>
-                                        {u.is_active ? "Active" : "Inactive"}
-                                    </span>
-                                </td>
-
-                                {/* Created */}
-                                <td className="px-4 py-3 text-xs text-gray-400">
-                                    {u.created_at ? new Date(u.created_at).toLocaleDateString("en-IN") : "—"}
-                                </td>
-
-                                {/* Actions */}
-                                <td className="px-4 py-3">
-                                    <button
-                                        onClick={() => dispatch(openEditForm(u))}
-                                        className="text-xs border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
-                                    >
-                                        Edit
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
