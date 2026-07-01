@@ -63,7 +63,8 @@ export default function BulkTransferRequestsTab() {
     const userRole = user?.role || "";
     const isWarehouseStaff = userRole === "WH_MANAGER" || userRole === "WH_STOCK_LISTER";
     const isWhBulkFlow = isWarehouseStaff && !!userWarehouseId;
-    const isShopOwnerFlow = userRole === "SHOP_OWNER" && !!userShopId;
+    // const isShopOwnerFlow = userRole === "SHOP_OWNER" && !!userShopId;
+    const isShopOwnerFlow = (userRole === "SHOP_OWNER" || userRole === "SHOP_STOCK_LISTER") && !!userShopId;
     const canCreateBulk =
         userRole === "SUPER_ADMIN" || isShopOwnerFlow || isWhBulkFlow;
     
