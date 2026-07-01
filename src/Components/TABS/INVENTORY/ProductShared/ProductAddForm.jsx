@@ -159,6 +159,7 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
       errors.special_price = "Special price is required";
     if (formData.purchase_price === "" || formData.purchase_price == null || toNumber(formData.purchase_price) < 0)
       errors.purchase_price = "Purchase price is required";
+    if (!formData.unit_of_measure)         errors.unit_of_measure = "Unit of measure is required";
     if (!formData.primary_vendor_id)         errors.primary_vendor_id = "Vendor is required";
     if (!formData.category_id)               errors.category_id = "Category is required";
     if (formData.low_stock_threshold === undefined || formData.low_stock_threshold === "" || toNumber(formData.low_stock_threshold) < 0)

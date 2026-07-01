@@ -15,7 +15,7 @@ const EMPTY_FORM = {
   hsn_code: "",
   gst_percent: "18",
   gst_type: "CGST_SGST",
-  unit_of_measure: "PCS",
+  unit_of_measure: "",
   mrp: "",
   special_price: "",        // Changed from retail_price
   purchase_price: "",       // Changed from wholesale_price

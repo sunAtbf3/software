@@ -146,7 +146,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Unit of Measure <span className="text-gray-400 font-normal">(Optional)</span>
+              Unit of Measure <span className="text-red-500">*</span>
             </label>
             <select value={formData.unit_of_measure || ""} onChange={(e) => onChange({ unit_of_measure: e.target.value })} className={inputCls("unit_of_measure")}>
               <option value="">— Select UOM —</option>
