@@ -112,7 +112,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             quantity_available: stockAvailable,
         });
         dispatch(addToCart(cartItem));
-        toast.success(`${productName} added to cart`);
+        // toast.success(`${productName} added to cart`);
     };
 
     const handleBarcodeScan = async (barcode) => {
@@ -188,7 +188,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 variant_id: variant.variant_id, 
                 quantity: newQuantity 
             }));
-            toast.success(`${product?.name} quantity increased to ${newQuantity}`);
+            // toast.success(`${product?.name} quantity increased to ${newQuantity}`);
         } else {
             if (stock.quantity_available === 0) {
                 toast.error(`${product?.name} is out of stock`);
@@ -209,7 +209,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 quantity_available: stock.quantity_available,
             });
             dispatch(addToCart(cartItem));
-            toast.success(`${product?.name} added to cart`);
+            // toast.success(`${product?.name} added to cart`);
         }
     };
 

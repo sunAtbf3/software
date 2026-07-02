@@ -50,6 +50,7 @@ const REQUIRED_COLS = [
   "length",
   "width",
   "height",
+  "Unit of Measure (UOM)",
 ];
 
 // ─── component ───────────────────────────────────────────────────────────────

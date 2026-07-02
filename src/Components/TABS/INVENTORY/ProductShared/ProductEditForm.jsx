@@ -167,9 +167,29 @@ export default function ProductEditForm({
 
       await updateProduct(payload).unwrap();
 
-      // 2. Handle primary variant images
+      // 2. Sync primary variant (Variant 0) — prices, shipping, threshold, images
       const primaryVariantId = productDetail?.primary_variant?.variant_id || productDetail?.variants?.[0]?.variant_id;
       if (primaryVariantId) {
+        await updateVariant({
+          productId: selectedProduct.product_id,
+          variantId: primaryVariantId,
+          mrp: toNumber(formData.mrp),
+          special_price: toNumber(formData.special_price),
+          wholesale_price: toNumber(formData.wholesale_price),
+          purchase_price: formData.purchase_price ? toNumber(formData.purchase_price) : 0,
+          expenses: toNumber(formData.expenses),
+          warranty: String(formData.warranty || "").trim() || undefined,
+          online_price: formData.online_price ? toNumber(formData.online_price) : undefined,
+          purchase_cost: formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,
+          weight: formData.weight ? toNumber(formData.weight) : undefined,
+          length: formData.length ? toNumber(formData.length) : undefined,
+          width: formData.width ? toNumber(formData.width) : undefined,
+          height: formData.height ? toNumber(formData.height) : undefined,
+          low_stock_threshold: toNumber(formData.low_stock_threshold, 10),
+          remarks: formData.remarks?.trim() || undefined,
+          is_active: formData.is_active,
+        }).unwrap();
+
         await handleSyncVariantImages(
           selectedProduct.product_id,
           primaryVariantId,
@@ -406,6 +426,7 @@ export default function ProductEditForm({
                         type="button"
                         onClick={() => {
                           dispatch(openVariantModalWithData({
+                            index: i,
                             variant_id: v.variant_id || null,
                             variant_code: v.variant_code || null,
                             system_barcode: v.system_barcode || null,

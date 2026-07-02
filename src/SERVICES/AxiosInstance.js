@@ -1,7 +1,7 @@
 import axios from "axios";
-import { getApiErrorMessage } from "../utils/apiErrorMessage";
 
-const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
+// const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
+const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
 
 // ✅ Access token stored in memory (set by Redux)
 let globalAccessToken = null;
@@ -90,17 +90,6 @@ AxiosInstance.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
-    }
-
-    if (error.response?.data?.message) {
-      const fallback =
-        error.response.status >= 500
-          ? "Something went wrong. Please try again."
-          : "Request failed";
-      error.response.data.message = getApiErrorMessage(
-        { data: error.response.data },
-        fallback
-      );
     }
 
     return Promise.reject(error);

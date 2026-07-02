@@ -29,6 +29,7 @@ const EMPTY_FORM = {
   length: "",
   width: "",
   height: "",
+  low_stock_threshold: "10",
   remarks: "",
   is_active: true,
   // IMAGE TRACKING FOR EDIT MODE
@@ -139,6 +140,11 @@ const buildFormDataFromProduct = (p) => {
     length: String(primaryVariant.length ?? ""),
     width: String(primaryVariant.width ?? ""),
     height: String(primaryVariant.height ?? ""),
+    low_stock_threshold: String(
+      primaryVariant.low_stock_threshold
+        ?? primaryVariant.stocks?.[0]?.low_stock_threshold
+        ?? "10"
+    ),
     remarks: p.remarks || "",
     is_active: p.is_active ?? true,
     imagesToKeep: imagesWithIds,
@@ -353,9 +359,9 @@ const productSlice = createSlice({
     },
 
     openVariantModalWithData: (state, action) => {
-      const v = action.payload;
+      const { index = 0, ...v } = action.payload;
       state.showVariantModal = true;
-      state.editingVariantIndex = 0;
+      state.editingVariantIndex = index;
       state.variantErrors = {};
       state.variantForm = {
         variant_id: v.variant_id || null,
@@ -364,6 +370,7 @@ const productSlice = createSlice({
         attributes: v.attributes?.length > 0 ? v.attributes : [{ key: "", value: "" }],
         mrp: String(v.mrp ?? ""),
         special_price: String(v.special_price ?? ""),
+        wholesale_price: String(v.wholesale_price ?? ""),
         purchase_price: String(v.purchase_price ?? ""),
         expenses: String(v.expenses ?? ""),
         online_price: String(v.online_price ?? ""),

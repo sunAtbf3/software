@@ -21,6 +21,31 @@ export const displayVal = (v) => {
   return s;
 };
 
+export const truncateProductName = (value, max = 25) => {
+  const text = displayVal(value);
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}...`;
+};
+
+export const resolveLineProductName = (item) =>
+  item?.manual_item_name ||
+  item?.variant?.product?.name ||
+  item?.product?.name ||
+  item?.item_name ||
+  item?.product_name ||
+  item?.variant?.sku ||
+  "Item";
+
+export const resolveLineMeta = (item, { isNonListed = false } = {}) => {
+  if (isNonListed || item?.manual_item_name) return [];
+  const brand = displayVal(item?.variant?.product?.brand_name || item?.product?.brand_name);
+  const warranty = displayVal(item?.variant?.warranty || item?.product?.warranty);
+  return [
+    brand ? `Brand: ${brand}` : null,
+    warranty ? `Warranty: ${warranty}` : null,
+  ].filter(Boolean);
+};
+
 export const lineMrp = (item) => {
   const mrp = item.mrp_unit_price ?? item.variant?.mrp ?? item.mrp;
   if (mrp != null && Number(mrp) > 0) return Number(mrp);

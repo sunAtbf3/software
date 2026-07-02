@@ -48,6 +48,18 @@ const enrichItemFromStock = async (item) => {
   const hsn = item.hsn_code ?? stock?.hsn_code ?? item.variant?.product?.hsn_code ?? "";
   const gstPercent = item.gst_percent ?? stock?.gst_percent ?? 0;
   const gstType = item.gst_type ?? stock?.gst_type ?? "CGST_SGST";
+  const brandName =
+    item.variant?.product?.brand_name ||
+    item.product?.brand_name ||
+    item.brand_name ||
+    stock?.brand_name ||
+    "";
+  const warranty =
+    item.variant?.warranty ||
+    item.product?.warranty ||
+    item.warranty ||
+    stock?.warranty ||
+    "";
   const name =
     item.variant?.product?.name ||
     item.product?.name ||
@@ -69,9 +81,11 @@ const enrichItemFromStock = async (item) => {
       ...(item.variant || {}),
       sku: item.variant?.sku || stock?.system_barcode || stock?.sku,
       mrp,
+      warranty,
       product: {
         ...(item.variant?.product || {}),
         name,
+        brand_name: brandName,
         hsn_code: hsn,
       },
     },

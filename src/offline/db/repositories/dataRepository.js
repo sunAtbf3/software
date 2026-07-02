@@ -20,6 +20,7 @@ const flattenStockRow = (row) => {
     product_id: variant.product_id ?? product.product_id ?? null,
     mrp: variant.mrp ?? 0,
     special_price: variant.special_price ?? null,
+    warranty: variant.warranty ?? product.warranty ?? null,
     purchase_price: variant.purchase_price ?? null,
     expenses: variant.expenses ?? 0,
     purchase_code: variant.purchase_code ?? null,

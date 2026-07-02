@@ -6,6 +6,9 @@ import {
   fmtMoney,
   fmtDate,
   displayVal,
+  truncateProductName,
+  resolveLineProductName,
+  resolveLineMeta,
   lineMrp,
   lineSpecialTotal,
   calcMrpDiscount,
@@ -126,6 +129,14 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
         ) : (
           <>
             <div className="bi-shop-name">{shop.shop_name || "Shop"}</div>
+            {(shop.shop_code || legalName) && (
+              <div className="bi-center-line">
+                {[
+                  shop.shop_code ? `Shop ID: ${shop.shop_code}` : null,
+                  legalName ? `Shop Name: ${legalName}` : null,
+                ].filter(Boolean).join(" | ")}
+              </div>
+            )}
             {shop.address && (
               <div className="bi-center-line">{shop.address}</div>
             )}
@@ -196,19 +207,20 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
           </thead>
           <tbody>
             {items.map((item, idx) => {
-              const name =
-                item.manual_item_name ||
-                item.variant?.product?.name ||
-                item.product?.name ||
-                item.item_name ||
-                item.product_name ||
-                item.variant?.sku ||
-                "Item";
+              const name = truncateProductName(resolveLineProductName(item));
+              const metaLines = resolveLineMeta(item, { isNonListed });
               return (
                 <Fragment key={idx}>
                   <tr style={{ fontWeight: "bold" }}>
                     <td colSpan={4} style={{ paddingTop: "4px" }}>{name}</td>
                   </tr>
+                  {metaLines.length > 0 && (
+                    <tr>
+                      <td colSpan={4} className="bi-item-meta">
+                        {metaLines.join(" | ")}
+                      </td>
+                    </tr>
+                  )}
                   <tr style={{ borderBottom: "1px dashed #eee" }}>
                     <td style={{ textAlign: "left" }}>MRP: ₹{fmtNum(lineMrp(item))}</td>
                     <td style={{ textAlign: "center" }}>{item.quantity}</td>
@@ -408,18 +420,20 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
         </thead>
         <tbody>
           {items.map((item, idx) => {
-            const name =
-              item.manual_item_name ||
-              item.variant?.product?.name ||
-              item.product?.name ||
-              item.item_name ||
-              item.product_name ||
-              item.variant?.sku ||
-              "Item";
+            const name = truncateProductName(resolveLineProductName(item));
+            const metaLines = resolveLineMeta(item, { isNonListed });
+            const productNameCell = (
+              <div className="bi-product-cell">
+                <div>{name}</div>
+                {metaLines.map((line) => (
+                  <div key={line} className="bi-item-meta">{line}</div>
+                ))}
+              </div>
+            );
             const cells = isNonGst
               ? [
                 idx + 1,
-                name,
+                productNameCell,
                 item.quantity,
                 fmtNum(lineMrp(item)),
                 fmtNum(item.unit_price),
@@ -427,7 +441,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
               ]
               : [
                 idx + 1,
-                name,
+                productNameCell,
                 displayVal(item.hsn_code),
                 item.quantity,
                 fmtNum(lineMrp(item)),

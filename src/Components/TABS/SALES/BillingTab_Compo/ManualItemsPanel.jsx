@@ -61,7 +61,7 @@ export default function ManualItemsPanel() {
         };
 
         dispatch(addManualItem(itemPayload));
-        toast.success(`"${name}" added to cart`);
+        // toast.success(`"${name}" added to cart`);
 
         // Reset form
         setFormData({
