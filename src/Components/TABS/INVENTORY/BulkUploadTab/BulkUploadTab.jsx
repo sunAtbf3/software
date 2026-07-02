@@ -40,6 +40,7 @@ const REQUIRED_COLS = [
   "product_code",
   "mrp",
   "special_price",
+  "wholesale_price",
   "purchase_price",
   "expenses",
   "vendor_name",
@@ -69,6 +70,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
   const [importPct, setImportPct]     = useState(0);
   const [csvPct, setCsvPct]           = useState(0);
   const [importPhase, setImportPhase] = useState(0); // 0 uploading 1 processing 2 finalizing
+  const [templateDownloading, setTemplateDownloading] = useState(false);
 
   // auto-set mode
   useEffect(() => { dispatch(setImageMode("zip")); }, []);
@@ -233,14 +235,31 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
     }
   };
 
-  const downloadSample = () => {
-    const a = document.createElement("a");
-    a.href = "/bulk-product-upload-template-software-final-with-validation.xlsx";
-    a.download = "bulk-product-upload-template-software-final-with-validation.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    toast.success("Sample Excel template downloaded");
+  const downloadSample = async () => {
+    if (templateDownloading) return;
+    setTemplateDownloading(true);
+    try {
+      const response = await AxiosInstance.get("/products/bulk/template", {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bulk-product-upload-template-software-final-with-validation.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Sample Excel template downloaded");
+    } catch (err) {
+      console.error("Template download failed:", err);
+      toast.error(err.response?.data?.message || "Failed to download template");
+    } finally {
+      setTemplateDownloading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -418,8 +437,14 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 />
 
                 <div className="flex justify-start">
-                  <button onClick={downloadSample} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-                    <Download size={12} /> Download sample CSV
+                  <button
+                    type="button"
+                    onClick={downloadSample}
+                    disabled={templateDownloading}
+                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {templateDownloading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+                    {templateDownloading ? "Downloading…" : "Download sample CSV"}
                   </button>
                 </div>
               </>
@@ -465,8 +490,14 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 <div className="rounded-xl border border-slate-700/60 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/60 border-b border-slate-700/60">
                     <span className="text-xs text-slate-400 font-medium">{previewData.rows?.length || 0} rows parsed</span>
-                    <button onClick={downloadSample} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-                      <Download size={11} /> Sample
+                    <button
+                      type="button"
+                      onClick={downloadSample}
+                      disabled={templateDownloading}
+                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {templateDownloading ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                      {templateDownloading ? "Downloading…" : "Sample"}
                     </button>
                   </div>
                   <div className="overflow-y-auto max-h-64 overflow-x-auto">

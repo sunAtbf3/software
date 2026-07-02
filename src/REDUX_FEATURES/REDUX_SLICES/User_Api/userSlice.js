@@ -85,7 +85,7 @@ const userSlice = createSlice({
                 if (payload.role !== undefined) {
                     const role = payload.role;
                     const isWH = ["WH_MANAGER", "WH_STOCK_LISTER"].includes(role);
-                    const isShop = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_STOCK_LISTER"].includes(role);
+                    const isShop = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"].includes(role);
                     const isSuper = role === "SUPER_ADMIN";
                     if (isWH) { state.formData.shop_id = ""; }
                     if (isShop) { state.formData.warehouse_id = ""; }

@@ -231,7 +231,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
           </div>
           {mrpDiscount > 0 && (
             <div className="bi-flex-row">
-              <span>Discount</span>
+              <span>MRP Discount</span>
               <span>- ₹{fmtNum(mrpDiscount)}</span>
             </div>
           )}
@@ -266,6 +266,12 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 </div>
               )}
             </>
+          )}
+          {Number(bill.discount) > 0 && (
+            <div className="bi-flex-row">
+              <span>Extra Discount</span>
+              <span>- ₹{fmtNum(bill.discount)}</span>
+            </div>
           )}
 
           <div className="bi-divider" />
@@ -466,10 +472,12 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
             <span className="bi-label">Sub Total</span>
             <span>{fmtNum(bill.subtotal)}</span>
           </div>
-          <div className="bi-total-row">
-            <span className="bi-label">Discount</span>
-            <span>- {fmtNum(mrpDiscount)}</span>
-          </div>
+          {mrpDiscount > 0 && (
+            <div className="bi-total-row">
+              <span className="bi-label">MRP Discount</span>
+              <span>- {fmtNum(mrpDiscount)}</span>
+            </div>
+          )}
           {!isNonGst && (
             <>
               <div className="bi-total-row">
@@ -510,6 +518,12 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 </div>
               )}
             </>
+          )}
+          {Number(bill.discount) > 0 && (
+            <div className="bi-total-row">
+              <span className="bi-label">Extra Discount</span>
+              <span>- {fmtNum(bill.discount)}</span>
+            </div>
           )}
           <div className="bi-total-row bi-grand">
             <span>Total Payable Amount</span>

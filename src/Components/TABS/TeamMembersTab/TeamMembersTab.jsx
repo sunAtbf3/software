@@ -40,7 +40,7 @@ const ROLE_BADGE_CLASSES = {
     WH_STOCK_LISTER: "bg-sky-50 text-sky-700 border border-sky-200",
     SHOP_OWNER: "bg-green-50 text-green-700 border border-green-200",
     BILLING_STAFF: "bg-yellow-50 text-yellow-700 border border-yellow-200",
-    SHOP_STOCK_LISTER: "bg-teal-50 text-teal-700 border border-teal-200",
+    SHOP_MANAGER: "bg-teal-50 text-teal-700 border border-teal-200",
 };
 const ROLE_BADGE_DEFAULT = "bg-gray-100 text-gray-600 border border-gray-200";
 

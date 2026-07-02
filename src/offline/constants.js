@@ -60,7 +60,7 @@ export const SHOP_OFFLINE_ROLES = Object.freeze([
   'SUPER_ADMIN',
   'SHOP_OWNER',
   'BILLING_STAFF',
-  'SHOP_STOCK_LISTER',
+  'SHOP_MANAGER',
 ]);
 
 /** Resolve shop id from auth user payload (direct assignment or nested shop relation). */

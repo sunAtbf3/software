@@ -15,11 +15,14 @@ import {
     useDeleteShopStaffCodeMutation,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopApi";
 import StaffCodeFormModal from "./StaffCodeFormModal";
+import { ROLES, can } from "../../../roles";
+import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 
 export default function StaffCodesTab() {
     const { user } = useSelector((state) => state.auth);
-    const isSuperAdmin = user?.role === "SUPER_ADMIN";
-    const isShopOwner = user?.role === "SHOP_OWNER";
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isShopOwner = user?.role === ROLES.SHOP_OWNER;
+    const canManageStaff = can("shop.staff.write");
 
     const [selectedShopId, setSelectedShopId] = useState("");
     const [showForm, setShowForm] = useState(false);
@@ -83,7 +86,7 @@ export default function StaffCodesTab() {
             refetch();
             refetchSummary();
         } catch (err) {
-            toast.error(err?.data?.message || "Failed to remove staff code");
+            toast.error(getApiErrorMessage(err, "Failed to remove staff code"));
         }
     };
 
@@ -111,6 +114,7 @@ export default function StaffCodesTab() {
                     >
                         <RefreshCw size={13} className={isFetching ? "animate-spin text-blue-500" : ""} /> Refresh
                     </button>
+                    {canManageStaff && (
                     <button
                         type="button"
                         onClick={openAdd}
@@ -119,6 +123,7 @@ export default function StaffCodesTab() {
                     >
                         <Plus size={14} /> Add Staff Code
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -277,6 +282,7 @@ export default function StaffCodesTab() {
                                             )}
                                         </td>
                                         <td className="px-5 py-3.5">
+                                            {canManageStaff ? (
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     type="button"
@@ -295,6 +301,9 @@ export default function StaffCodesTab() {
                                                     <Trash2 size={13} />
                                                 </button>
                                             </div>
+                                            ) : (
+                                                <span className="text-[11px] text-gray-400">—</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -314,7 +323,7 @@ export default function StaffCodesTab() {
             </div>
 
             {/* Form Modal Workflow Management Injection Frame */}
-            {showForm && (
+            {showForm && canManageStaff && (
                 <StaffCodeFormModal
                     shopId={effectiveShopId}
                     staffCode={editingCode}

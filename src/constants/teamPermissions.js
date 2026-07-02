@@ -1,9 +1,9 @@
 import { ROLES } from "../Components/roles";
 
-export const SHOP_OWNER_CREATABLE_ROLES = ["BILLING_STAFF", "SHOP_STOCK_LISTER"];
+export const SHOP_OWNER_CREATABLE_ROLES = ["BILLING_STAFF", "SHOP_MANAGER"];
 export const WH_MANAGER_CREATABLE_ROLES = ["WH_STOCK_LISTER"];
 
-export const SHOP_OWNER_EDITABLE_ROLES = ["BILLING_STAFF", "SHOP_STOCK_LISTER"];
+export const SHOP_OWNER_EDITABLE_ROLES = ["BILLING_STAFF", "SHOP_MANAGER"];
 export const WH_MANAGER_EDITABLE_ROLES = ["WH_STOCK_LISTER"];
 
 export const isTeamManagerRole = (role) =>
@@ -32,7 +32,7 @@ export const getTeamRoleFilterOptions = (actorRole, allRoles) => {
   if (actorRole === ROLES.SUPER_ADMIN) return allRoles;
   if (actorRole === ROLES.SHOP_OWNER) {
     return allRoles.filter((r) =>
-      ["SHOP_OWNER", "BILLING_STAFF", "SHOP_STOCK_LISTER"].includes(r.value)
+      ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"].includes(r.value)
     );
   }
   if (actorRole === ROLES.WH_MANAGER) {

@@ -1,6 +1,6 @@
  // TABS/INVENTORY/ShopStockTab.jsx
 //
-// Shop Stock Management for SHOP_OWNER / SHOP_STOCK_LISTER
+// Shop Stock Management for SHOP_OWNER / SHOP_MANAGER
 // Features: View stock, adjust quantity, bulk update, low stock alerts
 // NEW: Set Min-Max Levels, Bulk Restock Request, Barcode Display & Download (Modal-based)
 // UPDATED: Each variant has its own checkbox, edit, and min-max buttons
@@ -27,6 +27,7 @@ import {
     setLoading,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/ShopStock_api/shopStockSlice";
 import { getUserShopId } from "../../../../offline/constants";
+import { useShopPricingVisibility } from "../../../../utils/shopPricingVisibility";
 import { isAdmin } from "../../../roles";
 import StockQuantityModal from "./ShopStockShared/StockQuantityModal";
 import StockBulkModal from "./ShopStockShared/StockBulkModal";
@@ -74,7 +75,9 @@ const groupStocksByProduct = (stocks) => {
             sku: variant.sku,
             system_barcode: variant.system_barcode,
             special_price: variant.special_price,
+            wholesale_price: variant.wholesale_price,
             purchase_price: variant.purchase_price,
+            warranty: variant.warranty,
             purchase_code: variant.purchase_code,
             mrp: variant.mrp,
             expenses: variant.expenses,
@@ -123,8 +126,9 @@ export default function ShopStockTab() {
     const [selectedVariantsForBarcode, setSelectedVariantsForBarcode] = useState([]);
 
     const isShopOwner = user?.role === "SHOP_OWNER";
-    const isShopLister = user?.role === "SHOP_STOCK_LISTER";
-    const canEdit = isAdmin() || isShopOwner || isShopLister;
+    const isShopManager = user?.role === "SHOP_MANAGER";
+    const canEdit = isAdmin() || isShopOwner || isShopManager;
+    const { canViewWholesale } = useShopPricingVisibility();
 
     const userShopId = getUserShopId(user) || "";
 
@@ -662,7 +666,11 @@ export default function ShopStockTab() {
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Variant SKU</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Barcode</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Special Price</th>
+                                                                    {canViewWholesale && (
+                                                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Wholesale Price</th>
+                                                                    )}
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Purchase Price</th>
+                                                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Warranty</th>
                                                                     <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Available</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
                                                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Min/Max</th>
@@ -710,9 +718,23 @@ export default function ShopStockTab() {
                                                                                 </span>
                                                                             </td>
                                                                             
+                                                                            {canViewWholesale && (
+                                                                            <td className="px-4 py-2">
+                                                                                <span className="text-sm font-semibold text-indigo-600">
+                                                                                    ₹{variant.wholesale_price?.toLocaleString() || "—"}
+                                                                                </span>
+                                                                            </td>
+                                                                            )}
+                                                                            
                                                                             <td className="px-4 py-2">
                                                                                 <span className="text-sm font-semibold text-green-600">
                                                                                     ₹{variant.purchase_price?.toLocaleString() || "—"}
+                                                                                </span>
+                                                                            </td>
+
+                                                                            <td className="px-4 py-2">
+                                                                                <span className="text-xs text-gray-600">
+                                                                                    {variant.warranty || "—"}
                                                                                 </span>
                                                                             </td>
                                                                             
@@ -825,7 +847,7 @@ export default function ShopStockTab() {
 // downb code is working but upper code have barcode 
 // // TABS/INVENTORY/ShopStockTab.jsx
 // //
-// // Shop Stock Management for SHOP_OWNER / SHOP_STOCK_LISTER
+// // Shop Stock Management for SHOP_OWNER / SHOP_MANAGER
 // // Features: View stock, adjust quantity, bulk update, low stock alerts
 // // NEW: Set Min-Max Levels, Bulk Restock Request
 
@@ -882,7 +904,7 @@ export default function ShopStockTab() {
 //     } = useSelector((state) => state.shopStock);
 
 //     const isShopOwner = user?.role === "SHOP_OWNER";
-//     const isShopLister = user?.role === "SHOP_STOCK_LISTER";
+//     const isShopLister = user?.role === "SHOP_MANAGER";
 //     const canEdit = isAdmin() || isShopOwner || isShopLister;
 
 //     const userShopId = user?.shop_id || "";
@@ -1250,7 +1272,7 @@ export default function ShopStockTab() {
 
 // // TABS/INVENTORY/ShopStockTab.jsx
 // //
-// // Shop Stock Management for SHOP_OWNER / SHOP_STOCK_LISTER
+// // Shop Stock Management for SHOP_OWNER / SHOP_MANAGER
 // // Features: View stock, adjust quantity, bulk update, low stock alerts
 
 // import React, { useState } from "react";
@@ -1300,7 +1322,7 @@ export default function ShopStockTab() {
 //     } = useSelector((state) => state.shopStock);
 
 //     const isShopOwner = user?.role === "SHOP_OWNER";
-//     const isShopLister = user?.role === "SHOP_STOCK_LISTER";
+//     const isShopLister = user?.role === "SHOP_MANAGER";
 //     const canEdit = isAdmin() || isShopOwner || isShopLister;
 
 //     // Get user's shop ID

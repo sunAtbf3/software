@@ -24,6 +24,8 @@ import {
   updateVariantInList,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
 import ProductFormBody from "./ProductFormBody";
+import { normalizeUnitOfMeasure } from "../../../../constants/unitOfMeasure.constants";
+import { validateCatalogPricing } from "../../../../utils/productCatalogValidation";
 import VariantModal    from "./VariantModal";
 
 const toNumber = (val, defaultVal = 0) => {
@@ -69,19 +71,11 @@ export default function ProductEditForm({
   const validate = () => {
     const errors = {};
     if (!formData.name?.trim())          errors.name = "Product name is required";
-    if (!formData.mrp || toNumber(formData.mrp) <= 0)
-      errors.mrp = "MRP is required and must be > 0";
-    if (!formData.special_price || toNumber(formData.special_price) <= 0)
-      errors.special_price = "Special price is required";
-    if (formData.purchase_price === "" || formData.purchase_price == null || toNumber(formData.purchase_price) < 0)
-      errors.purchase_price = "Purchase price is required";
     if (!formData.unit_of_measure)     errors.unit_of_measure = "Unit of measure is required";
     if (!formData.primary_vendor_id)     errors.primary_vendor_id = "Vendor is required";
     if (!formData.category_id)           errors.category_id = "Category is required";
     if (formData.low_stock_threshold === undefined || formData.low_stock_threshold === "" || toNumber(formData.low_stock_threshold) < 0)
       errors.low_stock_threshold = "Threshold is required";
-    if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
-      errors.expenses = "Expenses is required";
     if (!formData.weight || toNumber(formData.weight) <= 0)
       errors.weight = "Weight is required";
     if (!formData.length || toNumber(formData.length) <= 0)
@@ -90,6 +84,25 @@ export default function ProductEditForm({
       errors.width = "Width is required";
     if (!formData.height || toNumber(formData.height) <= 0)
       errors.height = "Height is required";
+
+    const applyPriceValidation = (prices, label, { mapToFormFields = false } = {}) => {
+      const priceError = validateCatalogPricing(prices, label);
+      if (!priceError) return;
+      if (mapToFormFields) {
+        if (priceError.includes("MRP")) errors.mrp = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Special price")) errors.special_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Wholesale price")) errors.wholesale_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Purchase price")) errors.purchase_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Expenses")) errors.expenses = priceError.replace(`${label}: `, "");
+        else if (!errors.general) errors.general = priceError;
+      } else if (!errors.general) {
+        errors.general = priceError;
+      }
+    };
+
+    applyPriceValidation(formData, "Primary variant", { mapToFormFields: true });
+    variants.forEach((v, i) => applyPriceValidation(v, `Variant ${i + 2}`));
+
     return errors;
   };
 
@@ -134,11 +147,13 @@ export default function ProductEditForm({
           ? toNumber(formData.gst_percent)
           : 0,
         gst_type:          formData.gst_type || "EXEMPT",
-        unit_of_measure:   formData.unit_of_measure || "",
+        unit_of_measure:   normalizeUnitOfMeasure(formData.unit_of_measure) || "",
         mrp:               toNumber(formData.mrp),
         special_price:     toNumber(formData.special_price),
+        wholesale_price:   toNumber(formData.wholesale_price),
         purchase_price:    formData.purchase_price ? toNumber(formData.purchase_price) : 0,
         expenses:          toNumber(formData.expenses),
+        warranty:          String(formData.warranty || "").trim() || undefined,
         online_price:      formData.online_price  ? toNumber(formData.online_price)  : undefined,
         purchase_cost:     formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,
         weight:            formData.weight        ? toNumber(formData.weight)        : undefined,
@@ -175,8 +190,10 @@ export default function ProductEditForm({
             attributes: v.attributes || [],
             mrp: toNumber(v.mrp),
             special_price: toNumber(v.special_price),
+            wholesale_price: toNumber(v.wholesale_price),
             purchase_price: toNumber(v.purchase_price),
             expenses: toNumber(v.expenses),
+            warranty: String(v.warranty || "").trim() || undefined,
             online_price: v.online_price ? toNumber(v.online_price) : undefined,
             purchase_cost: v.purchase_cost ? toNumber(v.purchase_cost) : undefined,
             weight: v.weight ? toNumber(v.weight) : undefined,
@@ -201,8 +218,10 @@ export default function ProductEditForm({
             attributes: v.attributes || [],
             mrp: toNumber(v.mrp),
             special_price: toNumber(v.special_price),
+            wholesale_price: toNumber(v.wholesale_price),
             purchase_price: toNumber(v.purchase_price),
             expenses: toNumber(v.expenses),
+            warranty: String(v.warranty || "").trim() || undefined,
             online_price: v.online_price ? toNumber(v.online_price) : undefined,
             purchase_cost: v.purchase_cost ? toNumber(v.purchase_cost) : undefined,
             weight: v.weight ? toNumber(v.weight) : undefined,
@@ -373,7 +392,7 @@ export default function ProductEditForm({
                             </p>
                           )}
                           <p className="text-xs text-gray-500 mt-0.5">
-                            MRP ₹{v.mrp?.toLocaleString()} · SP ₹{v.special_price?.toLocaleString()} · PP ₹{v.purchase_price?.toLocaleString()} · Exp ₹{v.expenses?.toLocaleString()}
+                            MRP ₹{v.mrp?.toLocaleString()} · SP ₹{v.special_price?.toLocaleString()} · WP ₹{v.wholesale_price?.toLocaleString()} · PP ₹{v.purchase_price?.toLocaleString()} · Exp ₹{v.expenses?.toLocaleString()} · {v.warranty || "—"}
                           </p>
                           {((v.imagesToKeep?.length || 0) + (v.newImages?.length || 0)) > 0 && (
                             <p className="text-xs text-gray-400 mt-0.5">
@@ -393,8 +412,10 @@ export default function ProductEditForm({
                             attributes: v.attributes?.length > 0 ? v.attributes : [{ key: "", value: "" }],
                             mrp: String(v.mrp ?? ""),
                             special_price: String(v.special_price ?? ""),
+                            wholesale_price: String(v.wholesale_price ?? ""),
                             purchase_price: String(v.purchase_price ?? ""),
                             expenses: String(v.expenses ?? ""),
+                            warranty: v.warranty || "",
                             online_price: String(v.online_price ?? ""),
                             purchase_cost: String(v.purchase_cost ?? ""),
                             weight: String(v.weight ?? ""),

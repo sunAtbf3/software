@@ -6,7 +6,13 @@
 import React from "react";
 import { useGetUsersQuery } from "../../../../../REDUX_FEATURES/REDUX_SLICES/User_Api/userApi";
 import { SALES_CHANNELS } from "../../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopSlice";
+import {
+    SHOP_CODE_PLACEHOLDER,
+    SHOP_CODE_FORMAT_HINT,
+    normalizeShopCode,
+} from "../../../../../constants/shop.constants";
 import IndianStatePicker from "../../../../shared/IndianStatePicker";
+
 const CHANNEL_LABELS = {
     WALK_IN: "Walk-in Store",
     ONLINE: "Online Store",
@@ -53,12 +59,15 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
                 </label>
                 <input
                     value={formData.shop_code || ""}
-                    onChange={(e) => onChange({ shop_code: e.target.value })}
-                    placeholder="e.g., SHOP-DL-001"
+                    onChange={(e) => onChange({ shop_code: normalizeShopCode(e.target.value) })}
+                    placeholder={SHOP_CODE_PLACEHOLDER}
                     className={inputCls("shop_code")}
                     disabled={isEdit}
                 />
                 {errorMsg("shop_code")}
+                {!isEdit && (
+                    <p className="text-xs text-gray-400 mt-1">{SHOP_CODE_FORMAT_HINT}</p>
+                )}
                 {isEdit && (
                     <p className="text-xs text-gray-400 mt-1">Shop code cannot be changed after creation</p>
                 )}

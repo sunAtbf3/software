@@ -4,5 +4,5 @@ export const USER_ROLES = [
     { value: "WH_STOCK_LISTER", label: "WH Stock Lister", color: "bg-blue-100 text-blue-700" },
     { value: "SHOP_OWNER", label: "Shop Owner", color: "bg-green-100 text-green-700" },
     { value: "BILLING_STAFF", label: "Billing Staff", color: "bg-yellow-100 text-yellow-700" },
-    { value: "SHOP_STOCK_LISTER", label: "Shop Manager", color: "bg-orange-100 text-orange-700" },
+    { value: "SHOP_MANAGER", label: "Shop Manager", color: "bg-orange-100 text-orange-700" },
 ];

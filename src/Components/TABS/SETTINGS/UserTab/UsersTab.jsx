@@ -32,7 +32,7 @@ const ROLE_BADGE_CLASSES = {
     SUPER_ADMIN: "bg-purple-50 text-purple-700 border border-purple-200",
     WH_MANAGER: "bg-blue-50 text-blue-700 border border-blue-200",
     SHOP_OWNER: "bg-green-50 text-green-700 border border-green-200",
-    SHOP_STOCK_LISTER: "bg-teal-50 text-teal-700 border border-teal-200",
+    SHOP_MANAGER: "bg-teal-50 text-teal-700 border border-teal-200",
 };
 const ROLE_BADGE_DEFAULT = "bg-gray-100 text-gray-600 border border-gray-200";
 
@@ -48,7 +48,7 @@ const getRoleBreakdownBadgeClass = (value) => {
     if (value === "SUPER_ADMIN") return "bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "WH_MANAGER") return "bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "SHOP_OWNER") return "bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full text-xs font-medium";
-    if (value === "SHOP_STOCK_LISTER") return "bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full text-xs font-medium";
+    if (value === "SHOP_MANAGER") return "bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full text-xs font-medium";
     return "bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full text-xs font-medium";
 };
 

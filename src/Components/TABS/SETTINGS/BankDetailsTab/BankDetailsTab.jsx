@@ -13,11 +13,15 @@ import {
     useDeleteShopBankAccountMutation,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopApi";
 import BankAccountFormModal from "./BankAccountFormModal";
+import { ROLES, can } from "../../../roles";
 
 export default function BankDetailsTab() {
     const { user } = useSelector((state) => state.auth);
-    const isSuperAdmin = user?.role === "SUPER_ADMIN";
-    const isShopOwner = user?.role === "SHOP_OWNER";
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isShopOwner = user?.role === ROLES.SHOP_OWNER;
+    const isShopManager = user?.role === ROLES.SHOP_MANAGER;
+    const canManageBank = can("shop.bank.write");
+    const isReadOnlyBank = isShopManager || (!canManageBank && user?.role === ROLES.BILLING_STAFF);
 
     const [selectedShopId, setSelectedShopId] = useState("");
     const [showForm, setShowForm] = useState(false);
@@ -49,6 +53,10 @@ export default function BankDetailsTab() {
 
     const defaultAccount = accounts.find((a) => a.is_default);
     const upiAccounts = accounts.filter((a) => a.upi_id);
+
+    const managerColumns = ["Institution", "Branch", "Beneficiary Holder", "Default", "Status"];
+    const fullColumns = ["Institution", "Beneficiary Holder", "Account Sequence", "Routing (IFSC)", "UPI Interface String", "Default", "Actions"];
+    const tableColumns = isReadOnlyBank ? managerColumns : fullColumns;
 
     const openAdd = () => {
         setEditingAccount(null);
@@ -87,7 +95,9 @@ export default function BankDetailsTab() {
                 <div>
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight">Bank Accounts</h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                        Manage UPI-enabled settlement accounts map-linked to this shop's terminal billing registers.
+                        {isReadOnlyBank
+                            ? "View linked bank names and account holder details (payment credentials are hidden)."
+                            : "Manage UPI-enabled settlement accounts for this shop's billing."}
                     </p>
                 </div>
                 <div className="flex items-center gap-2 self-end md:self-auto">
@@ -100,6 +110,7 @@ export default function BankDetailsTab() {
                         <RefreshCw size={13} className={isFetching ? "animate-spin text-blue-500" : ""} />
                         Refresh Panel
                     </button>
+                    {canManageBank && (
                     <button
                         type="button"
                         onClick={openAdd}
@@ -108,6 +119,7 @@ export default function BankDetailsTab() {
                     >
                         <Plus size={14} /> Add Bank Account
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -156,9 +168,16 @@ export default function BankDetailsTab() {
                         <p className="text-sm font-bold text-gray-800 mt-2 truncate">
                             {defaultAccount?.bank_name || "—"}
                         </p>
+                        {!isReadOnlyBank && (
                         <p className="text-[11px] text-gray-500 font-mono mt-0.5 truncate">
                             {defaultAccount?.upi_id || "Unset Flag"}
                         </p>
+                        )}
+                        {isReadOnlyBank && defaultAccount?.branch_name && (
+                        <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                            {defaultAccount.branch_name}
+                        </p>
+                        )}
                     </div>
                     <div className={`p-3 rounded-xl border ${defaultAccount ? "bg-emerald-50 text-emerald-500 border-emerald-100" : "bg-amber-50 text-amber-500 border-amber-100"}`}>
                         <CheckCircle2 size={20} />
@@ -167,9 +186,15 @@ export default function BankDetailsTab() {
 
                 <div className="bg-white rounded-2xl border border-gray-200 p-4 relative overflow-hidden shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-xs uppercase tracking-wider font-bold text-gray-400">UPI Ecosystem</p>
-                        <p className="text-2xl font-bold text-blue-600 mt-1">{upiAccounts.length}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">Terminal dynamically active</p>
+                        <p className="text-xs uppercase tracking-wider font-bold text-gray-400">
+                            {isReadOnlyBank ? "Active Accounts" : "UPI Ecosystem"}
+                        </p>
+                        <p className="text-2xl font-bold text-blue-600 mt-1">
+                            {isReadOnlyBank ? accounts.length : upiAccounts.length}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                            {isReadOnlyBank ? "Configured for this shop" : "Terminal dynamically active"}
+                        </p>
                     </div>
                     <div className="p-3 bg-blue-50 text-blue-500 rounded-xl border border-blue-100/50">
                         <QrCode size={20} />
@@ -221,7 +246,7 @@ export default function BankDetailsTab() {
                         <table className="w-full min-w-[720px] lg:min-w-0 text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50/70 border-b border-gray-100">
-                                    {["Institution", "Beneficiary Holder", "Account Sequence", "Routing (IFSC)", "UPI Interface String", "Default", "Actions"].map((h) => (
+                                    {tableColumns.map((h) => (
                                         <th
                                             key={h}
                                             className="px-5 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider"
@@ -234,6 +259,28 @@ export default function BankDetailsTab() {
                             <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
                                 {accounts.map((row) => (
                                     <tr key={row.bank_account_id} className="hover:bg-gray-50/50 transition-colors">
+                                        {isReadOnlyBank ? (
+                                            <>
+                                                <td className="px-5 py-3.5 font-semibold text-gray-900">{row.bank_name}</td>
+                                                <td className="px-5 py-3.5 text-gray-600">{row.branch_name || "—"}</td>
+                                                <td className="px-5 py-3.5 text-gray-600 font-medium">{row.account_holder_name}</td>
+                                                <td className="px-5 py-3.5">
+                                                    {row.is_default ? (
+                                                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase shadow-sm">
+                                                            <span className="w-1 h-1 rounded-full bg-emerald-500"></span> Primary
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11px] font-medium text-gray-400">Secondary</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-3.5">
+                                                    <span className={`text-[11px] font-medium ${row.is_active ? "text-emerald-600" : "text-gray-400"}`}>
+                                                        {row.is_active ? "Active" : "Inactive"}
+                                                    </span>
+                                                </td>
+                                            </>
+                                        ) : (
+                                            <>
                                         <td className="px-5 py-3.5 font-semibold text-gray-900">{row.bank_name}</td>
                                         <td className="px-5 py-3.5 text-gray-600 font-medium">{row.account_holder_name}</td>
                                         <td className="px-5 py-3.5 font-mono text-gray-500 tracking-wide">
@@ -276,6 +323,8 @@ export default function BankDetailsTab() {
                                                 </button>
                                             </div>
                                         </td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
@@ -293,7 +342,7 @@ export default function BankDetailsTab() {
             </div>
 
             {/* Modal Injection Control Element */}
-            {showForm && (
+            {showForm && canManageBank && (
                 <BankAccountFormModal
                     shopId={effectiveShopId}
                     account={editingAccount}

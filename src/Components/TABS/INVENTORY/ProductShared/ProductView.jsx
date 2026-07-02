@@ -178,12 +178,20 @@ export default function ProductView({ productId, onClose }) {
                   <span className="font-semibold text-blue-600">₹{toNumber(primaryVariant.special_price).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-500">Wholesale Price:</span>
+                  <span className="font-semibold text-indigo-600">₹{toNumber(primaryVariant.wholesale_price).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-500">Purchase Price:</span>
                   <span className="font-semibold text-green-600">₹{toNumber(primaryVariant.purchase_price).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Expenses:</span>
                   <span className="text-gray-600">₹{toNumber(primaryVariant.expenses).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Warranty:</span>
+                  <span className="text-gray-800">{primaryVariant.warranty || product.warranty || "—"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Purchase Code:</span>
@@ -286,8 +294,10 @@ export default function ProductView({ productId, onClose }) {
                       <div className="flex flex-wrap gap-4 text-sm">
                         <span className="font-semibold text-red-600">MRP: ₹{toNumber(variant.mrp).toLocaleString()}</span>
                         <span className="text-blue-600">SP: ₹{toNumber(variant.special_price).toLocaleString()}</span>
+                        <span className="text-indigo-600">WP: ₹{toNumber(variant.wholesale_price).toLocaleString()}</span>
                         <span className="text-green-600">PP: ₹{toNumber(variant.purchase_price).toLocaleString()}</span>
                         <span className="text-gray-500">Exp: ₹{toNumber(variant.expenses).toLocaleString()}</span>
+                        <span className="text-gray-600">Warranty: {variant.warranty || "—"}</span>
                         {variant.weight && <span className="text-gray-500">Shipping: {toNumber(variant.weight)}kg</span>}
                       </div>
                       {variant.remarks && <p className="text-xs text-gray-400 mt-1">{variant.remarks}</p>}

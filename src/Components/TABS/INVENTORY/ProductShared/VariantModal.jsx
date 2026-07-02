@@ -14,6 +14,7 @@ import {
   removeVariantImage,
   replaceVariantImage,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
+import { validateCatalogPricing } from "../../../../utils/productCatalogValidation";
 
 const toNumber = (val, defaultVal = 0) => {
   const num = Number(val);
@@ -110,16 +111,18 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
 
   const validate = () => {
     const errors = {};
-    if (!variantForm.mrp || toNumber(variantForm.mrp) <= 0) errors.mrp = "MRP is required";
-    if (!variantForm.special_price || toNumber(variantForm.special_price) <= 0) errors.special_price = "Special price is required";
-    if (variantForm.purchase_price === "" || variantForm.purchase_price == null || toNumber(variantForm.purchase_price) < 0) {
-      errors.purchase_price = "Purchase price is required";
+    const priceError = validateCatalogPricing(variantForm, "This variant");
+    if (priceError) {
+      if (priceError.includes("MRP")) errors.mrp = priceError.replace("This variant: ", "");
+      else if (priceError.includes("Special price")) errors.special_price = priceError.replace("This variant: ", "");
+      else if (priceError.includes("Wholesale price")) errors.wholesale_price = priceError.replace("This variant: ", "");
+      else if (priceError.includes("Purchase price")) errors.purchase_price = priceError.replace("This variant: ", "");
+      else if (priceError.includes("Expenses")) errors.expenses = priceError.replace("This variant: ", "");
+      else errors.general = priceError;
     }
     if (variantForm.low_stock_threshold === undefined || variantForm.low_stock_threshold === "" || toNumber(variantForm.low_stock_threshold) < 0) {
       errors.low_stock_threshold = "Threshold is required";
     }
-    if (variantForm.expenses === undefined || variantForm.expenses === "") errors.expenses = "Expenses is required";
-    // Shipping validation for multi-variant products
     if (!variantForm.weight || toNumber(variantForm.weight) <= 0) errors.weight = "Weight is required";
     if (!variantForm.length || toNumber(variantForm.length) <= 0) errors.length = "Length is required";
     if (!variantForm.width || toNumber(variantForm.width) <= 0) errors.width = "Width is required";
@@ -142,8 +145,10 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
       attributes: (variantForm.attributes || []).filter(a => a.key?.trim() && a.value?.trim()),
       mrp: toNumber(variantForm.mrp),
       special_price: toNumber(variantForm.special_price),
+      wholesale_price: toNumber(variantForm.wholesale_price),
       purchase_price: variantForm.purchase_price ? toNumber(variantForm.purchase_price) : undefined,
       expenses: toNumber(variantForm.expenses),
+      warranty: String(variantForm.warranty || "").trim() || undefined,
       online_price: variantForm.online_price ? toNumber(variantForm.online_price) : undefined,
       purchase_cost: variantForm.purchase_cost ? toNumber(variantForm.purchase_cost) : undefined,
       weight: variantForm.weight ? toNumber(variantForm.weight) : undefined,
@@ -257,6 +262,11 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
                 {errorMsg("special_price")}
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Wholesale Price <span className="text-red-500">*</span></label>
+                <input type="number" step="0.01" {...field("wholesale_price")} placeholder="Franchise / B2B" className={inputCls("wholesale_price")} />
+                {errorMsg("wholesale_price")}
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Price <span className="text-red-500">*</span></label>
                 <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
                 {errorMsg("purchase_price")}
@@ -266,14 +276,11 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
                 <input type="number" step="0.01" {...field("expenses")} placeholder="Per Unit" className={inputCls("expenses")} />
                 {errorMsg("expenses")}
               </div>
-              {/* <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Online Price</label>
-              <input type="number" step="0.01" {...field("online_price")} placeholder="E-comm" className={inputCls("online_price")} />
-            </div> */}
-              {/* <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Cost</label>
-              <input type="number" step="0.01" {...field("purchase_cost")} placeholder="Alternate" className={inputCls("purchase_cost")} />
-            </div> */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Warranty</label>
+                <input {...field("warranty")} placeholder="e.g. 1 Year" className={inputCls("warranty")} />
+                {errorMsg("warranty")}
+              </div>
             </div>
           </div>
 

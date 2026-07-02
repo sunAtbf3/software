@@ -15,11 +15,20 @@ import {
   replaceProductImage,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
 
+import {
+  getUnitOfMeasureSelectOptions,
+  normalizeUnitOfMeasure,
+} from "../../../../constants/unitOfMeasure.constants";
+
 const GST_TYPES     = ["CGST_SGST", "IGST", "EXEMPT"];
 const GST_PERCENTS  = ["0", "5", "12", "18", "28"];
-const UOM_OPTIONS   = ["PCS", "KG", "GM", "LTR", "BOX", "PACKET", "DOZEN", "MTR"];
 
 export default function ProductFormBody({ formData, onChange, formErrors }) {
+  const uomOptions = React.useMemo(
+    () => getUnitOfMeasureSelectOptions(formData.unit_of_measure),
+    [formData.unit_of_measure]
+  );
+
   const dispatch = useDispatch();
   const fileInputRef = useRef(null);
   const replaceFileInputRef = useRef(null);
@@ -148,9 +157,13 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Unit of Measure <span className="text-red-500">*</span>
             </label>
-            <select value={formData.unit_of_measure || ""} onChange={(e) => onChange({ unit_of_measure: e.target.value })} className={inputCls("unit_of_measure")}>
+            <select
+              value={formData.unit_of_measure || ""}
+              onChange={(e) => onChange({ unit_of_measure: normalizeUnitOfMeasure(e.target.value) })}
+              className={inputCls("unit_of_measure")}
+            >
               <option value="">— Select UOM —</option>
-              {UOM_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
+              {uomOptions.map((u) => <option key={u} value={u}>{u}</option>)}
             </select>
             {errorMsg("unit_of_measure")}
           </div>
@@ -210,7 +223,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Prices — Variant 0 (defaults)
         </p>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -230,6 +243,14 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
+              Wholesale Price <span className="text-red-500">*</span>
+            </label>
+            <input type="number" step="0.01" {...field("wholesale_price")} placeholder="Franchise / B2B" className={inputCls("wholesale_price")} />
+            {errorMsg("wholesale_price")}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Purchase Price <span className="text-red-500">*</span>
             </label>
             <input type="number" step="0.01" {...field("purchase_price")} placeholder="Cost Price" className={inputCls("purchase_price")} />
@@ -244,15 +265,13 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             {errorMsg("expenses")}
           </div>
 
-          {/* <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Online Price</label>
-            <input type="number" step="0.01" {...field("online_price")} placeholder="E-comm" className={inputCls("online_price")} />
-          </div>
-
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Purchase Cost (Legacy)</label>
-            <input type="number" step="0.01" {...field("purchase_cost")} placeholder="Alternate" className={inputCls("purchase_cost")} />
-          </div> */}
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Warranty <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input {...field("warranty")} placeholder="e.g. 1 Year" className={inputCls("warranty")} />
+            {errorMsg("warranty")}
+          </div>
 
         </div>
       

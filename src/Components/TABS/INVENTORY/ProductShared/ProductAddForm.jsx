@@ -21,6 +21,8 @@ import {
   updateVariantInList,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
 import ProductFormBody from "./ProductFormBody";
+import { normalizeUnitOfMeasure } from "../../../../constants/unitOfMeasure.constants";
+import { validateCatalogPricing, mapVariantCatalogPrices } from "../../../../utils/productCatalogValidation";
 import VariantModal from "./VariantModal";
 
 const toNumber = (val, defaultVal = 0) => {
@@ -49,13 +51,9 @@ const cleanVariantPayload = (variant) => {
 
 // ── Build complete variants array (main variant + extra variants) ─────────────
 const buildCompleteVariantsArray = (formData, extraVariants) => {
-  // Main variant (variant 0) - prices from formData
   const mainVariant = {
     attributes: [],
-    mrp: toNumber(formData.mrp),
-    special_price: toNumber(formData.special_price),
-    purchase_price: formData.purchase_price ? toNumber(formData.purchase_price) : undefined,
-    expenses: toNumber(formData.expenses),
+    ...mapVariantCatalogPrices(formData),
     online_price: formData.online_price ? toNumber(formData.online_price) : undefined,
     purchase_cost: formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,
     weight: formData.weight ? toNumber(formData.weight) : undefined,
@@ -66,14 +64,11 @@ const buildCompleteVariantsArray = (formData, extraVariants) => {
     remarks: formData.remarks?.trim() || undefined,
     is_active: formData.is_active !== false,
   };
-  
+
   const cleanedExtraVariants = extraVariants.map(({ newImages, imagesToKeep, imagesToDelete, ...rest }) => {
     const variant = {
       ...rest,
-      mrp: toNumber(rest.mrp),
-      special_price: toNumber(rest.special_price),
-      purchase_price: rest.purchase_price ? toNumber(rest.purchase_price) : undefined,
-      expenses: toNumber(rest.expenses),
+      ...mapVariantCatalogPrices(rest),
       online_price: rest.online_price ? toNumber(rest.online_price) : undefined,
       purchase_cost: rest.purchase_cost ? toNumber(rest.purchase_cost) : undefined,
       weight: rest.weight ? toNumber(rest.weight) : undefined,
@@ -81,11 +76,10 @@ const buildCompleteVariantsArray = (formData, extraVariants) => {
       width: rest.width ? toNumber(rest.width) : undefined,
       height: rest.height ? toNumber(rest.height) : undefined,
     };
-    // Remove null values to prevent backend validator rejection
     return cleanVariantPayload(variant);
   });
-  
-  return [mainVariant, ...cleanedExtraVariants];
+
+  return [cleanVariantPayload(mainVariant), ...cleanedExtraVariants];
 };
 
 // Build Base Payload (same for JSON or FormData)
@@ -103,7 +97,7 @@ const buildBasePayload = (formData, extraVariants) => {
     base.gst_percent = toNumber(formData.gst_percent);
   }
   if (formData.gst_type) base.gst_type = formData.gst_type;
-  if (formData.unit_of_measure) base.unit_of_measure = formData.unit_of_measure;
+  if (formData.unit_of_measure) base.unit_of_measure = normalizeUnitOfMeasure(formData.unit_of_measure);
   
   if (formData.description?.trim())  base.description = formData.description.trim();
   if (formData.brand_name?.trim())   base.brand_name = formData.brand_name.trim();
@@ -153,19 +147,11 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
     const errors = {};
     if (!formData.product_code?.trim())      errors.product_code = "Product code is required";
     if (!formData.name?.trim())              errors.name = "Product name is required";
-    if (!formData.mrp || toNumber(formData.mrp) <= 0)
-      errors.mrp = "MRP is required and must be > 0";
-    if (!formData.special_price || toNumber(formData.special_price) <= 0)
-      errors.special_price = "Special price is required";
-    if (formData.purchase_price === "" || formData.purchase_price == null || toNumber(formData.purchase_price) < 0)
-      errors.purchase_price = "Purchase price is required";
     if (!formData.unit_of_measure)         errors.unit_of_measure = "Unit of measure is required";
     if (!formData.primary_vendor_id)         errors.primary_vendor_id = "Vendor is required";
     if (!formData.category_id)               errors.category_id = "Category is required";
     if (formData.low_stock_threshold === undefined || formData.low_stock_threshold === "" || toNumber(formData.low_stock_threshold) < 0)
       errors.low_stock_threshold = "Threshold is required";
-    if (formData.expenses === "" || formData.expenses == null || toNumber(formData.expenses) < 0)
-      errors.expenses = "Expenses is required";
     if (!formData.weight || toNumber(formData.weight) <= 0)
       errors.weight = "Weight is required";
     if (!formData.length || toNumber(formData.length) <= 0)
@@ -174,6 +160,25 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
       errors.width = "Width is required";
     if (!formData.height || toNumber(formData.height) <= 0)
       errors.height = "Height is required";
+
+    const applyPriceValidation = (prices, label, { mapToFormFields = false } = {}) => {
+      const priceError = validateCatalogPricing(prices, label);
+      if (!priceError) return;
+      if (mapToFormFields) {
+        if (priceError.includes("MRP")) errors.mrp = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Special price")) errors.special_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Wholesale price")) errors.wholesale_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Purchase price")) errors.purchase_price = priceError.replace(`${label}: `, "");
+        else if (priceError.includes("Expenses")) errors.expenses = priceError.replace(`${label}: `, "");
+        else if (!errors.general) errors.general = priceError;
+      } else if (!errors.general) {
+        errors.general = priceError;
+      }
+    };
+
+    applyPriceValidation(formData, "Primary variant", { mapToFormFields: true });
+    variants.forEach((v, i) => applyPriceValidation(v, `Variant ${i + 2}`));
+
     return errors;
   };
 
@@ -318,7 +323,7 @@ export default function ProductAddForm({ formData, formErrors, variants, showVar
                           </p>
                         )}
                         <p className="text-xs text-gray-500 mt-0.5">
-                          MRP ₹{v.mrp} · SP ₹{v.special_price} · PP ₹{v.purchase_price} · Exp ₹{v.expenses}
+                          MRP ₹{v.mrp} · SP ₹{v.special_price} · WP ₹{v.wholesale_price} · PP ₹{v.purchase_price} · Exp ₹{v.expenses} · {v.warranty || "—"}
                         </p>
                         {v.weight && (
                           <p className="text-xs text-gray-400 mt-0.5">

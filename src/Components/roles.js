@@ -27,7 +27,7 @@ export const SUB_TAB_PERMISSIONS = {
 
     // Sales sidebar dropdown
     "sales.billing": ["SUPER_ADMIN", "BILLING_STAFF", "SHOP_OWNER", "WH_MANAGER"],
-    "sales.internal.offline-sync": ["SUPER_ADMIN", "BILLING_STAFF", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "sales.internal.offline-sync": ["SUPER_ADMIN", "BILLING_STAFF", "SHOP_OWNER", "SHOP_MANAGER"],
     "sales.invoices": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "WH_MANAGER"],
     "sales.customers": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "WH_MANAGER"],
     "sales.wholesale": ["SUPER_ADMIN", "SHOP_OWNER", "WH_MANAGER"],
@@ -39,9 +39,9 @@ export const SUB_TAB_PERMISSIONS = {
     "settings.shops": ["SUPER_ADMIN"],
     "settings.vendors": ["SUPER_ADMIN", "WH_MANAGER"],
     "settings.companydetails": ["SUPER_ADMIN"],
-    "settings.bankdetails": ["SUPER_ADMIN", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "settings.staffcodes": ["SUPER_ADMIN", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "settings.shopprofile": ["SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "settings.bankdetails": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
+    "settings.staffcodes": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
+    "settings.shopprofile": ["SHOP_OWNER"],
     "settings.warehouseprofile": ["WH_MANAGER"],
 
 
@@ -50,28 +50,28 @@ export const SUB_TAB_PERMISSIONS = {
     "settings.internal.shops": ["SUPER_ADMIN"],
     "settings.internal.vendors": ["SUPER_ADMIN"],
     "settings.internal.companydetails": ["SUPER_ADMIN"],
-    "settings.internal.bankdetails": ["SUPER_ADMIN", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "settings.internal.staffcodes": ["SUPER_ADMIN", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "settings.internal.shopprofile": ["SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "settings.internal.bankdetails": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
+    "settings.internal.staffcodes": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
+    "settings.internal.shopprofile": ["SHOP_OWNER"],
     "settings.internal.warehouseprofile": ["WH_MANAGER"],
 
     // Transfers sidebar dropdown
     "transfers.wh-to-shop": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "transfers.shop-to-shop": ["SUPER_ADMIN", "SHOP_OWNER"],
+    "transfers.shop-to-shop": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.wh-to-wh": ["SUPER_ADMIN", "WH_MANAGER"],
-    "transfers.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "transfers.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.wh-to-shop": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "transfers.internal.wh-to-wh": ["SUPER_ADMIN", "WH_MANAGER"],
-    "transfers.internal.shop-stock-request": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "transfers.internal.shop-stock-request": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.wh-stock-request": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "transfers.internal.transfer-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
-    "transfers.internal.bulk-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
-    "transfers.internal.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "transfers.internal.transfer-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "transfers.internal.bulk-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "transfers.internal.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
 
 
     // Inventory internal horizontal tabs (from inventoryTabRegistry.js)
     "inventory.internal.products": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER",],
-    "inventory.internal.shopstock": ["SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "inventory.internal.shopstock": ["SHOP_OWNER", "SHOP_MANAGER"],
     "inventory.internal.inventorystock": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 
     // Cash & Bank — shop level (collections / receivables)
@@ -86,41 +86,41 @@ export const SUB_TAB_PERMISSIONS = {
     "cashbank.internal.vendor-payments": ["SUPER_ADMIN", "WH_MANAGER"],
     "cashbank.internal.bank-statement-wh": ["SUPER_ADMIN", "WH_MANAGER"],
     "cashbank.internal.cheques-issued": ["SUPER_ADMIN", "WH_MANAGER"],
-    "cashbank.internal.petty-cash": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "cashbank.internal.petty-cash": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER"],
 
     // Cash & Bank — organisation level
     "cashbank.internal.loan-account": ["SUPER_ADMIN"],
-    "cashbank.internal.collections": ["WH_MANAGER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "cashbank.internal.customer-due": ["SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "cashbank.internal.cash-in-hand": ["SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "cashbank.internal.bank-statement-shop": ["SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "cashbank.internal.collections": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "CASHIER", "ACCOUNTANT"],
+    "cashbank.internal.customer-due": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "CASHIER", "ACCOUNTANT"],
+    "cashbank.internal.cash-in-hand": ["SUPER_ADMIN", "SHOP_OWNER"],
+    "cashbank.internal.bank-statement-shop": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF"],
     "cashbank.internal.cheques-received": ["SUPER_ADMIN"],
     "cashbank.internal.vendor-payables": ["SUPER_ADMIN"],
     "cashbank.internal.vendor-payments": ["SUPER_ADMIN"],
     "cashbank.internal.bank-statement-wh": ["SUPER_ADMIN"],
     "cashbank.internal.cheques-issued": ["SUPER_ADMIN"],
-    "cashbank.internal.petty-cash": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "cashbank.internal.petty-cash": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER"],
 
 
     // Team Members tab — managers only (+ super admin)
-    "teammembers.internal.teammembers": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "teammembers.internal.teammembers": ["SUPER_ADMIN", "WH_MANAGER", "SHOP_OWNER"],
 
     // Backup internal horizontal tabs (from backupTabRegistry.js)
-    "backup.internal.autobackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "backup.internal.backuptocomputer": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "backup.internal.backuptodrive": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
-    "backup.internal.restorebackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER","SHOP_STOCK_LISTER"],
+    "backup.internal.autobackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.backuptocomputer": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.backuptodrive": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "backup.internal.restorebackup": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
 
     // Utilities internal horizontal tabs (from utilitiesTabRegistry.js)
     "utilities.internal.importitems": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "utilities.internal.setUpbillperforma": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "utilities.internal.pettycashbook": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER"],
+    "utilities.internal.pettycashbook": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
 
     // Purchase internal horizontal tabs (from purchaseTabRegistry.js)
     "purchase.internal.purchase-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "purchase.internal.payment-out": ["SUPER_ADMIN", "WH_MANAGER"],
     "purchase.internal.bill-payment-status": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
-    "purchase.internal.expenses": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
+    "purchase.internal.expenses": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "purchase.internal.purchase-performance": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "purchase.internal.purchase-returns": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 };
@@ -184,7 +184,7 @@ export const filterInternalTabsByRole = (parentTabId, tabRegistry) => {
 export const ACTION_PERMISSIONS = {
 
     // Products / Inventory/ Product Master
-    "productMs.read": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_STOCK_LISTER"],
+    "productMs.read": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "productMs.create": ["WH_MANAGER"],
     "productMs.edit": ["WH_MANAGER"],
     "productMs.archive": ["WH_MANAGER"],
@@ -210,9 +210,15 @@ export const ACTION_PERMISSIONS = {
     "user.delete": ["SUPER_ADMIN"],
 
     // Team members (scoped shop / warehouse)
-    "team.read": ["SUPER_ADMIN", "SHOP_OWNER","SHOP_STOCK_LISTER", "WH_MANAGER"],
+    "team.read": ["SUPER_ADMIN", "SHOP_OWNER", "WH_MANAGER"],
     "team.create": ["SHOP_OWNER", "WH_MANAGER"],
     "team.edit": ["SHOP_OWNER", "WH_MANAGER"],
+
+    // Shop settings — bank (owner write) vs staff codes (owner + manager write)
+    "shop.bank.read": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"],
+    "shop.bank.write": ["SUPER_ADMIN", "SHOP_OWNER"],
+    "shop.staff.read": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"],
+    "shop.staff.write": ["SUPER_ADMIN", "SHOP_OWNER", "SHOP_MANAGER"],
 
     // Inwards
     "inward.read": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
@@ -242,7 +248,7 @@ export const ROLES = {
     WH_STOCK_LISTER: "WH_STOCK_LISTER",
     SHOP_OWNER: "SHOP_OWNER",
     BILLING_STAFF: "BILLING_STAFF",
-    SHOP_STOCK_LISTER: "SHOP_STOCK_LISTER",
+    SHOP_MANAGER: "SHOP_MANAGER",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -288,7 +294,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.WH_MANAGER]: ["dashboard", "warehouses", "transfers", "inventory", "archive", "purchase", "parties", "settings", "vendors", "reports", "cashbank", "teammembers", "backup", "utilities"],
     [ROLES.WH_STOCK_LISTER]: ["dashboard", "warehouses", "transfers", "inventory", "purchase", "parties", "settings", "vendors", "reports", "backup", "utilities"],
     [ROLES.SHOP_OWNER]: ["dashboard", "sales", "inventory", "transfers", "parties", "reports", "settings", "cashbank", "teammembers", "backup"],
-    [ROLES.SHOP_STOCK_LISTER]: ["dashboard", "sales", "purchase", "inventory", "parties", "reports", "backup","transfers","settings","cashbank",],
+    [ROLES.SHOP_MANAGER]: ["dashboard", "inventory", "transfers", "parties", "reports", "settings", "purchase"],
 };
 
 export const ROLE_LABELS = {
@@ -300,7 +306,7 @@ export const ROLE_LABELS = {
     [ROLES.WH_MANAGER]: "Warehouse Manager",
     [ROLES.WH_STOCK_LISTER]: "Warehouse Stock Lister",
     [ROLES.SHOP_OWNER]: "Shop Owner",
-    [ROLES.SHOP_STOCK_LISTER]: "Shop Manager",
+    [ROLES.SHOP_MANAGER]: "Shop Manager",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

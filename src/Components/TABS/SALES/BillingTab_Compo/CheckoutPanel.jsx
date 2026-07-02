@@ -39,6 +39,7 @@ import {
     clearManualCart,
     clearSelectedCustomer,
     setPaymentMethod,
+    setExtraDiscount,
     setLastCreatedBill,
     clearLastCreatedBill,
     openEditCustomer,
@@ -48,7 +49,9 @@ import {
     selectCartTotal,
     selectCartItemCount,
     selectCartTaxSummary,
+    selectExtraDiscount,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
+import { computeFinalPayable } from "../../../../utils/billingPayable";
 import { getStateName } from "../../../../constants/indianStateCodes";
 import { BILL_TYPES, getBillTypeLabel, isWithGstBill, isNonListedBill } from "../../../../constants/billingBillTypes";
 
@@ -137,6 +140,7 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                                             {bill.tax_summary?.igst > 0 && (
                                                 <tr><td colSpan="3" className="px-3 py-2 text-right text-xs text-gray-500">IGST:</td><td className="px-3 py-2 text-right text-xs">₹{toNumber(bill.tax_summary.igst).toFixed(2)}</td></tr>
                                             )}
+                                            {bill.discount > 0 && <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold text-orange-600">Extra Discount:</td><td className="px-3 py-2 text-right text-orange-600">-₹{toNumber(bill.discount).toFixed(2)}</td></tr>}
                                             {bill.credit_applied > 0 && <tr><td colSpan="3" className="px-3 py-2 text-right font-semibold text-green-600">Credit Applied:</td><td className="px-3 py-2 text-right text-green-600">-₹{toNumber(bill.credit_applied).toFixed(2)}</td></tr>}
                                             <tr className="border-t border-gray-200"><td colSpan="3" className="px-3 py-2 text-right font-bold text-lg">Total:</td><td className="px-3 py-2 text-right font-bold text-lg text-blue-600">₹{toNumber(bill.total_amount).toFixed(2)}</td></tr>
                                         </tfoot>
@@ -203,6 +207,7 @@ export default function CheckoutPanel({ shop_id }) {
     const total = useSelector(selectCartTotal);
     const itemCount = useSelector(selectCartItemCount);
     const taxSummary = useSelector(selectCartTaxSummary);
+    const extraDiscountInput = useSelector(selectExtraDiscount);
 
     const [createBill, { isLoading: isCreating }] = useCreateBillMutation();
     const [triggerPdf] = useLazyGetBillPdfQuery();
@@ -308,7 +313,11 @@ export default function CheckoutPanel({ shop_id }) {
         .filter((cn) => selectedCreditNoteIds.includes(cn.credit_note_id))
         .reduce((sum, cn) => sum + toNumber(cn.balance || cn.credit_amount || cn.amount), 0);
 
-    const finalPayable = Math.max(0, total - totalSelectedCredit);
+    const { extraDiscount, finalPayable } = computeFinalPayable({
+        grossTotal: total,
+        extraDiscountAmount: extraDiscountInput,
+        creditAmount: totalSelectedCredit,
+    });
     const selectedBankAccount =
         bankAccounts.find((a) => a.bank_account_id === selectedBankAccountId) ||
         bankAccounts.find((a) => a.is_default) ||
@@ -439,6 +448,10 @@ export default function CheckoutPanel({ shop_id }) {
             payload.city = selectedCustomer?.city?.trim() || "";
             payload.state_code = selectedCustomer?.state_code?.trim() || "";
             payload.pincode = selectedCustomer?.pincode?.trim() || "";
+        }
+
+        if (extraDiscount > 0) {
+            payload.discount = extraDiscount;
         }
 
         if (finalPayable > 0 && paymentMethod) {
@@ -1017,6 +1030,33 @@ export default function CheckoutPanel({ shop_id }) {
                             </div>
                         )}
                     </>
+                )}
+                <div className="pt-2 border-t border-gray-100">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Extra Discount (₹)</label>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={extraDiscountInput || ""}
+                        onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") {
+                                dispatch(setExtraDiscount(0));
+                                return;
+                            }
+                            const val = Math.max(0, Number(raw) || 0);
+                            dispatch(setExtraDiscount(val));
+                        }}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Deducted from total after GST</p>
+                </div>
+                {extraDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-orange-600">
+                        <span>Extra Discount:</span>
+                        <span>-₹{extraDiscount.toFixed(2)}</span>
+                    </div>
                 )}
                 {totalSelectedCredit > 0 && (
                     <div className="flex justify-between text-sm text-green-600">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
+import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 import {
     useCreateShopStaffCodeMutation,
     useUpdateShopStaffCodeMutation,
@@ -65,7 +66,7 @@ export default function StaffCodeFormModal({ shopId, staffCode, onClose, onSucce
             onSuccess?.();
             onClose();
         } catch (err) {
-            toast.error(err?.data?.message || "Failed to save staff code");
+            toast.error(getApiErrorMessage(err, "Failed to save staff code"));
         }
     };
 

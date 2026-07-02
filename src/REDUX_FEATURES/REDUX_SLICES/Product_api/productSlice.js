@@ -1,6 +1,7 @@
 // REDUX_SLICES/Product_api/productSlice.js
 
 import { createSlice } from "@reduxjs/toolkit";
+import { normalizeUnitOfMeasure } from "../../../constants/unitOfMeasure.constants";
 
 // ── Empty forms ───────────────────────────────────────────────────────────────
 
@@ -17,9 +18,11 @@ const EMPTY_FORM = {
   gst_type: "CGST_SGST",
   unit_of_measure: "",
   mrp: "",
-  special_price: "",        // Changed from retail_price
-  purchase_price: "",       // Changed from wholesale_price
-  expenses: "",             // NEW - added
+  special_price: "",
+  wholesale_price: "",
+  purchase_price: "",
+  expenses: "",
+  warranty: "",
   online_price: "",
   purchase_cost: "",
   weight: "",
@@ -37,9 +40,11 @@ const EMPTY_FORM = {
 const EMPTY_VARIANT_FORM = {
   attributes: [{ key: "", value: "" }],
   mrp: "",
-  special_price: "",        // Changed from retail_price
-  purchase_price: "",       // Changed from wholesale_price
-  expenses: "",             // NEW - added
+  special_price: "",
+  wholesale_price: "",
+  purchase_price: "",
+  expenses: "",
+  warranty: "",
   online_price: "",
   purchase_cost: "",
   weight: "",
@@ -121,11 +126,13 @@ const buildFormDataFromProduct = (p) => {
     hsn_code: p.hsn_code || "",
     gst_percent: String(p.gst_percent ?? "18"),
     gst_type: p.gst_type || "CGST_SGST",
-    unit_of_measure: p.unit_of_measure || "PCS",
+    unit_of_measure: normalizeUnitOfMeasure(p.unit_of_measure) || "Pcs",
     mrp: String(primaryVariant.mrp ?? p.mrp ?? ""),
     special_price: String(primaryVariant.special_price ?? p.special_price ?? ""),
+    wholesale_price: String(primaryVariant.wholesale_price ?? p.wholesale_price ?? ""),
     purchase_price: String(primaryVariant.purchase_price ?? p.purchase_price ?? ""),
     expenses: String(primaryVariant.expenses ?? p.expenses ?? ""),
+    warranty: primaryVariant.warranty ?? p.warranty ?? "",
     online_price: String(primaryVariant.online_price ?? p.online_price ?? ""),
     purchase_cost: String(primaryVariant.purchase_cost ?? p.purchase_cost ?? ""),
     weight: String(primaryVariant.weight ?? ""),
@@ -150,8 +157,10 @@ const buildVariantsFromProduct = (p) => {
     attributes: v.attributes || [],
     mrp: v.mrp,
     special_price: v.special_price,
+    wholesale_price: v.wholesale_price,
     purchase_price: v.purchase_price,
     expenses: v.expenses,
+    warranty: v.warranty || "",
     online_price: v.online_price,
     purchase_cost: v.purchase_cost,
     weight: v.weight,
@@ -323,8 +332,10 @@ const productSlice = createSlice({
             : [{ key: "", value: "" }],
           mrp: String(existing.mrp ?? ""),
           special_price: String(existing.special_price ?? ""),
+          wholesale_price: String(existing.wholesale_price ?? ""),
           purchase_price: String(existing.purchase_price ?? ""),
           expenses: String(existing.expenses ?? ""),
+          warranty: existing.warranty || "",
           online_price: String(existing.online_price ?? ""),
           purchase_cost: String(existing.purchase_cost ?? ""),
           weight: String(existing.weight ?? ""),

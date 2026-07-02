@@ -7,7 +7,7 @@ import { ROLES } from "../../../roles";
 import ShopExpensesTab from "../../PURCHASE/ShopExpensesTab/ShopExpensesTab";
 import ExpensesTab from "../../PURCHASE/ExpensesTab/ExpensesTab";
 
-const SHOP_ROLES = new Set([ROLES.SHOP_OWNER, ROLES.SHOP_STOCK_LISTER]);
+const SHOP_ROLES = new Set([ROLES.SHOP_OWNER, ROLES.SHOP_MANAGER]);
 const WH_ROLES = new Set([ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER]);
 
 const PETTY_CASH_SUBTITLE = {

@@ -12,7 +12,7 @@ import { USER_ROLES } from "./userRoles";
 export { USER_ROLES };
 
 const WH_ROLES = ["WH_MANAGER", "WH_STOCK_LISTER"];
-const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_STOCK_LISTER"];
+const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
 
 export default function UserFormBody({
     formData,

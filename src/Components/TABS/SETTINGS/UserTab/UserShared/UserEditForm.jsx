@@ -20,7 +20,7 @@ import {
 import UserFormBody from "./UserFormBody";
 
 const WH_ROLES = ["WH_MANAGER", "WH_STOCK_LISTER"];
-const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_STOCK_LISTER"];
+const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_#^])[A-Za-z\d@$!%*?&_#^]{8,}$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 

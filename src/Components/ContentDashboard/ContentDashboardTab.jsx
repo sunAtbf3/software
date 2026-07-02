@@ -10,7 +10,7 @@ import { useGetWarehousesQuery } from "../../REDUX_FEATURES/REDUX_SLICES/Warehou
 import { useGetMonthlyOverviewQuery } from "../../REDUX_FEATURES/REDUX_SLICES/Dashboard_api/dashboardApi";
 import NetworkStockPanel from "../shared/NetworkStockPanel";
 
-const SHOP_ROLES = new Set(["SHOP_OWNER", "SHOP_STOCK_LISTER", "BILLING_STAFF"]);
+const SHOP_ROLES = new Set(["SHOP_OWNER", "SHOP_MANAGER", "BILLING_STAFF"]);
 const WH_ROLES = new Set(["WH_MANAGER", "WH_STOCK_LISTER"]);
 
 const StatCard = ({ label, value, sub, color = "text-app-text" }) => (

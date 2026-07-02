@@ -16,6 +16,11 @@ import {
     setSubmitting,
 } from "../../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopSlice";
 import ShopFormBody from "./ShopFormBody";
+import {
+    isValidShopCode,
+    normalizeShopCode,
+    SHOP_CODE_FORMAT_HINT,
+} from "../../../../../constants/shop.constants";
 
 export default function ShopAddForm({ onSuccess }) {
     const dispatch = useDispatch();
@@ -24,10 +29,21 @@ export default function ShopAddForm({ onSuccess }) {
 
     const validate = () => {
         const errors = {};
-        if (!formData.shop_code?.trim()) errors.shop_code = "Shop code is required";
+        const shopCode = normalizeShopCode(formData.shop_code);
+        if (!shopCode) errors.shop_code = "Shop code is required";
+        else if (!isValidShopCode(shopCode)) {
+            errors.shop_code = `Invalid format. Use ${SHOP_CODE_FORMAT_HINT}`;
+        }
         if (!formData.shop_name?.trim()) errors.shop_name = "Shop name is required";
+        if (!formData.address?.trim()) errors.address = "Address is required";
         if (!formData.city?.trim()) errors.city = "City is required";
         if (!formData.state_code?.trim()) errors.state_code = "State is required";
+        if (formData.pincode?.trim() && !/^\d{6}$/.test(formData.pincode.trim())) {
+            errors.pincode = "Pincode must be 6 digits";
+        }
+        if (formData.phone?.trim() && !/^[0-9]{10}$/.test(formData.phone.trim())) {
+            errors.phone = "Phone must be a 10-digit number";
+        }
         return errors;
     };
 
@@ -42,7 +58,7 @@ export default function ShopAddForm({ onSuccess }) {
         dispatch(setSubmitting(true));
         try {
             const payload = {
-                shop_code: formData.shop_code.trim(),
+                shop_code: normalizeShopCode(formData.shop_code),
                 shop_name: formData.shop_name.trim(),
                 address: formData.address?.trim() || null,
                 city: formData.city.trim(),

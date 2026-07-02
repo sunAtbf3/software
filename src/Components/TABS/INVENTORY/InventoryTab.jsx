@@ -453,12 +453,20 @@ export default function InventoryTab() {
                         <span className="text-sm font-semibold text-blue-600">₹{p.special_price?.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400 w-14">Wholesale</span>
+                        <span className="text-xs font-semibold text-indigo-600">₹{p.wholesale_price?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <span className="text-xs text-gray-400 w-14">Purchase</span>
                         <span className="text-xs font-semibold text-green-600">₹{p.purchase_price?.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-gray-400 w-14">MRP</span>
                         <span className="text-xs font-bold text-red-500">₹{p.mrp?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400 w-14">Warranty</span>
+                        <span className="text-xs text-gray-600 truncate max-w-[120px]" title={p.warranty || ""}>{p.warranty || "—"}</span>
                       </div>
                     </div>
                   </td>
@@ -554,7 +562,9 @@ export default function InventoryTab() {
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Variant SKU</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Barcode</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Special Price</th>
+                                <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Wholesale</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Purchase Price</th>
+                                <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Warranty</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Attributes</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Action</th>
                               </tr>
@@ -578,9 +588,17 @@ export default function InventoryTab() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-2">
+                                    <span className="text-sm font-semibold text-indigo-600">
+                                      ₹{variant.wholesale_price?.toLocaleString() || "—"}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2">
                                     <span className="text-sm font-semibold text-green-600">
                                       ₹{variant.purchase_price?.toLocaleString() || "—"}
                                     </span>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <span className="text-xs text-gray-600">{variant.warranty || "—"}</span>
                                   </td>
                                   <td className="px-4 py-2">
                                     <div className="flex flex-wrap gap-1 text-gray-600">

@@ -49,6 +49,7 @@ const initialState = {
     showUpgradeGst: false,
     showEditCustomer: false,
     lastCreatedBill: null,
+    extraDiscount: 0,
 };
 
 const billingSlice = createSlice({
@@ -155,10 +156,12 @@ const billingSlice = createSlice({
 
         clearCart: (state) => {
             state.cart = [];
+            state.extraDiscount = 0;
         },
 
         clearManualCart: (state) => {
             state.manualCart = [];
+            state.extraDiscount = 0;
         },
 
         addManualItem: (state, action) => {
@@ -223,6 +226,11 @@ const billingSlice = createSlice({
 
         setPaymentMethod: (state, action) => {
             state.paymentMethod = action.payload;
+        },
+
+        setExtraDiscount: (state, action) => {
+            const value = Math.max(0, Number(action.payload) || 0);
+            state.extraDiscount = Number.isFinite(value) ? value : 0;
         },
 
         // ── UI State ─────────────────────────────────────────────────
@@ -312,6 +320,9 @@ export const selectCartTaxSummary = (state) => {
     return aggregateCartTax(cart, billType);
 };
 
+export const selectExtraDiscount = (state) =>
+    Math.max(0, Number(state.billing.extraDiscount) || 0);
+
 export const {
     addToCart,
     removeFromCart,
@@ -329,6 +340,7 @@ export const {
     setBillType,
     setBillingShopContext,
     setPaymentMethod,
+    setExtraDiscount,
     openVariantPicker,
     closeVariantPicker,
     openCreateCustomer,
