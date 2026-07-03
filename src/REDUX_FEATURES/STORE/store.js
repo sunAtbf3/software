@@ -107,7 +107,9 @@ export const store = configureStore({
     offline: offlineReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(
+    getDefaultMiddleware({
+    serializableCheck: false,  // 👈 Complete disable
+  }).concat(
       authApi.middleware,
       vendorApi.middleware,
       warehouseApi.middleware,

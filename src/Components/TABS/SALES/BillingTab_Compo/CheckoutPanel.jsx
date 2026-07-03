@@ -8,7 +8,7 @@
 // UPDATED: Bill type values to match backend enum (GST_INVOICE | NON_GST_INVOICE)
 // UPDATED: Per-bill GST details form + save-to-customer option
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Printer, Download, PlusCircle, Eye, X, Receipt, CheckCircle, Search } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
@@ -194,6 +194,7 @@ export default function CheckoutPanel({ shop_id }) {
     const isSyncing = useSelector((state) => state.offline.isSyncing);
     const pendingOutboxCount = useSelector((state) => state.offline.pendingCounts.pending);
     const { user } = useSelector((state) => state.auth);
+    const printThermalBtnRef = useRef(null);
     const {
         cart,
         manualCart,
@@ -221,6 +222,7 @@ export default function CheckoutPanel({ shop_id }) {
     const [viewBillSnapshot, setViewBillSnapshot] = useState(null);
     const [isOfflineCreating, setIsOfflineCreating] = useState(false);
     const isCreatingBill = isOnline ? isCreating : isOfflineCreating;
+
 
     const applySyncedBillUpdate = useCallback(async () => {
         const current = createdBillData || lastCreatedBill;
@@ -265,6 +267,18 @@ export default function CheckoutPanel({ shop_id }) {
             applySyncedBillUpdate();
         }
     }, [isOnline, isSyncing, pendingOutboxCount, applySyncedBillUpdate]);
+
+
+    useEffect(() => {
+        if (createdBillData || lastCreatedBill) {
+            setTimeout(() => {
+                if (printThermalBtnRef.current) {
+                    printThermalBtnRef.current.focus();
+                }
+            }, 150);
+        }
+    }, [createdBillData, lastCreatedBill]);
+
 
     // Credit Note States
     const [selectedCreditNoteIds, setSelectedCreditNoteIds] = useState([]);
@@ -794,7 +808,12 @@ export default function CheckoutPanel({ shop_id }) {
                             <p className="text-xs text-purple-600 mt-1">Credit Applied: -₹{toNumber(bill.credit_applied).toFixed(2)}</p>
                         )}
                         <div className="flex flex-wrap gap-2 mt-4">
-                            <button onClick={() => handlePrintBill("80mm")} disabled={docBusy} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal"}</button>
+                            <button ref={printThermalBtnRef} onClick={() => handlePrintBill("80mm")} disabled={docBusy} onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handlePrintBill("80mm");
+                                }
+                            }} className="flex-1 min-w-[120px] py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-60 flex items-center justify-center gap-2"><Printer size={14} /> {isPrinting ? "Printing…" : "Print Thermal"}</button>
                             {canShowBillUpiQr(bill) && (
                                 <button type="button" onClick={() => setShowUpiQrBill(bill)} className="flex-1 min-w-[120px] py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center justify-center gap-2">📱 UPI QR</button>
                             )}
