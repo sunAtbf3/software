@@ -24,6 +24,7 @@ import {
     resolveProductGstType,
     toBillingNumber,
 } from "../../../../utils/billingCart.utils";
+import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import BarcodeScanner from "./BarcodeScanner";
 
 const resolveStockImageUrl = (variant, product) =>
@@ -110,6 +111,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             gst_type: result.gst_type ?? resolveProductGstType(result.product),
             hsn_code: result.hsn_code ?? result.product?.hsn_code,
             quantity_available: stockAvailable,
+            attributes: result.attributes,
         });
         dispatch(addToCart(cartItem));
         // toast.success(`${productName} added to cart`);
@@ -207,6 +209,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 gst_type: resolveProductGstType(product),
                 hsn_code: product?.hsn_code,
                 quantity_available: stock.quantity_available,
+                attributes: variant?.attributes,
             });
             dispatch(addToCart(cartItem));
             // toast.success(`${product?.name} added to cart`);
@@ -277,6 +280,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                         const isLowStock = stockQty <= lowStockThreshold && stockQty > 0;
                         const isOutOfStock = stockQty === 0;
                         const gstLabel = formatGstPercentLabel(resolveProductGstPercent(product));
+                        const attrLabel = formatAttributesDisplay(variant?.attributes);
 
                         return (
                             <button
@@ -300,6 +304,11 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                                     <p className="text-xs font-semibold text-gray-800 truncate leading-tight">
                                         {product?.name || "Unknown"}
                                     </p>
+                                    {attrLabel && (
+                                        <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
+                                            {attrLabel}
+                                        </p>
+                                    )}
                                     <div className="mt-1 flex items-center justify-between gap-1">
                                         <div className="flex items-center gap-1 min-w-0">
                                             <span className="text-xs font-bold text-blue-600 shrink-0">

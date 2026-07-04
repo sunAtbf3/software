@@ -1,6 +1,7 @@
 /**
  * Billing cart helpers — product GST from master, cart line shape for Redux.
  */
+import { normalizeAttributes } from "./variantAttributes.utils";
 
 export const toBillingNumber = (value, defaultValue = 0) => {
   const num = Number(value);
@@ -76,6 +77,8 @@ export const buildBillingCartItem = ({
   gst_type,
   hsn_code,
   quantity_available,
+  attributes,
+  variant_attributes,
   price_type = "SPECIAL",
   quantity = 1,
 }) => {
@@ -84,10 +87,12 @@ export const buildBillingCartItem = ({
   const type = String(gst_type || "CGST_SGST").trim().toUpperCase();
   const normalizedType =
     type === "IGST" || type === "EXEMPT" || type === "CGST_SGST" ? type : "CGST_SGST";
+  const normalizedAttributes = normalizeAttributes(variant_attributes ?? attributes);
   return {
     variant_id,
     product_name: product_name || "Unknown",
     system_barcode: system_barcode || "",
+    variant_attributes: normalizedAttributes.length ? normalizedAttributes : undefined,
     quantity,
     price_type,
     unit_price: unitPrice,

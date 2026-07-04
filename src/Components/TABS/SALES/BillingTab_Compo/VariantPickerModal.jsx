@@ -14,6 +14,7 @@ import {
     formatGstPercentLabel,
     toBillingNumber,
 } from "../../../../utils/billingCart.utils";
+import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 
 export default function VariantPickerModal() {
     const dispatch = useDispatch();
@@ -33,6 +34,7 @@ export default function VariantPickerModal() {
             mrp: variant.mrp,
             online_price: variant.online_price,
             retail_price: variant.special_price,
+            attributes: variant.attributes,
             gst_percent: variant.gst_percent,
             gst_type: variant.gst_type || "CGST_SGST",
             quantity_available: variant.quantity_available || 999999,
@@ -68,6 +70,11 @@ export default function VariantPickerModal() {
                             className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
                         >
                             <p className="font-medium text-gray-800">{variant.sku || "No SKU"}</p>
+                            {formatAttributesDisplay(variant.attributes) && (
+                                <p className="text-xs text-gray-600 mt-0.5">
+                                    {formatAttributesDisplay(variant.attributes)}
+                                </p>
+                            )}
                             <div className="flex justify-between items-center mt-1">
                                 <p className="text-xs text-gray-500 font-mono">
                                     Barcode: {variant.system_barcode || "—"}

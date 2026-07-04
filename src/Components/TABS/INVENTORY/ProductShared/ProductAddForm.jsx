@@ -23,6 +23,7 @@ import {
 import ProductFormBody from "./ProductFormBody";
 import { normalizeUnitOfMeasure } from "../../../../constants/unitOfMeasure.constants";
 import { validateCatalogPricing, mapVariantCatalogPrices } from "../../../../utils/productCatalogValidation";
+import { sanitizeAttributesForPayload } from "../../../../utils/variantAttributes.utils";
 import VariantModal from "./VariantModal";
 
 const toNumber = (val, defaultVal = 0) => {
@@ -52,7 +53,7 @@ const cleanVariantPayload = (variant) => {
 // ── Build complete variants array (main variant + extra variants) ─────────────
 const buildCompleteVariantsArray = (formData, extraVariants) => {
   const mainVariant = {
-    attributes: [],
+    attributes: sanitizeAttributesForPayload(formData.attributes),
     ...mapVariantCatalogPrices(formData),
     online_price: formData.online_price ? toNumber(formData.online_price) : undefined,
     purchase_cost: formData.purchase_cost ? toNumber(formData.purchase_cost) : undefined,

@@ -78,6 +78,7 @@ const billingSlice = createSlice({
                     variant_id: variant.variant_id,
                     product_name: variant.product_name,
                     system_barcode: variant.system_barcode,
+                    variant_attributes: variant.variant_attributes,
                     quantity: 1,
                     price_type: variant.price_type || "SPECIAL",
                     unit_price: variant.unit_price,

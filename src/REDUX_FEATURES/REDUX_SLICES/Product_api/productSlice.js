@@ -2,6 +2,7 @@
 
 import { createSlice } from "@reduxjs/toolkit";
 import { normalizeUnitOfMeasure } from "../../../constants/unitOfMeasure.constants";
+import { attributesForForm } from "../../../utils/variantAttributes.utils";
 
 // ── Empty forms ───────────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ const EMPTY_FORM = {
   height: "",
   low_stock_threshold: "10",
   remarks: "",
+  attributes: [{ key: "", value: "" }],
   is_active: true,
   // IMAGE TRACKING FOR EDIT MODE
   imagesToKeep: [],
@@ -146,6 +148,7 @@ const buildFormDataFromProduct = (p) => {
         ?? "10"
     ),
     remarks: p.remarks || "",
+    attributes: attributesForForm(primaryVariant.attributes),
     is_active: p.is_active ?? true,
     imagesToKeep: imagesWithIds,
     imagesToDelete: [],
@@ -306,6 +309,26 @@ const productSlice = createSlice({
         if (newIdx >= 0) {
           state.formData.newImages[newIdx] = file;
         }
+      }
+    },
+
+    updateFormAttribute: (state, action) => {
+      const { index, key, value } = action.payload;
+      const attrs = [...(state.formData.attributes || [{ key: "", value: "" }])];
+      attrs[index] = { key, value };
+      state.formData.attributes = attrs;
+    },
+    addFormAttributeRow: (state) => {
+      state.formData.attributes = [
+        ...(state.formData.attributes || [{ key: "", value: "" }]),
+        { key: "", value: "" },
+      ];
+    },
+    removeFormAttributeRow: (state, action) => {
+      const idx = action.payload;
+      state.formData.attributes = (state.formData.attributes || []).filter((_, i) => i !== idx);
+      if (!state.formData.attributes.length) {
+        state.formData.attributes = [{ key: "", value: "" }];
       }
     },
 
@@ -556,6 +579,7 @@ export const {
   syncFormDataFromDetail,
   updateFormData, setFormErrors, clearFormErrors,
   addProductImages, removeProductImage, replaceProductImage,
+  updateFormAttribute, addFormAttributeRow, removeFormAttributeRow,
   openVariantModal,
   openVariantModalForEdit,
   openVariantModalWithData,

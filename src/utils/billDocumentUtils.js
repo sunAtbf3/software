@@ -2,6 +2,10 @@ import { roundMoney, splitTaxByProductGstType } from "./billingTax";
 import { getStateName, normalizeStateCode } from "../constants/indianStateCodes";
 import { BILL_TYPES } from "../constants/billingBillTypes";
 import { amountInWords } from "./amountInWords";
+import {
+  formatAttributesDisplay,
+  resolveItemVariantAttributes,
+} from "./variantAttributes.utils";
 
 export const fmtNum = (n) =>
   (Number.isFinite(Number(n)) ? Number(n) : 0).toLocaleString("en-IN", {
@@ -36,14 +40,36 @@ export const resolveLineProductName = (item) =>
   item?.variant?.sku ||
   "Item";
 
+export const resolveLineBrand = (item) =>
+  displayVal(item?.variant?.product?.brand_name || item?.product?.brand_name);
+
+export const resolveLineWarranty = (item) =>
+  displayVal(item?.variant?.warranty || item?.product?.warranty);
+
+/** Attribute lines only — for A4/PDF product-name column (brand/warranty use dedicated columns). */
+export const resolveLineAttributeText = (item, { isNonListed = false } = {}) => {
+  if (isNonListed || item?.manual_item_name) return "";
+  return formatAttributesDisplay(resolveItemVariantAttributes(item));
+};
+
+/**
+ * Structured meta for 80mm receipts: attributes first, then brand & warranty on separate lines.
+ * @returns {Array<{ kind: 'attributes', parts: Array<{key,value}> } | { kind: 'field', label: string, value: string }>}
+ */
 export const resolveLineMeta = (item, { isNonListed = false } = {}) => {
   if (isNonListed || item?.manual_item_name) return [];
-  const brand = displayVal(item?.variant?.product?.brand_name || item?.product?.brand_name);
-  const warranty = displayVal(item?.variant?.warranty || item?.product?.warranty);
-  return [
-    brand ? `Brand: ${brand}` : null,
-    warranty ? `Warranty: ${warranty}` : null,
-  ].filter(Boolean);
+
+  const lines = [];
+  const parts = resolveItemVariantAttributes(item);
+  if (parts.length) lines.push({ kind: "attributes", parts });
+
+  const brand = resolveLineBrand(item);
+  if (brand) lines.push({ kind: "field", label: "Brand", value: brand });
+
+  const warranty = resolveLineWarranty(item);
+  if (warranty) lines.push({ kind: "field", label: "Warranty", value: warranty });
+
+  return lines;
 };
 
 export const lineMrp = (item) => {

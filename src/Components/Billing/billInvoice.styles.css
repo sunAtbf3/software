@@ -104,28 +104,59 @@
   table-layout: fixed;
 }
 
-.bill-invoice-doc table.bi-table th,
 .bill-invoice-doc table.bi-table td {
+  border: 0.5px solid #333;
+  padding: 3px 4px;
+  text-align: center;
+  font-size: 7.5pt;
+  vertical-align: top;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+.bill-invoice-doc table.bi-table th {
   border: 0.5px solid #333;
   padding: 3px 4px;
   text-align: center;
   font-size: 7.5pt;
   vertical-align: middle;
   word-wrap: break-word;
-}
-
-.bill-invoice-doc table.bi-table th {
   font-weight: 700;
 }
 
 .bill-invoice-doc .bi-product-cell {
   line-height: 1.25;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .bill-invoice-doc .bi-item-meta {
   font-size: 7pt;
   font-weight: 400;
   line-height: 1.25;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  white-space: normal;
+}
+
+.bill-invoice-doc .bi-meta-key {
+  font-weight: 700;
+}
+
+.bill-invoice-doc .bi-meta-val {
+  font-weight: 400;
+}
+
+.bill-invoice-doc.thermal .bi-item-meta-line {
+  padding-bottom: 1px;
+}
+
+.bill-invoice-doc.thermal .bi-item-separator td {
+  border-bottom: 1px dashed #333;
+  padding: 0;
+  height: 4px;
+  line-height: 0;
 }
 
 .bill-invoice-doc .bi-fin-box {

@@ -81,6 +81,7 @@ const buildBillSnapshot = ({
     variant: {
       sku: item.system_barcode,
       mrp: item.mrp ?? item.unit_price,
+      attributes: item.variant_attributes ?? null,
       product: { name: item.product_name },
     },
   }),

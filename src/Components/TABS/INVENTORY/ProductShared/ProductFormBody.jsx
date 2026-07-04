@@ -13,7 +13,11 @@ import {
   addProductImages,
   removeProductImage,
   replaceProductImage,
+  updateFormAttribute,
+  addFormAttributeRow,
+  removeFormAttributeRow,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
+import VariantAttributesEditor from "./VariantAttributesEditor";
 
 import {
   getUnitOfMeasureSelectOptions,
@@ -218,7 +222,22 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
         </div>
       </div>
 
-      {/* ── Section 3: Prices (Variant 0 / defaults) ─────────────────────── */}
+      {/* ── Section 3: Variant 0 attributes ───────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          Primary Variant Attributes
+        </p>
+        <VariantAttributesEditor
+          attributes={formData.attributes}
+          onUpdateAttribute={(index, key, value) =>
+            dispatch(updateFormAttribute({ index, key, value }))
+          }
+          onAddRow={() => dispatch(addFormAttributeRow())}
+          onRemoveRow={(index) => dispatch(removeFormAttributeRow(index))}
+        />
+      </div>
+
+      {/* ── Section 4: Prices (Variant 0 / defaults) ─────────────────────── */}
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
           Prices — Variant 0 (defaults)

@@ -9,6 +9,8 @@ import {
   truncateProductName,
   resolveLineProductName,
   resolveLineMeta,
+  resolveLineBrand,
+  resolveLineWarranty,
   lineMrp,
   lineSpecialTotal,
   calcMrpDiscount,
@@ -18,6 +20,7 @@ import {
   amountInWords,
 } from "../../utils/billDocumentUtils";
 import { maskAccountNumber } from "../../utils/shopBank";
+import { resolveItemVariantAttributes } from "../../utils/variantAttributes.utils";
 import "./billInvoice.styles.css";
 
 const shopGstin = (bill) => bill.gst_config?.gst_number?.trim() || "";
@@ -29,6 +32,34 @@ const LabelValue = ({ label, value, className = "" }) => (
     <span>{displayVal(value)}</span>
   </div>
 );
+
+const AttributeParts = ({ parts }) => (
+  <>
+    {parts.map((part, i) => (
+      <Fragment key={`${part.key}-${i}`}>
+        {i > 0 && ", "}
+        <span className="bi-meta-key">{part.key}: </span>
+        <span className="bi-meta-val">{part.value}</span>
+      </Fragment>
+    ))}
+  </>
+);
+
+const BillMetaLine = ({ entry }) => {
+  if (entry.kind === "attributes") {
+    return (
+      <span className="bi-item-meta bi-item-meta-line">
+        <AttributeParts parts={entry.parts} />
+      </span>
+    );
+  }
+  return (
+    <span className="bi-item-meta bi-item-meta-line">
+      <span className="bi-meta-key">{entry.label}: </span>
+      <span className="bi-meta-val">{entry.value}</span>
+    </span>
+  );
+};
 
 export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat }) {
   if (!bill) return null;
@@ -214,18 +245,21 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   <tr style={{ fontWeight: "bold" }}>
                     <td colSpan={4} style={{ paddingTop: "4px" }}>{name}</td>
                   </tr>
-                  {metaLines.length > 0 && (
-                    <tr>
-                      <td colSpan={4} className="bi-item-meta">
-                        {metaLines.join(" | ")}
+                  {metaLines.map((entry, mi) => (
+                    <tr key={`${idx}-meta-${mi}`}>
+                      <td colSpan={4}>
+                        <BillMetaLine entry={entry} />
                       </td>
                     </tr>
-                  )}
-                  <tr style={{ borderBottom: "1px dashed #eee" }}>
+                  ))}
+                  <tr>
                     <td style={{ textAlign: "left" }}>MRP: ₹{fmtNum(lineMrp(item))}</td>
                     <td style={{ textAlign: "center" }}>{item.quantity}</td>
                     <td style={{ textAlign: "right" }}>₹{fmtNum(item.unit_price)}</td>
                     <td style={{ textAlign: "right" }}>₹{fmtNum(lineSpecialTotal(item))}</td>
+                  </tr>
+                  <tr className="bi-item-separator">
+                    <td colSpan={4} />
                   </tr>
                 </Fragment>
               );
@@ -395,21 +429,25 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
           <tr>
             {(isNonGst
               ? [
-                { label: "S.No.", width: "5.35%" },
-                { label: "Product Name", width: "41.3%" },
-                { label: "Qty", width: "6.12%" },
-                { label: "MRP", width: "13%" },
-                { label: "Special Price", width: "14.5%" },
-                { label: "Total", width: "19.73%" }
+                { label: "S.No.", width: "4.5%" },
+                { label: "Product Name", width: "24%" },
+                { label: "Brand", width: "10%" },
+                { label: "Warranty", width: "10%" },
+                { label: "Qty", width: "5.5%" },
+                { label: "MRP", width: "12%" },
+                { label: "Special Price", width: "13%" },
+                { label: "Total", width: "21%" }
               ]
               : [
-                { label: "S.No.", width: "5.35%" },
-                { label: "Product Name", width: "32.12%" },
-                { label: "HSN Code", width: "9.17%" },
-                { label: "Qty", width: "6.12%" },
-                { label: "MRP", width: "13%" },
-                { label: "Special Price", width: "14.5%" },
-                { label: "Total", width: "19.74%" }
+                { label: "S.No.", width: "4.5%" },
+                { label: "Product Name", width: "20%" },
+                { label: "Brand", width: "9%" },
+                { label: "Warranty", width: "9%" },
+                { label: "HSN Code", width: "8%" },
+                { label: "Qty", width: "5.5%" },
+                { label: "MRP", width: "11%" },
+                { label: "Special Price", width: "12%" },
+                { label: "Total", width: "21%" }
               ]
             ).map((col) => (
               <th key={col.label} style={{ width: col.width }}>
@@ -421,19 +459,25 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
         <tbody>
           {items.map((item, idx) => {
             const name = truncateProductName(resolveLineProductName(item));
-            const metaLines = resolveLineMeta(item, { isNonListed });
+            const attrParts = resolveItemVariantAttributes(item);
+            const brand = resolveLineBrand(item);
+            const warranty = resolveLineWarranty(item);
             const productNameCell = (
               <div className="bi-product-cell">
                 <div>{name}</div>
-                {metaLines.map((line) => (
-                  <div key={line} className="bi-item-meta">{line}</div>
-                ))}
+                {attrParts.length > 0 && (
+                  <div className="bi-item-meta">
+                    <AttributeParts parts={attrParts} />
+                  </div>
+                )}
               </div>
             );
             const cells = isNonGst
               ? [
                 idx + 1,
                 productNameCell,
+                displayVal(brand),
+                displayVal(warranty),
                 item.quantity,
                 fmtNum(lineMrp(item)),
                 fmtNum(item.unit_price),
@@ -442,6 +486,8 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
               : [
                 idx + 1,
                 productNameCell,
+                displayVal(brand),
+                displayVal(warranty),
                 displayVal(item.hsn_code),
                 item.quantity,
                 fmtNum(lineMrp(item)),

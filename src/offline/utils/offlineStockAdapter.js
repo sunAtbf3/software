@@ -58,6 +58,7 @@ export const mapLocalStockToBarcodeProduct = (row) => {
     hsn_code: row.hsn_code,
     gst_percent: row.gst_percent,
     gst_type: row.gst_type,
+    attributes: row.variant?.attributes ?? null,
     stock_available: row.quantity_available ?? 0,
   };
 };

@@ -26,6 +26,7 @@ import {
 import ProductFormBody from "./ProductFormBody";
 import { normalizeUnitOfMeasure } from "../../../../constants/unitOfMeasure.constants";
 import { validateCatalogPricing } from "../../../../utils/productCatalogValidation";
+import { sanitizeAttributesForPayload } from "../../../../utils/variantAttributes.utils";
 import VariantModal    from "./VariantModal";
 
 const toNumber = (val, defaultVal = 0) => {
@@ -173,6 +174,7 @@ export default function ProductEditForm({
         await updateVariant({
           productId: selectedProduct.product_id,
           variantId: primaryVariantId,
+          attributes: sanitizeAttributesForPayload(formData.attributes) || [],
           mrp: toNumber(formData.mrp),
           special_price: toNumber(formData.special_price),
           wholesale_price: toNumber(formData.wholesale_price),

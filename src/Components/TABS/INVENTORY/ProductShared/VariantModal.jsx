@@ -5,16 +5,17 @@ import { useDispatch } from "react-redux";
 import {
   closeVariantModal,
   updateVariantForm,
-  updateVariantAttribute,
-  addVariantAttributeRow,
-  removeVariantAttributeRow,
   setVariantErrors,
   clearVariantErrors,
   addVariantImages,
   removeVariantImage,
   replaceVariantImage,
+  updateVariantAttribute,
+  addVariantAttributeRow,
+  removeVariantAttributeRow,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
 import { validateCatalogPricing } from "../../../../utils/productCatalogValidation";
+import VariantAttributesEditor from "./VariantAttributesEditor";
 
 const toNumber = (val, defaultVal = 0) => {
   const num = Number(val);
@@ -208,45 +209,14 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
             </button>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Attributes</label>
-              <button
-                type="button"
-                onClick={() => dispatch(addVariantAttributeRow())}
-                className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
-              >
-                + Add Row
-              </button>
-            </div>
-            <div className="space-y-2">
-              {(variantForm.attributes || [{ key: "", value: "" }]).map((attr, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={attr.key}
-                    onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: e.target.value, value: attr.value }))}
-                    placeholder="e.g. Color"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    value={attr.value}
-                    onChange={(e) => dispatch(updateVariantAttribute({ index: i, key: attr.key, value: e.target.value }))}
-                    placeholder="e.g. Red"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {(variantForm.attributes || []).length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => dispatch(removeVariantAttributeRow(i))}
-                      className="text-red-400 hover:text-red-600 text-sm cursor-pointer px-1"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <VariantAttributesEditor
+            attributes={variantForm.attributes}
+            onUpdateAttribute={(index, key, value) =>
+              dispatch(updateVariantAttribute({ index, key, value }))
+            }
+            onAddRow={() => dispatch(addVariantAttributeRow())}
+            onRemoveRow={(index) => dispatch(removeVariantAttributeRow(index))}
+          />
 
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prices</p>

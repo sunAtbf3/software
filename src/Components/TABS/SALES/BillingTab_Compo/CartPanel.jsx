@@ -15,6 +15,7 @@ import {
     updateManualItem,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
+import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
 
 const toNumber = (value, defaultValue = 0) => {
@@ -93,6 +94,11 @@ export default function CartPanel() {
                             <tr key={itemId} className="bg-white">
                                 <td className="px-3 py-3">
                                     <p className="font-semibold text-gray-800 text-xs">{itemName}</p>
+                                    {billType !== BILL_TYPES.NON_LISTED && formatAttributesDisplay(item.variant_attributes) && (
+                                        <p className="text-[10px] text-gray-500 mt-0.5 leading-snug break-words">
+                                            {formatAttributesDisplay(item.variant_attributes)}
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-2 mt-1">
                                         {billType === BILL_TYPES.NON_LISTED ? (
                                             <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1 py-0.5 rounded">

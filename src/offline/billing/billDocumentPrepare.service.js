@@ -60,6 +60,11 @@ const enrichItemFromStock = async (item) => {
     item.warranty ||
     stock?.warranty ||
     "";
+  const variantAttributes =
+    item.variant?.attributes ??
+    item.variant_attributes ??
+    stock?.variant?.attributes ??
+    null;
   const name =
     item.variant?.product?.name ||
     item.product?.name ||
@@ -82,6 +87,7 @@ const enrichItemFromStock = async (item) => {
       sku: item.variant?.sku || stock?.system_barcode || stock?.sku,
       mrp,
       warranty,
+      attributes: variantAttributes,
       product: {
         ...(item.variant?.product || {}),
         name,

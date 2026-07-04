@@ -7,6 +7,7 @@ import React from "react";
 import { useDispatch } from "react-redux";
 import { closeViewModal } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
 import { useGetProductByIdQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productApi";
+import { normalizeAttributes } from "../../../../utils/variantAttributes.utils";
 
 const toNumber = (val, defaultVal = 0) => {
   const num = Number(val);
@@ -63,6 +64,7 @@ export default function ProductView({ productId, onClose }) {
   }
 
   const primaryVariant = product.primary_variant || product.variants?.[0] || {};
+  const primaryAttributes = normalizeAttributes(primaryVariant.attributes);
   const allVariants = product.variants || [];
   const extraVariants = allVariants.slice(1);
   const mainImages = primaryVariant.images || [];
@@ -117,6 +119,18 @@ export default function ProductView({ productId, onClose }) {
                   <div className="flex">
                     <span className="w-28 text-gray-500">Description:</span>
                     <span className="text-gray-600">{product.description}</span>
+                  </div>
+                )}
+                {primaryAttributes.length > 0 && (
+                  <div className="flex items-start">
+                    <span className="w-28 text-gray-500 shrink-0">Attributes:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {primaryAttributes.map((attr, aIdx) => (
+                        <span key={aIdx} className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                          {attr.key}: {attr.value}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -282,9 +296,9 @@ export default function ProductView({ productId, onClose }) {
                         <span className="text-xs font-mono text-gray-400">{variant.variant_code}</span>
                         <span className="text-xs font-mono text-gray-400">{variant.system_barcode}</span>
                       </div>
-                      {variant.attributes?.length > 0 && (
+                      {normalizeAttributes(variant.attributes).length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
-                          {variant.attributes.map((attr, aIdx) => (
+                          {normalizeAttributes(variant.attributes).map((attr, aIdx) => (
                             <span key={aIdx} className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
                               {attr.key}: {attr.value}
                             </span>
