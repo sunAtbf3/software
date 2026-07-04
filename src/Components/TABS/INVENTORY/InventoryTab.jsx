@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { X, Plus, Package, Tag, TrendingUp,RefreshCw, Layers, Eye, Upload, FolderPlus, CheckSquare, Square, ChevronDown, ChevronRight, Barcode, Printer } from "lucide-react";
 import { toast } from "../../shared/ToastConfig";
 import {
   useGetProductsQuery,
+  useGetProductInventoryStatsQuery,
   useDeleteProductMutation,
   useBulkUpdateProductsMutation,
   useBulkArchiveProductsMutation,
@@ -56,17 +57,21 @@ export default function InventoryTab() {
 
   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
 
-  const { data, isLoading, isFetching, refetch } = useGetProductsQuery({
-    page: currentPage, limit: pageSize,
-    search, category_id: categoryFilter,
-    is_active: '', warehouse_id: warehouseId,
-  });
+  const productListParams = useMemo(() => {
+    const base = {
+      page: currentPage,
+      limit: pageSize,
+      search,
+      category_id: categoryFilter,
+      warehouse_id: warehouseId,
+    };
+    if (activeFilter === "true") return { ...base, is_active: true };
+    if (activeFilter === "false") return { ...base, is_active: false };
+    return { ...base, include_inactive: true };
+  }, [currentPage, pageSize, search, categoryFilter, activeFilter, warehouseId]);
 
-  const { data: allData, error: allDataError, isLoading: allDataLoading } = useGetProductsQuery({
-    page: 1, limit: 100,
-    search, category_id: categoryFilter,
-    is_active: '', warehouse_id: warehouseId,
-}, { skip: false });
+  const { data, isLoading, isFetching, refetch } = useGetProductsQuery(productListParams);
+  const { data: inventoryStats, refetch: refetchStats } = useGetProductInventoryStatsQuery({ warehouse_id: warehouseId });
 
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -84,7 +89,12 @@ export default function InventoryTab() {
   const someSelected = products.some(p => selectedProductIds.includes(p.product_id));
 
 
-  const allProducts = data?.products || [];
+  const stats = inventoryStats || {
+    total_products: 0,
+    active_count: 0,
+    multi_variant_count: 0,
+    avg_mrp: 0,
+  };
 
   // Toggle expand for product row - ONLY for multi-variant products
   const toggleExpand = (productId) => {
@@ -115,14 +125,6 @@ export default function InventoryTab() {
     setSelectedVariantsForBarcode(variantsWithProducts);
     setShowBarcodeModal(true);
   };
-
-
-//   console.log("allData:", allData);
-// console.log("allData?.products:", allData?.products);
-// console.log("allData?.data:", allData?.data);
-
-// console.log("allDataError:", allDataError);
-// console.log("allDataLoading:", allDataLoading);
 
   // Get non-primary variants for expand row (exclude primary_variant)
   const getNonPrimaryVariants = (product) => {
@@ -188,6 +190,7 @@ export default function InventoryTab() {
 
   const handleRefresh = () => {
     refetch();
+    refetchStats();
     dispatch(clearSelectedProducts());
 };
 
@@ -249,25 +252,23 @@ export default function InventoryTab() {
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <p className="text-xs uppercase tracking-wide font-medium text-gray-600">Total Products</p>
-          <p className="text-3xl font-bold text-gray-700 mt-1">{allProducts.length}</p>
-          <p className="text-xs text-gray-400 mt-1">matching filters</p>
+          <p className="text-3xl font-bold text-gray-700 mt-1">{stats.total_products}</p>
+          <p className="text-xs text-gray-400 mt-1">total in system</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <p className="text-xs uppercase tracking-wide font-medium text-gray-600">Active</p>
-          <p className="text-3xl font-bold text-gray-600 mt-1">{allProducts.filter(p => p.is_active).length}</p>
+          <p className="text-3xl font-bold text-gray-600 mt-1">{stats.active_count}</p>
           <p className="text-xs text-gray-400 mt-1">total in system</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <p className="text-xs uppercase tracking-wide font-medium text-gray-400">Multi-Variant</p>
-          <p className="text-3xl font-bold text-gray-600 mt-1">{allProducts.filter(p => p.variant_count > 1).length}</p>
+          <p className="text-3xl font-bold text-gray-600 mt-1">{stats.multi_variant_count}</p>
           <p className="text-xs text-gray-400 mt-1">total in system</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <p className="text-xs uppercase tracking-wide font-medium text-gray-400">Avg MRP</p>
           <p className="text-3xl font-bold text-gray-600 mt-1">
-            ₹{allProducts.length 
-              ? Math.round(allProducts.reduce((s, p) => s + (p.mrp || 0), 0) / allProducts.length).toLocaleString() 
-              : 0}
+            ₹{stats.avg_mrp.toLocaleString()}
           </p>
           <p className="text-xs text-gray-400 mt-1">across all products</p>
         </div>

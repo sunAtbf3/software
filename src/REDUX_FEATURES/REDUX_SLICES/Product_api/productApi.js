@@ -1,6 +1,15 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import AxiosInstance from "../../../SERVICES/AxiosInstance";
 
+const parseQueryBoolean = (value) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "true" || normalized === "1") return true;
+  if (normalized === "false" || normalized === "0") return false;
+  return undefined;
+};
+
 const axiosBaseQuery = () => async ({ url, method, data, params, headers }) => {
   try {
     const result = await AxiosInstance({ url, method, data, params, headers });
@@ -24,12 +33,14 @@ export const productApi = createApi({
 
     // ── GET /products ───────────────────────────────────────────────────────
     getProducts: builder.query({
-      query: ({ page = 1, limit = 20, search = "", category_id = "", is_active = "", warehouse_id = "" }) => {
+      query: ({ page = 1, limit = 20, search = "", category_id = "", is_active = "", include_inactive = false, warehouse_id = "" }) => {
         const params = { page, limit };
         if (search) params.search = search;
         if (category_id) params.category_id = category_id;
         if (warehouse_id) params.warehouse_id = warehouse_id;
-        if (is_active !== "") params.is_active = is_active;
+        const activeFilter = parseQueryBoolean(is_active);
+        if (activeFilter !== undefined) params.is_active = activeFilter ? "true" : "false";
+        if (parseQueryBoolean(include_inactive) === true) params.include_inactive = "true";
         return { url: "/products", method: "GET", params };
       },
       providesTags: (result) => {
@@ -45,6 +56,16 @@ export const productApi = createApi({
         products: response.data || [],
         meta: response.meta || { total: 0, page: 1, limit: 20, totalPages: 1 },
       }),
+    }),
+
+    getProductInventoryStats: builder.query({
+      query: ({ warehouse_id = "" } = {}) => {
+        const params = {};
+        if (warehouse_id) params.warehouse_id = warehouse_id;
+        return { url: "/products/inventory-stats", method: "GET", params };
+      },
+      providesTags: [{ type: "Product", id: "STATS" }],
+      transformResponse: (response) => response.data,
     }),
     
 
@@ -63,7 +84,7 @@ export const productApi = createApi({
         data: productData,
         headers: { "Content-Type": "application/json" },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -75,7 +96,7 @@ export const productApi = createApi({
         data: formData,
         headers: { "Content-Type": "multipart/form-data" },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -89,6 +110,7 @@ export const productApi = createApi({
       invalidatesTags: (result, error, { productId }) => [
         { type: "Product", id: productId },
         { type: "Product", id: "LIST" },
+        { type: "Product", id: "STATS" },
       ],
       transformResponse: (response) => response.data,
     }),
@@ -102,6 +124,7 @@ export const productApi = createApi({
       invalidatesTags: (result, error, productId) => [
         { type: "Product", id: productId },
         { type: "Product", id: "LIST" },
+        { type: "Product", id: "STATS" },
       ],
       transformResponse: (response) => response.data,
     }),
@@ -116,6 +139,7 @@ export const productApi = createApi({
       invalidatesTags: (result, error, { productId }) => [
         { type: "Product", id: productId },
         { type: "Product", id: "LIST" },
+        { type: "Product", id: "STATS" },
       ],
       transformResponse: (response) => response.data,
     }),
@@ -130,6 +154,7 @@ export const productApi = createApi({
       invalidatesTags: (result, error, { productId }) => [
         { type: "Product", id: productId },
         { type: "Product", id: "LIST" },
+        { type: "Product", id: "STATS" },
       ],
       transformResponse: (response) => response.data,
     }),
@@ -165,7 +190,7 @@ export const productApi = createApi({
         method: "PATCH",
         data: { items },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -176,7 +201,7 @@ export const productApi = createApi({
         method: "DELETE",
         data: { product_ids: productIds },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -187,7 +212,7 @@ export const productApi = createApi({
         method: "PATCH",
         data: { product_ids: productIds },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -198,7 +223,7 @@ export const productApi = createApi({
         method: "DELETE",
         params: { date },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }],
+      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
       transformResponse: (response) => response.data,
     }),
 
@@ -251,6 +276,7 @@ export const productApi = createApi({
 
 export const {
   useGetProductsQuery,
+  useGetProductInventoryStatsQuery,
   useGetProductByIdQuery,
   useCreateProductMutation,
   useCreateProductWithImagesMutation,
