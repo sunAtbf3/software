@@ -258,9 +258,11 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                     <td style={{ textAlign: "right" }}>₹{fmtNum(item.unit_price)}</td>
                     <td style={{ textAlign: "right" }}>₹{fmtNum(lineSpecialTotal(item))}</td>
                   </tr>
-                  <tr className="bi-item-separator">
-                    <td colSpan={4} />
-                  </tr>
+                  {idx < items.length - 1 && (
+                    <tr className="bi-item-separator">
+                      <td colSpan={4} />
+                    </tr>
+                  )}
                 </Fragment>
               );
             })}
@@ -497,7 +499,9 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
             return (
               <tr key={item.variant_id || idx}>
                 {cells.map((cell, cellIdx) => (
-                  <td key={cellIdx}>{cell}</td>
+                  <td key={cellIdx} className={cellIdx === 1 ? "bi-product-name-cell" : undefined}>
+                    {cell}
+                  </td>
                 ))}
               </tr>
             );

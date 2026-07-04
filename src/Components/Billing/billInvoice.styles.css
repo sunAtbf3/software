@@ -123,6 +123,10 @@
   font-weight: 700;
 }
 
+.bill-invoice-doc table.bi-table td.bi-product-name-cell {
+  text-align: left;
+}
+
 .bill-invoice-doc .bi-product-cell {
   line-height: 1.25;
   word-wrap: break-word;
@@ -145,6 +149,14 @@
 }
 
 .bill-invoice-doc .bi-meta-val {
+  font-weight: 400;
+}
+
+.bill-invoice-doc .bi-product-cell .bi-meta-key {
+  font-weight: 700;
+}
+
+.bill-invoice-doc .bi-product-cell .bi-meta-val {
   font-weight: 400;
 }
 
