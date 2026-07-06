@@ -216,14 +216,18 @@ export const productApi = createApi({
       transformResponse: (response) => response.data,
     }),
 
-    // ── DELETE /products/hard-delete-by-date (Permanent Delete by Date) ───────
-    hardDeleteProductsByDate: builder.mutation({
-      query: ({ date }) => ({
-        url: "/products/hard-delete-by-date",
+    // ── DELETE /products/hard-delete (Permanent delete archived products) ───
+    hardDeleteProducts: builder.mutation({
+      query: (productIds) => ({
+        url: "/products/hard-delete",
         method: "DELETE",
-        params: { date },
+        data: { product_ids: productIds },
       }),
-      invalidatesTags: [{ type: "Product", id: "LIST" }, { type: "Product", id: "STATS" }],
+      invalidatesTags: [
+        { type: "Product", id: "LIST" },
+        { type: "Product", id: "INACTIVE_LIST" },
+        { type: "Product", id: "STATS" },
+      ],
       transformResponse: (response) => response.data,
     }),
 
@@ -289,7 +293,7 @@ export const {
   useBulkUpdateProductsMutation,
   useBulkArchiveProductsMutation,
   useBulkRestoreProductsMutation,
-  useHardDeleteProductsByDateMutation,
+  useHardDeleteProductsMutation,
   useGetInactiveProductsQuery,
 
    useGetProductByBarcodeQuery,

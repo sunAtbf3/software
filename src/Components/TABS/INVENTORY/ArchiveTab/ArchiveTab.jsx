@@ -5,7 +5,7 @@ import { Package, Eye, RotateCcw, Trash2, AlertTriangle, X, Square, CheckSquare 
 import {
   useGetInactiveProductsQuery,
   useBulkRestoreProductsMutation,
-  useHardDeleteProductsByDateMutation,
+  useHardDeleteProductsMutation,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productApi";
 import {
   openViewModal,
@@ -29,11 +29,9 @@ export default function ArchiveTab() {
   } = useSelector((state) => state.product);
 
   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
-  const [showPermanentModal, setShowPermanentModal] = useState(false);
-  const [dateToDelete, setDateToDelete] = useState("");
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  // Fetch all products
+
   const { data, isLoading, isFetching, refetch } = useGetInactiveProductsQuery({
     page: currentPage,
     limit: pageSize,
@@ -41,18 +39,14 @@ export default function ArchiveTab() {
     warehouse_id: warehouseId,
   });
 
-
-
   const [bulkRestore, { isLoading: isRestoring }] = useBulkRestoreProductsMutation();
-  const [hardDeleteByDate, { isLoading: isDeleting }] = useHardDeleteProductsByDateMutation();
+  const [hardDeleteProducts, { isLoading: isDeleting }] = useHardDeleteProductsMutation();
 
-  // Filter to show ONLY archived products (deleted_at exists)
-  // No filtering needed
   const products = data?.products || [];
   const meta = data?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
 
   const allSelectedOnPage = products.length > 0 && products.every(p => selectedProductIds.includes(p.product_id));
-  const someSelected = products.some(p => selectedProductIds.includes(p.product_id));
+  const canPermanentDelete = can("product.permanent_delete");
 
   const toggleSelectProduct = (productId) => {
     if (selectedProductIds.includes(productId)) {
@@ -95,28 +89,30 @@ export default function ArchiveTab() {
       toast.success(`${selectedProductIds.length} product(s) restored successfully`);
       refetch();
       setSelectedProductIds([]);
+      setIsDropdownOpen(false);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to restore products");
     }
   };
 
-  const handlePermanentDeleteByDate = async () => {
-    if (!dateToDelete) {
-      toast.warning("Please select a date");
+  const handlePermanentDelete = async (productIds = selectedProductIds) => {
+    if (!productIds.length) {
+      toast.warning("Select archived products to permanently delete");
       return;
     }
 
-    if (!window.confirm(`Permanently delete ALL products archived before ${dateToDelete}? This cannot be undone!`)) {
+    if (!window.confirm(
+      `Permanently delete ${productIds.length} selected product(s)?\n\nThis removes them from the warehouse catalog and shop stock. This cannot be undone.`
+    )) {
       return;
     }
 
     try {
-      const result = await hardDeleteByDate({ date: dateToDelete }).unwrap();
+      const result = await hardDeleteProducts(productIds).unwrap();
       toast.success(`${result.deleted} product(s) permanently deleted`);
-      setShowPermanentModal(false);
-      setDateToDelete("");
       refetch();
       setSelectedProductIds([]);
+      setIsDropdownOpen(false);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to delete products");
     }
@@ -126,23 +122,21 @@ export default function ArchiveTab() {
     setSelectedProductIds([]);
   };
 
-
   return (
     <div className="space-y-5">
-      {/* Archive Header */}
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <div className="flex items-center gap-3">
           <AlertTriangle size={24} className="text-red-500" />
           <div>
             <h3 className="font-semibold text-red-800">Archive Zone</h3>
             <p className="text-sm text-red-600">
-              Products in archive are soft-deleted. You can restore them or permanently delete by date.
+              Archived products are inactive in inventory. Restore them or permanently delete selected items.
+              Products with billing or purchase history cannot be permanently deleted.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 text-gray-600 space-y-3">
         <div className="flex gap-3">
           <input
@@ -175,18 +169,19 @@ export default function ArchiveTab() {
             {[10, 20, 50].map(s => <option key={s} value={s}>{s} per page</option>)}
           </select>
 
-          {can("product.permanent_delete") && (
+          {canPermanentDelete && selectedProductIds.length > 0 && (
             <button
-              onClick={() => setShowPermanentModal(true)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2"
+              onClick={() => handlePermanentDelete()}
+              disabled={isDeleting}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-2 disabled:opacity-50"
             >
-              <Trash2 size={16} /> Permanent Delete by Date
+              <Trash2 size={16} />
+              Delete {selectedProductIds.length} Selected Permanently
             </button>
           )}
         </div>
       </div>
 
-      {/* Bulk Action Bar - Shows when items selected */}
       {selectedProductIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
           <div className="bg-blue-600 text-white rounded-xl shadow-2xl border border-gray-700 px-4 py-3 flex items-center gap-4">
@@ -214,12 +209,15 @@ export default function ArchiveTab() {
                       <RotateCcw size={16} /> Restore Selected
                     </button>
 
-                    {/* Only show Permanent Delete for SUPER_ADMIN */}
-                    {can("product.permanent_delete") && (
+                    {canPermanentDelete && (
                       <>
                         <div className="border-t border-gray-100" />
-                        <button onClick={() => { setIsDropdownOpen(false); setShowPermanentModal(true); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50">
-                          <Trash2 size={16} /> Permanent Delete
+                        <button
+                          onClick={() => handlePermanentDelete()}
+                          disabled={isDeleting}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          <Trash2 size={16} /> Delete Permanently
                         </button>
                       </>
                     )}
@@ -235,7 +233,6 @@ export default function ArchiveTab() {
         </div>
       )}
 
-      {/* Table */}
       <div className="bg-white rounded-xl text-gray-700 border border-gray-200 overflow-hidden">
         <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
         <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
@@ -249,7 +246,7 @@ export default function ArchiveTab() {
                 )}
               </th>
               <th className="px-4 py-3 text-left">Product</th>
-              <th className="px-4 py-3 text-left">Archived Date</th>
+              <th className="px-4 py-3 text-left">Last Updated</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">Actions</th>
             </tr>
@@ -280,7 +277,7 @@ export default function ArchiveTab() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500">
-                  {p.deleted_at ? new Date(p.deleted_at).toLocaleDateString() : "-"}
+                  {p.updated_at ? new Date(p.updated_at).toLocaleDateString() : "-"}
                 </td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700">
@@ -304,6 +301,15 @@ export default function ArchiveTab() {
                     >
                       <RotateCcw size={12} className="inline mr-1" /> Restore
                     </button>
+                    {canPermanentDelete && (
+                      <button
+                        onClick={() => handlePermanentDelete([p.product_id])}
+                        disabled={isDeleting}
+                        className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg disabled:opacity-50"
+                      >
+                        <Trash2 size={12} className="inline mr-1" /> Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -313,7 +319,6 @@ export default function ArchiveTab() {
         </div>
       </div>
 
-      {/* Pagination */}
       {meta.totalPages > 1 && (
         <div className="flex justify-between items-center bg-white rounded-xl border border-gray-200 px-4 py-3">
           <p className="text-sm text-gray-500">
@@ -345,40 +350,6 @@ export default function ArchiveTab() {
         </div>
       )}
 
-      {/* Permanent Delete Modal */}
-      {showPermanentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Permanent Delete Products</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Delete all products archived before this date. This action cannot be undone.
-            </p>
-            <input
-              type="date"
-              value={dateToDelete}
-              onChange={(e) => setDateToDelete(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowPermanentModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handlePermanentDeleteByDate}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              >
-                Delete Permanently
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Modal */}
       {showViewModal && selectedProduct && (
         <ProductView productId={selectedProduct.product_id} onClose={() => dispatch(closeViewModal())} />
       )}
