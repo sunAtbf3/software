@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { X, Plus, Package, Tag, TrendingUp,RefreshCw, Layers, Eye, Upload, FolderPlus, CheckSquare, Square, ChevronDown, ChevronRight, Barcode, Printer } from "lucide-react";
+import { X, Plus, Package, Tag, TrendingUp,RefreshCw, Layers, Eye, Upload, Download, FolderPlus, CheckSquare, Square, ChevronDown, ChevronRight, Barcode, Printer } from "lucide-react";
 import { toast } from "../../shared/ToastConfig";
+import AxiosInstance from "../../../SERVICES/AxiosInstance";
 import {
   useGetProductsQuery,
   useGetProductInventoryStatsQuery,
@@ -54,6 +55,34 @@ export default function InventoryTab() {
   const [expandedProducts, setExpandedProducts] = useState({});
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedVariantsForBarcode, setSelectedVariantsForBarcode] = useState([]);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportProducts = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const response = await AxiosInstance.get("/products/bulk/export", {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `products-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Products exported");
+    } catch (err) {
+      console.error("Product export failed:", err);
+      toast.error(err.response?.data?.message || "Failed to export products");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
 
@@ -223,6 +252,16 @@ export default function InventoryTab() {
             </button>
           )}
           
+          {can("productMs.export") && (
+            <button
+              onClick={handleExportProducts}
+              disabled={exporting}
+              className="bg-white border border-gray-200 text-gray-700 text-sm font-medium px-3.5 py-2 rounded-lg hover:bg-gray-50 inline-flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <Download size={16} /> {exporting ? "Exporting…" : "Export Products"}
+            </button>
+          )}
+
           {can("productMs.bulk_upload") && (
             <button
               onClick={() => setShowBulkUpload(true)}
