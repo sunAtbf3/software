@@ -80,7 +80,7 @@ export default function ProductView({ productId, onClose }) {
           <div>
             <h3 className="text-lg font-semibold text-gray-800">Product Details</h3>
             <p className="text-xs text-gray-400 mt-0.5 font-mono">
-              {product.product_code} — {product.name}
+              {primaryVariant.product_code || product.product_code} — {product.name}
             </p>
           </div>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 text-xl cursor-pointer">✕</button>
@@ -93,7 +93,7 @@ export default function ProductView({ productId, onClose }) {
               <div className="space-y-2 text-sm">
                 <div className="flex">
                   <span className="w-28 text-gray-500">Product Code:</span>
-                  <span className="font-mono text-gray-800">{product.product_code}</span>
+                  <span className="font-mono text-gray-800">{primaryVariant.product_code || product.product_code}</span>
                 </div>
                 <div className="flex">
                   <span className="w-28 text-gray-500">Name:</span>
@@ -293,7 +293,7 @@ export default function ProductView({ productId, onClose }) {
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-gray-400">{variant.variant_code}</span>
+                        <span className="text-xs font-mono text-gray-600">{variant.product_code || variant.variant_code}</span>
                         <span className="text-xs font-mono text-gray-400">{variant.system_barcode}</span>
                       </div>
                       {normalizeAttributes(variant.attributes).length > 0 && (

@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   // Step machine
-  step: "mode", // 'mode' | 'upload' | 'preview' | 'zip' | 'importing' | 'result'
+  step: "upload", // 'upload' | 'preview' | 'zip' | 'importing' | 'result'
   imageMode: null, // 'csv_only' | 'zip'
 
   // File metadata (actual File objects stay in component ref)
@@ -100,7 +100,7 @@ export default bulkUploadSlice.reducer;
 
 // const initialState = {
 //   // Step machine
-//   step: "mode", // 'mode' | 'upload' | 'preview' | 'zip' | 'importing' | 'result'
+//   step: "upload", // 'upload' | 'preview' | 'zip' | 'importing' | 'result'
 //   imageMode: null, // 'csv_only' | 'zip'
 
 //   // File metadata (actual File objects stay in component ref)

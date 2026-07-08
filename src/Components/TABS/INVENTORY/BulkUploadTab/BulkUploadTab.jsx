@@ -35,6 +35,77 @@ const STEPS = [
   { key: "result",    label: "Done"    },
 ];
 
+const BULK_UPLOAD_TIMEOUT_MS = 10 * 60 * 1000;
+
+const cleanBulkError = (raw) => {
+  if (!raw) return "Unknown error";
+  let msg = String(raw).replace(/\u001b\[[0-9;]*m/g, "");
+  const patterns = [
+    /Argument\s+`?(\w+)`?\s+is missing/i,
+    /Unique constraint failed on the fields: \(([^)]+)\)/i,
+    /Foreign key constraint failed on the field: \(([^)]+)\)/i,
+    /The provided value .+ is not valid/i,
+    /Expected .+, provided .+/i,
+  ];
+  for (const pat of patterns) {
+    const match = msg.match(pat);
+    if (match) return match[0].trim();
+  }
+  const lines = msg.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lastLine = lines[lines.length - 1] || msg;
+  return lastLine.replace(/`/g, "'").substring(0, 200);
+};
+
+const buildImportReportRows = (result) => {
+  const failedRows = (result?.failed || []).map((item) => ({
+    type: "Failed",
+    product: item.product || "",
+    rows: item.rows?.join(", ") || "",
+    message: cleanBulkError(item.message || item.error),
+  }));
+  const warningRows = (result?.warnings || []).map((item) => ({
+    type: "Warning",
+    product: item.product || "",
+    rows: Array.isArray(item.variants) ? item.variants.join(", ") : (item.rows?.join(", ") || ""),
+    message: cleanBulkError(item.message),
+  }));
+  return [...failedRows, ...warningRows];
+};
+
+const downloadImportReportCsv = (result, filename = "import_report.csv") => {
+  const rows = Array.isArray(result)
+    ? result
+    : buildImportReportRows(result);
+  if (!rows.length) {
+    return false;
+  }
+  const headers = ["Type", "Product Name", "Row / Variant", "Message"];
+  const csvRows = rows.map((item) => [
+    `"${String(item.type || "").replace(/"/g, '""')}"`,
+    `"${String(item.product || "").replace(/"/g, '""')}"`,
+    `"${String(item.rows || "").replace(/"/g, '""')}"`,
+    `"${String(item.message || "").replace(/"/g, '""')}"`,
+  ]);
+  const csvContent = [headers.join(","), ...csvRows.map((r) => r.join(","))].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+  return true;
+};
+
+const isImportTransportError = (err) =>
+  err?.code === "ECONNABORTED"
+  || err?.response?.status === 502
+  || err?.response?.status === 503
+  || err?.response?.status === 504
+  || (!err?.response && String(err?.message || "").toLowerCase().includes("network"));
+
 const REQUIRED_COLS = [
   "name",
   "product_code",
@@ -73,19 +144,33 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
   const [importPhase, setImportPhase] = useState(0); // 0 uploading 1 processing 2 finalizing
   const [templateDownloading, setTemplateDownloading] = useState(false);
 
-  // auto-set mode
-  useEffect(() => { dispatch(setImageMode("zip")); }, []);
+  // Reset when modal closes; configure image mode when opened
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(setImageMode("zip"));
+      dispatch(setStep("upload"));
+      return undefined;
+    }
+    csvFileRef.current = null;
+    zipFileRef.current = null;
+    dispatch(resetBulkUpload());
+    return undefined;
+  }, [isOpen, dispatch]);
 
   // toast on result
   useEffect(() => {
     if (prevStepRef.current !== "result" && step === "result" && result) {
-      const created  = result.created  || 0;
-      const failed   = result.failed?.length   || 0;
-      const warnings = result.warnings?.length || 0;
-      if (failed && !created)      toast.error(`Import failed — ${failed} product(s) could not be created`);
-      else if (failed)             toast.warning(`${created} created · ${failed} failed`, { autoClose: 6000 });
-      else if (warnings)           toast.success(`${created} imported with ${warnings} warning(s)`);
-      else                         toast.success(`${created} product(s) imported successfully`);
+      if (result.interrupted) {
+        toast.error(result.interruptionMessage || "Import was interrupted — check inventory before retrying", { autoClose: 12000 });
+      } else {
+        const created  = result.created  || 0;
+        const failed   = result.failed?.length   || 0;
+        const warnings = result.warnings?.length || 0;
+        if (failed && !created)      toast.error(`Import failed — ${failed} product(s) could not be created`);
+        else if (failed)             toast.warning(`${created} created · ${failed} failed`, { autoClose: 6000 });
+        else if (warnings)           toast.success(`${created} imported with ${warnings} warning(s)`);
+        else                         toast.success(`${created} product(s) imported successfully`);
+      }
     }
     prevStepRef.current = step;
   }, [step, result]);
@@ -127,6 +212,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
       const fd = new FormData(); fd.append("file", csvFileRef.current);
       const res = await AxiosInstance.post("/products/bulk/csv?preview=true", fd, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: BULK_UPLOAD_TIMEOUT_MS,
         onUploadProgress: (e) => setCsvPct(e.total ? Math.round((e.loaded / e.total) * 100) : 0),
       });
       
@@ -143,15 +229,23 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
 
       const validCount = resData?.preview?.valid || 0;
 
-      // If no valid rows found and there were validation failures, go back to upload step
+      // If no valid rows found, keep failed rows for download on upload step
       if (validCount === 0 && resData?.failed && resData.failed.length > 0) {
-        const errorMsg = resData.failed.map(f => f.message).join(" | ");
-        dispatch(setCsvError(`Validation failed: ${errorMsg}`));
+        dispatch(setPreviewData({
+          valid: 0,
+          invalid: resData.failed.length,
+          rows: [],
+          failed: resData.failed,
+        }));
+        dispatch(setCsvError(`${resData.failed.length} product(s) failed validation. Download the report below for details.`));
         dispatch(setStep("upload"));
         return;
       }
 
-      dispatch(setPreviewData(resData?.preview));
+      dispatch(setPreviewData({
+        ...resData?.preview,
+        failed: resData?.failed || [],
+      }));
     } catch (err) {
       dispatch(setCsvError(err.response?.data?.message || "Preview failed"));
       dispatch(setStep("upload"));
@@ -166,74 +260,49 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
       if (zipFileRef.current) fd.append("imagesZip", zipFileRef.current);
       const res = await AxiosInstance.post("/products/bulk/csv", fd, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: BULK_UPLOAD_TIMEOUT_MS,
         onUploadProgress: (e) => setImportPct(e.total ? Math.round((e.loaded / e.total) * 100) : 0),
       });
       dispatch(setResult(res.data.data)); dispatch(setStep("result"));
     } catch (err) {
-      dispatch(setImportError(err.response?.data?.message || "Import failed"));
-      dispatch(setStep("upload"));
+      const partial = err.response?.data?.data;
+      if (partial && (partial.created > 0 || partial.failed?.length > 0 || partial.warnings?.length > 0)) {
+        dispatch(setResult(partial));
+        dispatch(setStep("result"));
+        toast.warning("Import completed with some errors — see import report");
+        return;
+      }
+      const transportError = isImportTransportError(err);
+      const interruptionMessage = transportError
+        ? "Connection timed out while the server was still processing. Some products may already be created — check inventory before importing the same CSV again."
+        : (err.response?.data?.message || err.message || "Import failed");
+      dispatch(setResult({
+        created: partial?.created || 0,
+        failed: partial?.failed || [],
+        warnings: partial?.warnings || [],
+        interrupted: true,
+        interruptionMessage,
+      }));
+      dispatch(setImportError(interruptionMessage));
+      dispatch(setStep("result"));
     }
   };
 
-  const downloadFailedReport = () => {
+  const downloadImportReport = (reportResult = result, filename = "import_report.csv") => {
     try {
-      if (!result?.failed || result.failed.length === 0) {
-        toast.error("No failed products to report");
-        return;
-      }
-
-      // Extract clean, readable error from messy Prisma output
-      const cleanError = (raw) => {
-        if (!raw) return "Unknown error";
-        // 1. Strip ANSI escape codes
-        let msg = String(raw).replace(/\u001b\[[0-9;]*m/g, "");
-        // 2. Try to extract the final meaningful line after all the stack/code noise
-        //    Prisma errors end with lines like:
-        //    "Argument `purchase_price` is missing."
-        //    "Unique constraint failed on the fields: (`warehouse_id`,`product_code`)"
-        const patterns = [
-          /Argument\s+`?(\w+)`?\s+is missing/i,
-          /Unique constraint failed on the fields: \(([^)]+)\)/i,
-          /Foreign key constraint failed on the field: \(([^)]+)\)/i,
-          /The provided value .+ is not valid/i,
-          /Expected .+, provided .+/i,
-        ];
-        for (const pat of patterns) {
-          const match = msg.match(pat);
-          if (match) return match[0].trim();
-        }
-        // 3. Fallback: grab last non-empty line (usually has the real error)
-        const lines = msg.split("\n").map(l => l.trim()).filter(Boolean);
-        const lastLine = lines[lines.length - 1] || msg;
-        // Remove backticks decoration
-        return lastLine.replace(/`/g, "'").substring(0, 200);
-      };
-
-      const headers = ["Product Name", "Excel Row", "Error Message"];
-      const rows = result.failed.map(item => [
-        `"${String(item.product || '').replace(/"/g, '""')}"`,
-        `"${String(item.rows?.join(", ") || '').replace(/"/g, '""')}"`,
-        `"${cleanError(item.message).replace(/"/g, '""')}"`
-      ]);
-
-      const csvContent = [
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "failed_products_report.csv";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success("Failed report downloaded");
+      const ok = downloadImportReportCsv(reportResult, filename);
+      if (!ok) toast.error("No failed rows or warnings to report");
+      else toast.success("Import report downloaded");
     } catch {
       toast.error("Failed to download report");
     }
+  };
+
+  const downloadPreviewFailedReport = () => {
+    downloadImportReport(
+      { failed: previewData?.failed || [], warnings: [] },
+      "preview_failed_products_report.csv",
+    );
   };
 
   const downloadSample = async () => {
@@ -338,7 +407,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 py-8">
         {/* backdrop */}
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={() => { dispatch(resetBulkUpload()); onClose(); }} />
 
         {/* modal */}
         <div className="relative bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl max-h-[90vh]">
@@ -354,7 +423,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 <p className="text-xs text-slate-500 mt-0.5">CSV + ZIP images · row errors don't interrupt the import</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
+            <button onClick={() => { dispatch(resetBulkUpload()); onClose(); }} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
               <X size={16} />
             </button>
           </div>
@@ -417,6 +486,24 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 {csvError && (
                   <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-900/20 border border-red-800/50 text-red-400 text-xs">
                     <AlertTriangle size={13} className="flex-shrink-0" /> {csvError}
+                  </div>
+                )}
+
+                {importError && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-red-900/20 border border-red-800/50 text-red-400 text-xs">
+                    <AlertTriangle size={13} className="flex-shrink-0" /> {importError}
+                  </div>
+                )}
+
+                {(previewData?.failed?.length || 0) > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={downloadPreviewFailedReport}
+                      className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Download size={12} /> Download invalid rows report ({previewData.failed.length})
+                    </button>
                   </div>
                 )}
 
@@ -486,6 +573,18 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                     </div>
                   ))}
                 </div>
+
+                {(previewData.failed?.length || 0) > 0 && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={downloadPreviewFailedReport}
+                      className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Download size={12} /> Download invalid rows report
+                    </button>
+                  </div>
+                )}
 
                 {/* table */}
                 <div className="rounded-xl border border-slate-700/60 overflow-hidden">
@@ -582,7 +681,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 <div>
                   <p className="text-sm font-semibold text-slate-200">Upload product images</p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Pack images in a ZIP. Folder names must match the <code className="text-slate-400 bg-slate-800 px-1 rounded">product_code</code> column in your CSV.
+                    Pack images in a ZIP. Folder names must match the <code className="text-slate-400 bg-slate-800 px-1 rounded">product_code</code>. Primary variant folder may be <code className="text-slate-400 bg-slate-800 px-1 rounded">2313</code> or <code className="text-slate-400 bg-slate-800 px-1 rounded">2313-1</code>; other variants must use the exact suffix (<code className="text-slate-400 bg-slate-800 px-1 rounded">2313-2</code>, <code className="text-slate-400 bg-slate-800 px-1 rounded">2313-3</code>).
                   </p>
                 </div>
 
@@ -600,12 +699,12 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                     <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Expected ZIP structure</p>
                   </div>
                   <pre className="px-4 py-3 text-[11px] font-mono text-slate-400 leading-relaxed bg-slate-800/20 overflow-x-auto whitespace-pre">{`images.zip
-├── TSHIRT-001/          ← product_code
+├── 2313/               ← primary variant (or 2313-1)
 │   ├── front.jpg        ← up to 4 images
 │   └── back.jpg
-├── TSHIRT-002/
+├── 2313-2/             ← other variants need exact suffix
 │   └── photo.jpg
-└── TSHIRT-003/
+└── 9904-1/
     └── main.png`}</pre>
                   <div className="flex items-center gap-6 px-4 py-2.5 border-t border-slate-700/60 bg-slate-800/30">
                     {[
@@ -687,7 +786,7 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
                 </div>
 
                 <p className="text-xs text-slate-600 text-center">
-                  Errors on individual rows won't stop the import
+                  Upload progress only tracks file transfer. Processing continues on the server after 100%.
                 </p>
               </div>
             )}
@@ -696,13 +795,24 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
             {step === "result" && result && (
               <>
                 <div>
-                  <p className="text-sm font-semibold text-slate-200">Import complete</p>
+                  <p className="text-sm font-semibold text-slate-200">
+                    {result.interrupted ? "Import interrupted" : "Import complete"}
+                  </p>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {(result.failed?.length || 0) === 0
-                      ? "All products were imported successfully."
-                      : "Some rows had errors. Successful products were saved. Download the report for details."}
+                    {result.interrupted
+                      ? (result.interruptionMessage || "The server response did not finish. Check inventory before retrying the same CSV.")
+                      : ((result.failed?.length || 0) === 0
+                        ? "All products were imported successfully."
+                        : "Some rows had errors. Successful products were saved. Download the report for details.")}
                   </p>
                 </div>
+
+                {result.interrupted && (
+                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-900/20 border border-amber-800/50 text-amber-300 text-xs">
+                    <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+                    <span>File upload may have finished, but the final response was not received. Open inventory and confirm which products were created before importing again.</span>
+                  </div>
+                )}
 
                 {/* stat cards */}
                 <div className="grid grid-cols-4 gap-2.5">
@@ -830,9 +940,9 @@ const BulkUploadTab = ({ isOpen, onClose }) => {
 
                 {/* actions */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                  {(result.failed?.length || 0) > 0
-                    ? <button onClick={downloadFailedReport} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
-                        <Download size={12} /> Download failed report
+                  {(result.failed?.length || 0) > 0 || (result.warnings?.length || 0) > 0
+                    ? <button onClick={() => downloadImportReport()} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
+                        <Download size={12} /> Download import report
                       </button>
                     : <div />}
                   <div className="flex items-center gap-2">

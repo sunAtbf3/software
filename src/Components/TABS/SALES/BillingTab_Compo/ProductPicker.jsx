@@ -304,6 +304,11 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                                     <p className="text-xs font-semibold text-gray-800 truncate leading-tight">
                                         {product?.name || "Unknown"}
                                     </p>
+                                    {variant?.product_code && (
+                                        <p className="text-[10px] font-mono text-gray-400 truncate leading-tight mt-0.5">
+                                            {variant.product_code}
+                                        </p>
+                                    )}
                                     {attrLabel && (
                                         <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
                                             {attrLabel}

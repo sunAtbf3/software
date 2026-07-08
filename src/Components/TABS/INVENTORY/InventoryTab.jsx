@@ -426,7 +426,7 @@ export default function InventoryTab() {
                       <div>
                         <p className="font-semibold text-gray-800 text-sm">{p.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs font-mono text-gray-400">{p.product_code}</span>
+                          <span className="text-xs font-mono text-gray-400">{p.primary_variant?.product_code || p.product_code}</span>
                         </div>
                       </div>
                     </div>
