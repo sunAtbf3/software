@@ -15,6 +15,8 @@ import {
     setSubmitting,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Warehouse_api/warehouseSlice";
 import WarehouseFormBody from "./WarehouseFormBody";
+import { toast } from "../../../shared/ToastConfig";
+import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 
 export default function WarehouseAddForm({ formData, formErrors, onSave }) {
     const dispatch = useDispatch();
@@ -53,6 +55,7 @@ export default function WarehouseAddForm({ formData, formErrors, onSave }) {
         const errors = validate();
         if (Object.keys(errors).length > 0) {
             dispatch(setFormErrors(errors));
+            toast.error(Object.values(errors)[0] || "Please fill all required fields.");
             return;
         }
 
@@ -65,21 +68,31 @@ export default function WarehouseAddForm({ formData, formErrors, onSave }) {
                 city: formData.city.trim(),
                 manager_name: formData.manager_name?.trim() || undefined,
                 remarks: formData.remarks?.trim() || undefined,
+                gstin: formData.gstin?.trim()?.toUpperCase() || undefined,
+                legal_name: formData.legal_name?.trim() || undefined,
+                state_code: formData.state_code?.trim() || undefined,
             };
 
             await createWarehouse(payload).unwrap();
             onSave(); // tells parent to close + refetch
         } catch (err) {
-            // Map backend validation errors if present
-            if (err?.data?.errors?.length) {
+            const message = getApiErrorMessage(err, "Failed to create warehouse. Please try again.");
+            if (err?.data?.details?.fields?.length) {
                 const backendErrors = {};
-                err.data.errors.forEach(({ field, message }) => {
-                    backendErrors[field] = message;
+                err.data.details.fields.forEach(({ field, message: msg }) => {
+                    backendErrors[field] = msg;
+                });
+                dispatch(setFormErrors(backendErrors));
+            } else if (err?.data?.errors?.length) {
+                const backendErrors = {};
+                err.data.errors.forEach(({ field, message: msg }) => {
+                    backendErrors[field] = msg;
                 });
                 dispatch(setFormErrors(backendErrors));
             } else {
-                dispatch(setFormErrors({ general: err?.data?.message || "Failed to create warehouse" }));
+                dispatch(setFormErrors({ general: message }));
             }
+            toast.error(message);
         } finally {
             dispatch(setSubmitting(false));
         }

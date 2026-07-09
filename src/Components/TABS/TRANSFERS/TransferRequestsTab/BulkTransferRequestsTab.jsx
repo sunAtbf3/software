@@ -5,6 +5,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams } from "react-router-dom";
 import { X, Plus, RefreshCw, Package, Truck, CheckCircle, XCircle, Ban, Eye, ClipboardList } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { useGetWarehousesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Warehouse_api/warehouseApi";
@@ -51,6 +52,7 @@ const fmtDate = (iso) => {
 
 export default function BulkTransferRequestsTab() {
     const dispatch = useDispatch();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useSelector((state) => state.auth);
     const { statusFilter, currentPage, pageSize, showCreateModal, createForm, createErrors } = useSelector((state) => state.bulkTransfer);
     
@@ -62,6 +64,7 @@ export default function BulkTransferRequestsTab() {
     const userWarehouseId = user?.warehouse_id || "";
     const userRole = user?.role || "";
     const isWarehouseStaff = userRole === "WH_MANAGER" || userRole === "WH_STOCK_LISTER";
+    const showWhQtyColumn = userRole === "SUPER_ADMIN" || isWarehouseStaff;
     const isWhBulkFlow = isWarehouseStaff && !!userWarehouseId;
     // const isShopOwnerFlow = userRole === "SHOP_OWNER" && !!userShopId;
     const isShopOwnerFlow = (userRole === "SHOP_OWNER" || userRole === "SHOP_MANAGER") && !!userShopId;
@@ -93,6 +96,34 @@ export default function BulkTransferRequestsTab() {
     
     const [createBulkRequest] = useCreateBulkTransferRequestMutation();
     const [fetchBulkRequestDetail] = useLazyGetBulkTransferRequestByIdQuery();
+
+    const openBulkId = searchParams.get("openBulkId");
+
+    useEffect(() => {
+        if (!openBulkId) return undefined;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const fullRequest = await fetchBulkRequestDetail(openBulkId).unwrap();
+                if (!cancelled) dispatch(openViewModal(fullRequest));
+            } catch {
+                if (!cancelled) toast.error("Failed to load request details");
+            } finally {
+                if (!cancelled) {
+                    setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.delete("openBulkId");
+                        return next;
+                    }, { replace: true });
+                }
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [openBulkId, dispatch, fetchBulkRequestDetail, setSearchParams]);
     
     const warehouses = warehousesData?.warehouses || [];
     const peerWarehouses = warehouses.filter((w) => w.warehouse_id !== userWarehouseId);
@@ -457,7 +488,9 @@ export default function BulkTransferRequestsTab() {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">From WH</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">To</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">Items</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">Total Qty</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                                {showWhQtyColumn ? "Qty (Req → Sent)" : "Qty (Req → Rec)"}
+                            </th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Status</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Date</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wide">Actions</th>
@@ -479,7 +512,9 @@ export default function BulkTransferRequestsTab() {
                             </tr>
                         )}
                         {!isLoading && requests.map((req) => {
-                            const totalQty = req.total_quantity || 0;
+                            const requestedQty = req.requested_total_quantity ?? req.total_quantity ?? 0;
+                            const sentQty = req.status === "REQUESTED" ? null : (req.approved_total_quantity ?? 0);
+                            const receivedQty = req.received_total_quantity ?? 0;
                             const actions = getAvailableActions(req);
                             
                             return (
@@ -496,7 +531,33 @@ export default function BulkTransferRequestsTab() {
                                             : req.to_shop?.shop_name || req.to_shop_id}
                                     </td>
                                     <td className="px-4 py-3 text-center text-gray-500">{req.items_count || 0}</td>
-                                    <td className="px-4 py-3 text-right font-semibold text-gray-700">{totalQty}</td>
+                                    <td className="px-4 py-3 text-right font-semibold text-gray-700">
+                                        {showWhQtyColumn ? (
+                                            sentQty == null ? (
+                                                <span title="Requested → Sent (pending approval)">
+                                                    {requestedQty}
+                                                    <span className="text-gray-400 font-normal"> → </span>
+                                                    —
+                                                </span>
+                                            ) : requestedQty !== sentQty ? (
+                                                <span title="Requested → Sent">
+                                                    {requestedQty}
+                                                    <span className="text-gray-400 font-normal"> → </span>
+                                                    {sentQty}
+                                                </span>
+                                            ) : (
+                                                sentQty
+                                            )
+                                        ) : requestedQty !== receivedQty ? (
+                                            <span title="Requested → Received">
+                                                {requestedQty}
+                                                <span className="text-gray-400 font-normal"> → </span>
+                                                {receivedQty}
+                                            </span>
+                                        ) : (
+                                            requestedQty
+                                        )}
+                                    </td>
                                     <td className="px-4 py-3">
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[req.status]}`}>
                                             {req.status?.replace(/_/g, " ")}
@@ -541,11 +602,11 @@ export default function BulkTransferRequestsTab() {
             {/* Create Bulk Request Modal - Keep existing */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 overflow-y-auto">
-    <div className="flex items-center justify-center min-h-screen px-4 py-8">
+    <div className="flex items-center justify-center min-h-screen p-2 sm:p-4 lg:p-6">
         <div className="fixed inset-0 bg-black/40" />
 
-                    <div className="relative bg-white rounded-xl border border-gray-200 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between">
+                    <div className="relative bg-white rounded-xl border border-gray-200 w-full max-w-[min(1280px,calc(100vw-1rem))] sm:max-w-[min(1280px,calc(100vw-2rem))] max-h-[92vh] overflow-y-auto flex flex-col">
+                        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex justify-between shrink-0">
                             <div>
                                 <h3 className="text-base font-semibold text-gray-900">Create Bulk Transfer Request</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">
@@ -558,8 +619,8 @@ export default function BulkTransferRequestsTab() {
                             </div>
                             <button onClick={() => dispatch(closeCreateModal())} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
                         </div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 sm:p-6 space-y-4 flex-1 min-w-0">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {isWhBulkFlow ? (
                                     <>
                                         <div>
@@ -634,7 +695,7 @@ export default function BulkTransferRequestsTab() {
                             
                             {createForm.from_warehouse_id && (isWhBulkFlow ? userWarehouseId : catalogShopId) && (
                                 <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-xs text-gray-500 mb-1">Catalog mode</label>
                                             <select
@@ -667,6 +728,11 @@ export default function BulkTransferRequestsTab() {
                                         onSelectionChange={handleCatalogSelectionChange}
                                         onSelectAllProduct={handleSelectAllProduct}
                                         isLoading={catalogLoading}
+                                        franchisePricing={!!catalogData?.franchise_shop_pricing_view}
+                                        warehouseFranchiseView={
+                                            !!catalogData?.is_franchise_shop &&
+                                            !catalogData?.franchise_shop_pricing_view
+                                        }
                                         emptyMessage="No products in catalog for this warehouse and mode."
                                     />
                                     {createErrors.items && (
@@ -694,7 +760,7 @@ export default function BulkTransferRequestsTab() {
                                 />
                             </div>
                         </div>
-                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-2">
+                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 sm:px-6 py-4 flex justify-end gap-2 shrink-0">
                             <button onClick={() => dispatch(closeCreateModal())} className="px-4 py-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
                             <button 
                                 onClick={handleCreateSubmit} 

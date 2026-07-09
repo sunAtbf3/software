@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X, AlertTriangle, Package, Truck, CheckCircle, XCircle, Eye, Download } from "lucide-react";
+import { X, AlertTriangle, Package, Truck, CheckCircle, XCircle, Eye, Download, MessageCircle } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import {
     useApproveBulkTransferRequestMutation,
@@ -14,9 +14,25 @@ import {
     useReceiveBulkTransferRequestMutation,
     useCancelBulkTransferRequestMutation,
     useLazyDownloadBulkChallanPdfQuery,
+    useLazyGetBulkTransferRequestByIdQuery,
     generateBulkIdempotencyKey,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
 import { downloadBlobFile, CHALLAN_READY_STATUSES } from "../../../../utils/downloadBlob";
+import { openTransferBillWhatsApp, canViewTransferBill } from "../../../../utils/transferBillWhatsApp";
+import {
+    getBulkDispatchQty,
+    getBulkInTransitQty,
+    getBulkRequestedQty,
+    formatBulkSentQty,
+    sumBulkDispatchedQtyForRequest,
+    sumBulkDispatchedQty,
+    sumBulkInTransitQty,
+    sumBulkReceivedQty,
+    sumBulkRequestedQty,
+    getBulkReceiveableItems,
+} from "../../../../utils/bulkTransfer.utils";
+import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
+import { ROLES } from "../../../roles";
 import {
     closeApproveModal,
     closeRejectModal,
@@ -26,10 +42,12 @@ import {
     closeCancelModal,
     closeViewModal,
     setApproveType,
+    setTransferBillType,
     setApproveItem,
+    setApproveItemQuantity,
     setTrackingNumber,
     setExpectedDelivery,
-    setReceiveQuantity,
+    setReceiveItemQuantity,
     setReceiveRemarks,
     setCancelReason,
     setActionErrors,
@@ -71,9 +89,10 @@ export default function BulkActionModals({ onSuccess }) {
         selectedRequest,
         approveItems,
         approveType,
+        transferBillType,
         trackingNumber,
         expectedDelivery,
-        receiveQuantity,
+        receiveItems,
         receiveRemarks,
         cancelReason,
         rejectReason,
@@ -82,6 +101,15 @@ export default function BulkActionModals({ onSuccess }) {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [downloadBulkChallan, { isFetching: isDownloadingChallan }] = useLazyDownloadBulkChallanPdfQuery();
+    const [fetchBulkDetail, { data: bulkDetail }] = useLazyGetBulkTransferRequestByIdQuery();
+
+    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
+
+    useEffect(() => {
+        if (showViewModal && selectedRequest?.bulk_request_id) {
+            fetchBulkDetail(selectedRequest.bulk_request_id);
+        }
+    }, [showViewModal, selectedRequest?.bulk_request_id, fetchBulkDetail]);
 
     const [approveBulkRequest] = useApproveBulkTransferRequestMutation();
     const [rejectBulkRequest] = useRejectBulkTransferRequestMutation();
@@ -91,35 +119,79 @@ export default function BulkActionModals({ onSuccess }) {
 
     const inputCls = (name, errors) => `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors?.[name] ? "border-red-400" : "border-gray-300"}`;
 
-    // Calculate remaining quantity for receive modal (moved to top level)
-    const totalQty = selectedRequest?.items?.reduce((s, i) => s + i.quantity, 0) || 0;
-    const receivedQty = selectedRequest?.received_quantity || 0;
-    const remainingQty = totalQty - receivedQty;
-
-    // AUTO-FILL LOGIC - moved to top level useEffect
     useEffect(() => {
-        // Auto-fill remaining quantity when receive modal opens
-        if (showReceiveModal && remainingQty > 0 && !receiveQuantity) {
-            dispatch(setReceiveQuantity(remainingQty.toString()));
+        if (showReceiveModal && selectedRequest?.bulk_request_id) {
+            fetchBulkDetail(selectedRequest.bulk_request_id);
         }
-    }, [showReceiveModal, remainingQty, receiveQuantity, dispatch]);
+    }, [showReceiveModal, selectedRequest?.bulk_request_id, fetchBulkDetail]);
+
+    const receiveDisplayRequest =
+        bulkDetail?.bulk_request_id && bulkDetail.bulk_request_id === selectedRequest?.bulk_request_id
+            ? bulkDetail
+            : selectedRequest;
+
+    const receiveSourceItems = receiveDisplayRequest?.items || [];
+    const receiveRequestedTotal = sumBulkRequestedQty(receiveSourceItems);
+    const receiveDispatchedTotal = sumBulkDispatchedQty(receiveSourceItems);
+    const receiveAlreadyTotal = sumBulkReceivedQty(receiveSourceItems);
+    const receiveInTransitTotal = sumBulkInTransitQty(receiveSourceItems);
+    const receiveableItems = getBulkReceiveableItems(receiveSourceItems);
+    const isShopBulkReceive =
+        receiveDisplayRequest?.request_type === "WH_TO_SHOP" &&
+        [ROLES.SHOP_OWNER, ROLES.SHOP_MANAGER].includes(user?.role);
 
     // Handle Approve
     const handleApprove = async () => {
         setIsSubmitting(true);
         try {
+            const isFranchise =
+                selectedRequest?.is_franchise_transfer ||
+                selectedRequest?.to_shop?.shop_type === "FRANCHISE";
+
             let payload = {};
-            if (approveType === "partial" && approveItems.length > 0) {
-                payload.items = approveItems;
+            if (approveType === "partial") {
+                const items = selectedRequest?.items || [];
+                payload.items = items
+                    .map((item) => {
+                        const row = approveItems.find((i) => i.variant_id === item.variant_id);
+                        const approved = row ? row.approved !== false : true;
+                        const qty =
+                            row?.quantity != null && row.quantity !== ""
+                                ? parseInt(row.quantity, 10)
+                                : getBulkRequestedQty(item);
+                        return {
+                            variant_id: item.variant_id,
+                            approved,
+                            quantity: approved ? qty : 0,
+                        };
+                    })
+                    .filter((row) => row.approved && row.quantity > 0);
+                if (payload.items.length === 0) {
+                    toast.error("Select at least one item with valid quantity");
+                    setIsSubmitting(false);
+                    return;
+                }
             }
-            
+
+            if (isFranchise) {
+                payload.transfer_bill_type = transferBillType;
+            }
+
             await approveBulkRequest({
                 bulkRequestId: selectedRequest.bulk_request_id,
                 ...payload,
                 idempotencyKey: generateBulkIdempotencyKey(),
             }).unwrap();
-            
-            toast.success(approveType === "full" ? "✅ Bulk request approved fully" : "✅ Bulk request approved partially");
+
+            toast.success(
+                isFranchise
+                    ? approveType === "full"
+                        ? "Bulk request approved — transfer bill generated"
+                        : "Bulk request partially approved — transfer bill generated"
+                    : approveType === "full"
+                      ? "Bulk request approved"
+                      : "Bulk request partially approved"
+            );
             dispatch(closeApproveModal());
             if (onSuccess) onSuccess();
         } catch (err) {
@@ -132,6 +204,7 @@ export default function BulkActionModals({ onSuccess }) {
     const handleReject = async () => {
         if (!rejectReason?.trim()) {
             dispatch(setActionErrors({ rejection_reason: "Rejection reason is required" }));
+            toast.error("Please enter rejection reason.");
             return;
         }
         setIsSubmitting(true);
@@ -174,51 +247,67 @@ export default function BulkActionModals({ onSuccess }) {
     // Handle Receive
    // In the handleReceive function, REPLACE with this (uncomment the validation):
 
-const handleReceive = async () => {
-    let qty = parseInt(receiveQuantity);
-    
-    // If quantity is empty or 0, receive all remaining
-    if (!receiveQuantity || qty <= 0) {
-        qty = remainingQty;
-    }
-    
-    // FIXED: Uncommented this validation
-    if (qty <= 0) {
-        toast.error("No quantity to receive");
-        return;
-    }
-    if (qty > remainingQty) {
-        toast.error(`Cannot receive more than ${remainingQty} units`);
-        return;
-    }
-    
-    setIsSubmitting(true);
-    try {
-        await receiveBulkRequest({
-            bulkRequestId: selectedRequest.bulk_request_id,
-            received_quantity: qty,
-            receive_remarks: receiveRemarks?.trim() || null,
-            idempotencyKey: generateBulkIdempotencyKey(),
-        }).unwrap();
-        
-        if (qty === remainingQty) {
-            toast.success("📦 Bulk request completed successfully!");
-        } else {
-            toast.success(`📦 Received ${qty} of ${remainingQty} units`);
+    const handleReceive = async () => {
+        const items = receiveDisplayRequest?.items || [];
+        const payloadItems = [];
+
+        for (const item of items) {
+            const inTransit = getBulkInTransitQty(item);
+            if (inTransit <= 0) continue;
+
+            let qty = inTransit;
+            if (!isShopBulkReceive) {
+                const row = receiveItems.find((r) => r.variant_id === item.variant_id);
+                const rawQty = row?.quantity ?? "";
+                qty = rawQty === "" ? inTransit : parseInt(rawQty, 10);
+                if (!Number.isInteger(qty) || qty < 0) {
+                    toast.error(`Please enter a valid receive quantity for ${item.variant?.product?.name || "product"}.`);
+                    return;
+                }
+                if (qty > inTransit) {
+                    toast.error(`Cannot receive more than ${inTransit} for ${item.variant?.product?.name || "product"}.`);
+                    return;
+                }
+                if (qty === 0) continue;
+            }
+
+            payloadItems.push({
+                variant_id: item.variant_id,
+                received_quantity: qty,
+            });
         }
-        dispatch(closeReceiveModal());
-        if (onSuccess) onSuccess();
-    } catch (err) {
-        toast.error(err?.data?.message || "Failed to receive");
-    } finally {
-        setIsSubmitting(false);
-    }
-};
+
+        if (payloadItems.length === 0) {
+            toast.error("No goods are pending to receive on this request.");
+            return;
+        }
+
+        const receivingNow = payloadItems.reduce((sum, row) => sum + row.received_quantity, 0);
+
+        setIsSubmitting(true);
+        try {
+            await receiveBulkRequest({
+                bulkRequestId: receiveDisplayRequest.bulk_request_id,
+                items: payloadItems,
+                receive_remarks: receiveRemarks?.trim() || undefined,
+                idempotencyKey: generateBulkIdempotencyKey(),
+            }).unwrap();
+
+            toast.success(`Received ${receivingNow} unit(s) successfully.`);
+            dispatch(closeReceiveModal());
+            if (onSuccess) onSuccess();
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, "Failed to receive goods. Please try again."));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     // Handle Cancel
     const handleCancel = async () => {
         if (!cancelReason?.trim()) {
             dispatch(setActionErrors({ cancel_reason: "Cancellation reason is required" }));
+            toast.error("Please enter cancellation reason.");
             return;
         }
         setIsSubmitting(true);
@@ -243,7 +332,10 @@ const handleReceive = async () => {
     // ============================================================
     if (showApproveModal && selectedRequest) {
         const items = selectedRequest.items || [];
-        const approveTotalQty = items.reduce((s, i) => s + i.quantity, 0);
+        const approveTotalQty = items.reduce((s, i) => s + getBulkRequestedQty(i), 0);
+        const isFranchiseApprove =
+            selectedRequest?.is_franchise_transfer ||
+            selectedRequest?.to_shop?.shop_type === "FRANCHISE";
         
         return (
             <div className="fixed inset-0 z-50 overflow-y-auto text-gray-700">
@@ -267,6 +359,39 @@ const handleReceive = async () => {
                             <p><strong>{bulkDestLabel(selectedRequest)}:</strong> {bulkDestName(selectedRequest)}</p>
                             <p><strong>Total Items:</strong> {items.length} | <strong>Total Quantity:</strong> {approveTotalQty} units</p>
                         </div>
+
+                        {isFranchiseApprove && (
+                            <div className="border border-blue-100 bg-blue-50/50 rounded-lg p-3 space-y-2">
+                                <p className="text-xs font-semibold text-blue-900">Transfer bill type (required)</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => dispatch(setTransferBillType("NON_GST_INVOICE"))}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium border ${
+                                            transferBillType === "NON_GST_INVOICE"
+                                                ? "bg-blue-600 text-white border-blue-600"
+                                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        Non-GST Bill
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => dispatch(setTransferBillType("GST_INVOICE"))}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium border ${
+                                            transferBillType === "GST_INVOICE"
+                                                ? "bg-blue-600 text-white border-blue-600"
+                                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        GST Bill
+                                    </button>
+                                </div>
+                                <p className="text-[11px] text-blue-800">
+                                    Bill uses MRP + Franchise Price. GST is calculated on franchise price per product.
+                                </p>
+                            </div>
+                        )}
                         
                         <div className="flex gap-3">
                             <button 
@@ -294,7 +419,8 @@ const handleReceive = async () => {
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th>
-                                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Qty</th>
+                                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Requested</th>
+                                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Approve / Send</th>
                                             <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500 w-20">Approve</th>
                                         </tr>
                                     </thead>
@@ -305,11 +431,36 @@ const handleReceive = async () => {
                                                     <p className="font-medium text-gray-800">{item.variant?.product?.name || "Unknown"}</p>
                                                     <p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p>
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
+                                                <td className="px-3 py-2 text-right font-semibold">{getBulkRequestedQty(item)}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        max={getBulkRequestedQty(item)}
+                                                        defaultValue={getBulkRequestedQty(item)}
+                                                        className="w-20 border border-gray-200 rounded px-2 py-1 text-right text-sm"
+                                                        onChange={(e) =>
+                                                            dispatch(
+                                                                setApproveItemQuantity({
+                                                                    variant_id: item.variant_id,
+                                                                    quantity: e.target.value,
+                                                                })
+                                                            )
+                                                        }
+                                                    />
+                                                </td>
                                                 <td className="px-3 py-2 text-center">
                                                     <input 
                                                         type="checkbox" 
-                                                        onChange={(e) => dispatch(setApproveItem({ variant_id: item.variant_id, approved: e.target.checked }))} 
+                                                        onChange={(e) =>
+                                                            dispatch(
+                                                                setApproveItem({
+                                                                    variant_id: item.variant_id,
+                                                                    approved: e.target.checked,
+                                                                    quantity: item.quantity,
+                                                                })
+                                                            )
+                                                        } 
                                                         className="w-4 h-4 text-green-600 rounded"
                                                         defaultChecked={true}
                                                     />
@@ -321,18 +472,12 @@ const handleReceive = async () => {
                                 </div>
                             </div>
                         )}
-                        
-                        {approveType === "partial" && approveItems.length === 0 && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-center">
-                                <p className="text-xs text-yellow-700">⚠️ No items selected for approval</p>
-                            </div>
-                        )}
                     </div>
                     <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
                         <button onClick={() => dispatch(closeApproveModal())} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
                         <button 
                             onClick={handleApprove} 
-                            disabled={isSubmitting || (approveType === "partial" && approveItems.length === 0)} 
+                            disabled={isSubmitting} 
                             className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
                         >
                             {isSubmitting ? "Processing..." : "Confirm Approval"}
@@ -466,55 +611,126 @@ const handleReceive = async () => {
     <div className="flex items-center justify-center min-h-screen px-4 py-8">
         <div className="fixed inset-0 bg-black/40" />
 
-                <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-                    <div className="px-6 py-4 border-b border-gray-100 flex justify-between">
+                <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+                    <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between">
                         <div>
                             <h3 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                                 <Package size={18} className="text-green-600" />
                                 Receive Bulk Request
                             </h3>
-                            <p className="text-xs text-gray-400">{selectedRequest.bulk_request_number}</p>
+                            <p className="text-xs text-gray-400">{receiveDisplayRequest.bulk_request_number}</p>
                         </div>
-                        <button onClick={() => dispatch(closeReceiveModal())} className="text-gray-400"><X size={20} /></button>
+                        <button onClick={() => dispatch(closeReceiveModal())} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
                     </div>
                     <div className="p-6 space-y-4">
-                        <div className="bg-gray-50 rounded-lg p-3 text-sm">
-                            <p><strong>Total Requested:</strong> {totalQty} units</p>
-                            <p><strong>Already Received:</strong> {receivedQty} units</p>
-                            <p><strong>Remaining to Receive:</strong> <span className="font-bold text-blue-600">{remainingQty}</span> units</p>
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm grid grid-cols-2 gap-2">
+                            <p><strong>Requested:</strong> {receiveRequestedTotal} units</p>
+                            <p><strong>Approved / Sent:</strong> {receiveDispatchedTotal} units</p>
+                            <p><strong>Already Received:</strong> {receiveAlreadyTotal} units</p>
+                            <p><strong>In Transit:</strong> <span className="font-bold text-blue-600">{receiveInTransitTotal}</span> units</p>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Quantity to Receive <span className="text-gray-400 text-xs">(Optional - auto-filled)</span>
-                            </label>
-                            <input 
-                                type="number" 
-                                min="0" 
-                                max={remainingQty} 
-                                value={receiveQuantity} 
-                                onChange={(e) => dispatch(setReceiveQuantity(e.target.value))} 
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" 
-                                placeholder="Leave empty to receive all"
-                            />
-                            <p className="text-xs text-gray-400 mt-1">
-                                💡 Auto-filled with remaining quantity ({remainingQty} units). Change if receiving partial.
+
+                        <p className="text-xs text-gray-500">
+                            {isShopBulkReceive
+                                ? "Warehouse sent quantity is fixed — confirm to receive exactly what was dispatched."
+                                : "Enter received quantity per product if delivery was short."}
+                        </p>
+
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
+                            <table className="w-full min-w-[760px] lg:min-w-0 text-sm">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product / Code</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Requested</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Sent</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Received</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">In Transit</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                                            {isShopBulkReceive ? "Receiving" : "Receive Now"}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {receiveableItems.map((item) => {
+                                        const dispatched = getBulkDispatchQty(item);
+                                        const alreadyReceived = Number(item.received_quantity ?? 0);
+                                        const inTransit = getBulkInTransitQty(item);
+                                        const row = receiveItems.find((r) => r.variant_id === item.variant_id);
+                                        const fieldKey = `receive_${item.variant_id}`;
+                                        const code = item.variant?.product_code || item.variant?.sku || "—";
+                                        return (
+                                            <tr key={item.variant_id}>
+                                                <td className="px-3 py-2">
+                                                    <p className="font-medium text-gray-800">{item.variant?.product?.name || "Unknown"}</p>
+                                                    <p className="text-xs text-gray-400">{code}</p>
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-gray-600">{getBulkRequestedQty(item)}</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-gray-800">{dispatched}</td>
+                                                <td className="px-3 py-2 text-right text-gray-600">{alreadyReceived}</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-blue-700">{inTransit}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    {isShopBulkReceive ? (
+                                                        <span className="inline-block min-w-[2.5rem] px-2 py-1 rounded bg-green-50 text-green-800 font-semibold text-sm">
+                                                            {inTransit}
+                                                        </span>
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                max={inTransit}
+                                                                value={row?.quantity ?? ""}
+                                                                onChange={(e) =>
+                                                                    dispatch(
+                                                                        setReceiveItemQuantity({
+                                                                            variant_id: item.variant_id,
+                                                                            quantity: e.target.value,
+                                                                        })
+                                                                    )
+                                                                }
+                                                                className={`w-20 border rounded px-2 py-1 text-right text-sm ${
+                                                                    actionErrors[fieldKey] ? "border-red-400" : "border-gray-200"
+                                                                }`}
+                                                            />
+                                                            {actionErrors[fieldKey] && (
+                                                                <p className="text-[10px] text-red-500 mt-1">{actionErrors[fieldKey]}</p>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            </div>
+                        </div>
+
+                        {receiveableItems.length === 0 && (
+                            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                No products are pending receive on this request.
                             </p>
-                            {actionErrors.receive_quantity && <p className="text-xs text-red-500 mt-1">{actionErrors.receive_quantity}</p>}
-                        </div>
+                        )}
+
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks (Optional)</label>
-                            <textarea 
-                                value={receiveRemarks} 
-                                onChange={(e) => dispatch(setReceiveRemarks(e.target.value))} 
-                                rows={2} 
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500" 
-                                placeholder="Any issues with delivery?"
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks (optional)</label>
+                            <textarea
+                                value={receiveRemarks}
+                                onChange={(e) => dispatch(setReceiveRemarks(e.target.value))}
+                                rows={2}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="e.g. 1 unit damaged for Odonil Room Spray"
                             />
                         </div>
                     </div>
-                    <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+                    <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
                         <button onClick={() => dispatch(closeReceiveModal())} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Cancel</button>
-                        <button onClick={handleReceive} disabled={isSubmitting} className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">
+                        <button
+                            onClick={handleReceive}
+                            disabled={isSubmitting || receiveableItems.length === 0}
+                            className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60"
+                        >
                             {isSubmitting ? "Processing..." : "Confirm Receive"}
                         </button>
                     </div>
@@ -579,17 +795,39 @@ const handleReceive = async () => {
     // VIEW DETAILS MODAL
     // ============================================================
     if (showViewModal && selectedRequest) {
-        const viewTotalQty = selectedRequest.items?.reduce((s, i) => s + i.quantity, 0) || 0;
-        const status = selectedRequest.status;
-        const canPrintChallan = CHALLAN_READY_STATUSES.has(status);
+        const displayRequest = bulkDetail || selectedRequest;
+        const status = displayRequest.status;
+        const viewTotalRequested = sumBulkRequestedQty(displayRequest.items);
+        const viewTotalSent = sumBulkDispatchedQtyForRequest(displayRequest.items, status);
+        const viewTotalReceived = sumBulkReceivedQty(displayRequest.items);
+        const canPrintChallan =
+            canViewTransferBill(displayRequest) ||
+            (CHALLAN_READY_STATUSES.has(status) && !displayRequest.transfer_bill_number);
+        const isFranchiseTransfer =
+            displayRequest.is_franchise_transfer || displayRequest.to_shop?.shop_type === "FRANCHISE";
+        const franchiseTotals = displayRequest.franchise_bill_totals;
 
         const handleDownloadBulkChallan = async () => {
             try {
-                const blob = await downloadBulkChallan(selectedRequest.bulk_request_id).unwrap();
-                downloadBlobFile(blob, `bulk-challan-${selectedRequest.bulk_request_number}.pdf`);
-                toast.success("Bulk transfer challan downloaded");
+                const blob = await downloadBulkChallan(displayRequest.bulk_request_id).unwrap();
+                const fname = displayRequest.transfer_bill_number
+                    ? `transfer-bill-${displayRequest.transfer_bill_number}.pdf`
+                    : `bulk-challan-${displayRequest.bulk_request_number}.pdf`;
+                downloadBlobFile(blob, fname);
+                toast.success("Transfer bill downloaded");
             } catch (err) {
-                toast.error(err?.data?.message || "Failed to download challan");
+                toast.error(err?.data?.message || "Failed to download bill");
+            }
+        };
+
+        const handleWhatsAppBill = () => {
+            const result = openTransferBillWhatsApp(displayRequest);
+            if (!result.ok) {
+                if (result.reason === "missing_phone") {
+                    toast.error("Franchise shop phone number is not configured");
+                } else {
+                    toast.error("Transfer bill link is not available yet");
+                }
             }
         };
         
@@ -605,7 +843,7 @@ const handleReceive = async () => {
                                 <Eye size={18} className="text-blue-600" />
                                 Bulk Request Details
                             </h3>
-                            <p className="text-xs text-gray-400">{selectedRequest.bulk_request_number}</p>
+                            <p className="text-xs text-gray-400">{displayRequest.bulk_request_number}</p>
                         </div>
                         <button onClick={() => dispatch(closeViewModal())} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
                     </div>
@@ -614,57 +852,116 @@ const handleReceive = async () => {
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${STATUS_BADGE[status] || "bg-gray-100 text-gray-600"}`}>
                                 {status?.replace(/_/g, " ")}
                             </span>
-                            <span className="text-xs text-gray-400">Created: {fmtDate(selectedRequest.created_at)}</span>
+                            <span className="text-xs text-gray-400">Created: {fmtDate(displayRequest.created_at)}</span>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-3">
                             <div>
                                 <p className="text-xs text-gray-500">Source Warehouse</p>
-                                <p className="font-medium text-gray-800">{selectedRequest.from_warehouse?.warehouse_name || selectedRequest.from_warehouse_id}</p>
+                                <p className="font-medium text-gray-800">{displayRequest.from_warehouse?.warehouse_name || displayRequest.from_warehouse_id}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">{bulkDestLabel(selectedRequest)}</p>
-                                <p className="font-medium text-gray-800">{bulkDestName(selectedRequest)}</p>
+                                <p className="text-xs text-gray-500">{bulkDestLabel(displayRequest)}</p>
+                                <p className="font-medium text-gray-800">{bulkDestName(displayRequest)}</p>
                             </div>
                         </div>
 
-                        {status === "REJECTED" && selectedRequest.rejection_reason && (
+                        {status === "REJECTED" && displayRequest.rejection_reason && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                 <p className="text-xs font-medium text-red-800">Rejection Reason</p>
-                                <p className="text-sm text-red-700 mt-1">{selectedRequest.rejection_reason}</p>
+                                <p className="text-sm text-red-700 mt-1">{displayRequest.rejection_reason}</p>
                             </div>
                         )}
                         
                         <div>
-                            <p className="text-sm font-medium text-gray-700 mb-2">Items ({selectedRequest.items?.length || 0})</p>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Items ({displayRequest.items?.length || 0})</p>
                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
                                 <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product / Code</th>
                                             <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Requested</th>
+                                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Sent</th>
                                             <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Received</th>
+                                            {isFranchiseTransfer && (
+                                                <>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">MRP</th>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">F.Price</th>
+                                                </>
+                                            )}
+                                            {isFranchiseTransfer && isWarehouseUser && (
+                                                <>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Purchase</th>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Special</th>
+                                                </>
+                                            )}
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {selectedRequest.items?.map((item, idx) => {
-                                            const received = item.received_quantity || 0;
-                                            const itemStatus = received === 0 ? "Pending" : received === item.quantity ? "Completed" : "Partial";
+                                        {displayRequest.items?.map((item, idx) => {
+                                            const dispatched = getBulkDispatchQty(item);
+                                            const sentDisplay = formatBulkSentQty(item, status);
+                                            const received = Number(item.received_quantity ?? 0);
+                                            let itemStatus = "Pending";
+                                            let statusTone = "bg-gray-100 text-gray-600";
+                                            if (status === "REQUESTED") {
+                                                itemStatus = item.is_approved === false ? "Not Approved" : "Awaiting Approval";
+                                                statusTone = "bg-yellow-100 text-yellow-800";
+                                            } else if (item.is_approved === false) {
+                                                itemStatus = "Not Approved";
+                                                statusTone = "bg-red-100 text-red-700";
+                                            } else if (dispatched === 0) {
+                                                itemStatus = "—";
+                                            } else if (received === 0) {
+                                                itemStatus = "Pending";
+                                            } else if (received >= dispatched) {
+                                                itemStatus = "Completed";
+                                                statusTone = "bg-green-100 text-green-700";
+                                            } else {
+                                                itemStatus = `Short (${received}/${dispatched})`;
+                                                statusTone = "bg-yellow-100 text-yellow-800";
+                                            }
+                                            const fp = item.franchise_pricing;
+                                            const code = item.variant?.product_code || item.variant?.sku || "—";
                                             return (
                                                 <tr key={idx}>
                                                     <td className="px-3 py-2">
                                                         <p className="font-medium text-gray-800">{item.variant?.product?.name || "Unknown"}</p>
-                                                        <p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p>
+                                                        <p className="text-xs text-gray-400">{code}</p>
                                                     </td>
-                                                    <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
+                                                    <td className="px-3 py-2 text-right font-semibold">{getBulkRequestedQty(item)}</td>
+                                                    <td className="px-3 py-2 text-right font-semibold text-gray-500">{sentDisplay}</td>
                                                     <td className="px-3 py-2 text-right text-gray-600">{received}</td>
+                                                    {isFranchiseTransfer && (
+                                                        <>
+                                                            <td className="px-3 py-2 text-right text-gray-600">
+                                                                {fp?.mrp != null ? `₹${Number(fp.mrp).toFixed(2)}` : "—"}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-indigo-700 font-medium">
+                                                                {fp?.franchise_unit_price != null
+                                                                    ? `₹${Number(fp.franchise_unit_price).toFixed(2)}`
+                                                                    : "—"}
+                                                            </td>
+                                                        </>
+                                                    )}
+                                                    {isFranchiseTransfer && isWarehouseUser && (
+                                                        <>
+                                                            <td className="px-3 py-2 text-right text-gray-500">
+                                                                {item.variant?.purchase_price != null
+                                                                    ? `₹${Number(item.variant.purchase_price).toFixed(2)}`
+                                                                    : "—"}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-right text-gray-500">
+                                                                {item.variant?.special_price != null
+                                                                    ? `₹${Number(item.variant.special_price).toFixed(2)}`
+                                                                    : "—"}
+                                                            </td>
+                                                        </>
+                                                    )}
                                                     <td className="px-3 py-2">
-                                                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                                            itemStatus === "Completed" ? "bg-green-100 text-green-700" : 
-                                                            itemStatus === "Partial" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-600"
-                                                        }`}>
+                                                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusTone}`}>
                                                             {itemStatus}
                                                         </span>
                                                     </td>
@@ -675,9 +972,10 @@ const handleReceive = async () => {
                                     <tfoot className="bg-gray-50">
                                         <tr>
                                             <td className="px-3 py-2 font-semibold">Total</td>
-                                            <td className="px-3 py-2 text-right font-semibold">{viewTotalQty}</td>
-                                            <td className="px-3 py-2 text-right font-semibold">{selectedRequest.received_quantity || 0}</td>
-                                            <td className="px-3 py-2"></td>
+                                            <td className="px-3 py-2 text-right font-semibold">{viewTotalRequested}</td>
+                                            <td className="px-3 py-2 text-right font-semibold">{viewTotalSent ?? "—"}</td>
+                                            <td className="px-3 py-2 text-right font-semibold">{viewTotalReceived}</td>
+                                            <td className="px-3 py-2" colSpan={isFranchiseTransfer ? (isWarehouseUser ? 5 : 3) : 1}></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -685,34 +983,67 @@ const handleReceive = async () => {
                             </div>
                         </div>
                         
-                        {selectedRequest.request_remarks && (
+                        {isFranchiseTransfer && franchiseTotals && (
+                            <div className="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
+                                <p className="text-xs font-medium text-indigo-800">
+                                    {status === "REQUESTED"
+                                        ? "Estimated franchise bill (requested qty)"
+                                        : "Franchise bill totals"}
+                                </p>
+                                <p>Subtotal (MRP): ₹{Number(franchiseTotals.mrp_subtotal || 0).toFixed(2)}</p>
+                                <p>Discount: ₹{Number(franchiseTotals.discount || 0).toFixed(2)}</p>
+                                <p className="font-semibold text-indigo-900">
+                                    Final (F.Price): ₹{Number(franchiseTotals.final_amount || 0).toFixed(2)}
+                                </p>
+                            </div>
+                        )}
+
+                        {displayRequest.request_remarks && (
                             <div className="bg-gray-50 rounded-lg p-3">
                                 <p className="text-xs text-gray-500 mb-1">Remarks</p>
-                                <p className="text-sm text-gray-700">{selectedRequest.request_remarks}</p>
+                                <p className="text-sm text-gray-700">{displayRequest.request_remarks}</p>
                             </div>
                         )}
                         
-                        {selectedRequest.tracking_number && (
+                        {displayRequest.tracking_number && (
                             <div className="bg-blue-50 rounded-lg p-3">
                                 <p className="text-xs text-gray-500 mb-1">Tracking Information</p>
-                                <p className="text-sm font-medium text-gray-700">Tracking #: {selectedRequest.tracking_number}</p>
-                                {selectedRequest.expected_delivery && (
-                                    <p className="text-xs text-gray-500 mt-1">Expected: {fmtDate(selectedRequest.expected_delivery)}</p>
+                                <p className="text-sm font-medium text-gray-700">Tracking #: {displayRequest.tracking_number}</p>
+                                {displayRequest.expected_delivery && (
+                                    <p className="text-xs text-gray-500 mt-1">Expected: {fmtDate(displayRequest.expected_delivery)}</p>
                                 )}
                             </div>
                         )}
                     </div>
                     <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-2">
                         {canPrintChallan && (
-                            <button
-                                type="button"
-                                onClick={handleDownloadBulkChallan}
-                                disabled={isDownloadingChallan}
-                                className="px-4 py-2 border border-blue-200 text-blue-700 rounded-lg text-sm hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50"
-                            >
-                                <Download size={16} />
-                                {isDownloadingChallan ? "Downloading…" : "Transfer Challan (PDF)"}
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadBulkChallan}
+                                    disabled={isDownloadingChallan}
+                                    className="px-4 py-2 border border-blue-200 text-blue-700 rounded-lg text-sm hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <Download size={16} />
+                                    {isDownloadingChallan
+                                        ? "Downloading…"
+                                        : displayRequest.transfer_bill_number
+                                          ? `Transfer Bill (${displayRequest.transfer_bill_type === "GST_INVOICE" ? "GST" : "Non-GST"})`
+                                          : isFranchiseTransfer
+                                            ? "Franchise Transfer Bill (PDF)"
+                                            : "Transfer Challan (PDF)"}
+                                </button>
+                                {displayRequest.transfer_bill_number && isWarehouseUser && (
+                                    <button
+                                        type="button"
+                                        onClick={handleWhatsAppBill}
+                                        className="px-4 py-2 border border-green-200 text-green-700 rounded-lg text-sm hover:bg-green-50 flex items-center gap-2"
+                                    >
+                                        <MessageCircle size={16} />
+                                        WhatsApp to Shop
+                                    </button>
+                                )}
+                            </>
                         )}
                         <button onClick={() => dispatch(closeViewModal())} className="px-4 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200">Close</button>
                     </div>

@@ -8,6 +8,9 @@ const EMPTY_FORM = {
     address: "",
     city: "",
     manager_name: "",
+    gstin: "",
+    legal_name: "",
+    state_code: "",
     is_active: true,
     remarks: "",
 };
@@ -64,6 +67,9 @@ const warehouseSlice = createSlice({
                 address: wh.address || "",
                 city: wh.city || "",
                 manager_name: wh.manager_name || "",
+                gstin: wh.gstin || "",
+                legal_name: wh.legal_name || "",
+                state_code: wh.state_code || "",
                 is_active: wh.is_active ?? true,
                 remarks: wh.remarks || "",
             };

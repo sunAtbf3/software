@@ -90,6 +90,46 @@ export default function WarehouseFormBody({ formData, onChange, formErrors }) {
                 {errorMsg("address")}
             </div>
 
+            <div className="col-span-2 border-t border-gray-100 pt-4 mt-1">
+                <p className="text-xs font-semibold text-gray-700 mb-1">GST (optional)</p>
+                <p className="text-[11px] text-gray-500 mb-3">
+                    Required only when approving franchise transfers with GST bill type from this warehouse.
+                </p>
+            </div>
+
+            <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">GSTIN</label>
+                <input
+                    {...field("gstin")}
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
+                    className={inputCls("gstin")}
+                    style={{ textTransform: "uppercase" }}
+                />
+                {errorMsg("gstin")}
+            </div>
+
+            <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">State code</label>
+                <input
+                    {...field("state_code")}
+                    placeholder="22"
+                    maxLength={2}
+                    className={inputCls("state_code")}
+                />
+                {errorMsg("state_code")}
+            </div>
+
+            <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Legal name (for GST bill)</label>
+                <input
+                    {...field("legal_name")}
+                    placeholder="Registered business name on GSTIN"
+                    className={inputCls("legal_name")}
+                />
+                {errorMsg("legal_name")}
+            </div>
+
             {/* Remarks — full width */}
             <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">

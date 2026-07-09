@@ -33,6 +33,9 @@ export default function WarehouseProfileTab() {
                 city: myWarehouse.city || "",
                 manager_name: myWarehouse.manager_name || "",
                 address: myWarehouse.address || "",
+                gstin: myWarehouse.gstin || "",
+                legal_name: myWarehouse.legal_name || "",
+                state_code: myWarehouse.state_code || "",
                 remarks: myWarehouse.remarks || "",
                 is_active: myWarehouse.is_active ?? true,
             });
@@ -60,6 +63,9 @@ export default function WarehouseProfileTab() {
             await updateMyWarehouse({
                 manager_name: formData.manager_name?.trim() || null,
                 address: formData.address.trim(),
+                gstin: formData.gstin?.trim()?.toUpperCase() || null,
+                legal_name: formData.legal_name?.trim() || null,
+                state_code: formData.state_code?.trim() || null,
             }).unwrap();
             toast.success("Warehouse profile updated");
             refetch();
@@ -82,7 +88,7 @@ export default function WarehouseProfileTab() {
                 <div>
                     <h2 className="text-lg font-semibold text-gray-800">Warehouse Profile</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        View your warehouse details and update manager name and address.
+                        View your warehouse details and update manager name, address, and GST for transfer bills.
                     </p>
                 </div>
                 <button

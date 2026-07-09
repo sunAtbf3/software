@@ -83,10 +83,13 @@ export const bulkTransferApi = createApi({
 
         // PATCH /bulk-transfer-requests/:id/approve — approve bulk request
         approveBulkTransferRequest: builder.mutation({
-            query: ({ bulkRequestId, items, idempotencyKey }) => ({
+            query: ({ bulkRequestId, items, transfer_bill_type, idempotencyKey }) => ({
                 url: `/bulk-transfer-requests/${bulkRequestId}/approve`,
                 method: "PATCH",
-                data: items ? { items } : {},
+                data: {
+                    ...(items ? { items } : {}),
+                    ...(transfer_bill_type ? { transfer_bill_type } : {}),
+                },
                 headers: { "Idempotency-Key": idempotencyKey },
             }),
             invalidatesTags: (result, error, { bulkRequestId }) => [

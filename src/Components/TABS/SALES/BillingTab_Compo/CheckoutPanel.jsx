@@ -744,6 +744,7 @@ export default function CheckoutPanel({ shop_id }) {
     const handleNewBill = () => {
         setCreatedBillData(null);
         dispatch(clearLastCreatedBill());
+        dispatch(clearSelectedCustomer());
         setSelectedCreditNoteIds([]);
         setSearchedCreditNotes([]);
         setCreditNoteSearchInput("");

@@ -58,6 +58,48 @@ export default function WarehouseProfileFormBody({ formData, onChange, formError
                 {errorMsg("address")}
             </div>
 
+            <div className="col-span-2 border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold text-gray-700 mb-1">GST for franchise transfer bills</p>
+                <p className="text-[11px] text-gray-500 mb-3">
+                    Optional. Required when you approve a franchise transfer with GST bill type.
+                </p>
+            </div>
+
+            <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">GSTIN</label>
+                <input
+                    value={formData.gstin || ""}
+                    onChange={(e) => onChange({ gstin: e.target.value.toUpperCase() })}
+                    placeholder="22AAAAA0000A1Z5"
+                    maxLength={15}
+                    className={inputCls("gstin")}
+                />
+                {errorMsg("gstin")}
+            </div>
+
+            <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">State code</label>
+                <input
+                    value={formData.state_code || ""}
+                    onChange={(e) => onChange({ state_code: e.target.value })}
+                    placeholder="22"
+                    maxLength={2}
+                    className={inputCls("state_code")}
+                />
+                {errorMsg("state_code")}
+            </div>
+
+            <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Legal name</label>
+                <input
+                    value={formData.legal_name || ""}
+                    onChange={(e) => onChange({ legal_name: e.target.value })}
+                    placeholder="Registered business name on GSTIN"
+                    className={inputCls("legal_name")}
+                />
+                {errorMsg("legal_name")}
+            </div>
+
             {formData.remarks ? (
                 <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>

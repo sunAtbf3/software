@@ -37,6 +37,7 @@ import {
     setActionErrors,
     clearActionErrors,
 } from "../../../../../REDUX_FEATURES/REDUX_SLICES/TransferRequest_api/transferRequestSlice";
+import { getApiErrorMessage } from "../../../../../utils/apiErrorMessage";
 import { CURRENT_USER, isAdmin } from "../../../../roles";
 
 export default function RequestActionModals({ onSuccess }) {
@@ -76,6 +77,7 @@ export default function RequestActionModals({ onSuccess }) {
     const userWarehouseId = user?.warehouse_id || "";
     const userShopId = user?.shop_id || "";
     const isShopOwner = user?.role === "SHOP_OWNER";
+    const isShopManager = user?.role === "SHOP_MANAGER";
     const isWHManager = ["WH_MANAGER", "WH_STOCK_LISTER"].includes(user?.role);
 
     const [createRequest] = useCreateTransferRequestMutation();
@@ -255,13 +257,22 @@ export default function RequestActionModals({ onSuccess }) {
     };
 
     const handleReceive = async () => {
-        const qty = parseInt(receivedQuantity);
-        if (!receivedQuantity || qty <= 0) {
+        const isShopWhReceive =
+            selectedRequest?.request_type === "WH_TO_SHOP" &&
+            (isShopOwner || isShopManager);
+        const remaining =
+            (selectedRequest?.approved_quantity ?? selectedRequest?.quantity ?? 0) -
+            (selectedRequest?.received_quantity || 0);
+        const qty = isShopWhReceive ? remaining : parseInt(receivedQuantity, 10);
+
+        if (!Number.isInteger(qty) || qty <= 0) {
             dispatch(setActionErrors({ received_quantity: "Valid quantity is required" }));
+            toast.error("Please enter quantity to receive.");
             return;
         }
-        if (qty > selectedRequest?.quantity) {
-            dispatch(setActionErrors({ received_quantity: `Cannot receive more than ${selectedRequest.quantity}` }));
+        if (qty > remaining) {
+            dispatch(setActionErrors({ received_quantity: `Cannot receive more than ${remaining}` }));
+            toast.error(`Cannot receive more than ${remaining} units.`);
             return;
         }
         setIsSubmitting(true);
@@ -269,14 +280,14 @@ export default function RequestActionModals({ onSuccess }) {
             await receiveRequest({
                 requestId: selectedRequest.request_id,
                 received_quantity: qty,
-                receive_remarks: receiveRemarks?.trim() || null,
+                receive_remarks: receiveRemarks?.trim() || undefined,
                 idempotencyKey: generateIdempotencyKey(),
             }).unwrap();
             toast.success(`Received ${qty} units successfully`);
             dispatch(closeReceiveModal());
             if (onSuccess) onSuccess();
         } catch (err) {
-            toast.error(err?.data?.message || "Failed to receive");
+            toast.error(getApiErrorMessage(err, "Failed to receive goods. Please try again."));
         } finally {
             setIsSubmitting(false);
         }
@@ -598,7 +609,11 @@ export default function RequestActionModals({ onSuccess }) {
     // RECEIVE MODAL RENDER
     // ─────────────────────────────────────────────────────────────
     if (showReceiveModal && selectedRequest) {
-        const remaining = selectedRequest.quantity - (selectedRequest.received_quantity || 0);
+        const isShopWhReceive =
+            selectedRequest?.request_type === "WH_TO_SHOP" &&
+            (isShopOwner || isShopManager);
+        const sentQty = selectedRequest?.approved_quantity ?? selectedRequest?.quantity ?? 0;
+        const remaining = sentQty - (selectedRequest.received_quantity || 0);
         return (
             <div className="fixed inset-0 z-50 overflow-y-auto text-gray-700">
     <div className="flex items-center justify-center min-h-screen px-4 py-8">
@@ -613,16 +628,24 @@ export default function RequestActionModals({ onSuccess }) {
                         <div className="bg-gray-50 rounded-lg p-3 text-sm">
                             <p><strong>Product:</strong> {selectedRequest.variant?.product?.name}</p>
                             <p><strong>Total Requested:</strong> {selectedRequest.quantity}</p>
+                            <p><strong>Sent by Warehouse:</strong> {sentQty}</p>
                             <p><strong>Already Received:</strong> {selectedRequest.received_quantity || 0}</p>
-                            <p><strong>Remaining to Receive:</strong> <span className="font-bold text-blue-600">{remaining}</span></p>
+                            <p><strong>Receiving Now:</strong> <span className="font-bold text-green-700">{remaining}</span></p>
                         </div>
+                        {!isShopWhReceive && (
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Quantity to Receive <span className="text-red-500">*</span></label>
                             <input type="number" min="1" max={remaining} value={receivedQuantity} onChange={(e) => dispatch(setReceivedQuantity(e.target.value))} className={inputCls("received_quantity", actionErrors)} placeholder={`Max ${remaining}`} />
                             {actionErrors.received_quantity && <p className="text-xs text-red-500 mt-1">{actionErrors.received_quantity}</p>}
                         </div>
+                        )}
+                        {isShopWhReceive && (
+                            <p className="text-xs text-gray-500 bg-green-50 border border-green-100 rounded-lg p-3">
+                                Warehouse dispatched <strong>{remaining}</strong> unit(s). Confirm to receive the same quantity.
+                            </p>
+                        )}
                         <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks (optional)</label>
                             <textarea value={receiveRemarks} onChange={(e) => dispatch(setReceiveRemarks(e.target.value))} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none" placeholder="Optional" />
                         </div>
                     </div>

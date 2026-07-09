@@ -1,49 +1,49 @@
-/**
- * User-safe API error text — never show Prisma paths, SQL, or stack traces in toasts.
- */
-const TECHNICAL_PATTERNS = [
-    /Invalid `prisma\./i,
-    /prisma\.\w+\.(create|update|delete|findMany|findFirst|findUnique)/i,
-    /invocation in\s+/i,
-    /\\src\\services\\|\bsrc\/services\//i,
-    /does not exist in the current database/i,
-    /column `.+` does not exist/i,
-    /table `.+` does not exist/i,
-    /^Database error:/i,
-    /Foreign key constraint failed/i,
-    /ECONNREFUSED|ENOTFOUND/i,
-];
-
-const FRIENDLY_BY_CODE = {
-    DB_SCHEMA_OUT_OF_DATE: "This feature is not fully set up yet. Please contact your administrator.",
-    DATABASE_ERROR: "Unable to complete the request. Please try again.",
-    DATABASE_VALIDATION_ERROR: "Some data was invalid. Please check the form and try again.",
-    INTERNAL_ERROR: "Something went wrong. Please try again.",
+const FIELD_LABELS = {
+  receive_remarks: 'receive remarks',
+  cancel_reason: 'cancellation reason',
+  rejection_reason: 'rejection reason',
+  reject_reason: 'rejection reason',
+  gstin: 'GSTIN',
+  state_code: 'state code',
+  legal_name: 'legal name',
+  remarks: 'remarks',
+  warehouse_code: 'warehouse code',
+  warehouse_name: 'warehouse name',
+  address: 'address',
+  city: 'city',
+  manager_name: 'manager name',
+  from_warehouse_id: 'source warehouse',
+  to_shop_id: 'destination shop',
+  transfer_bill_type: 'transfer bill type',
+  received_quantity: 'received quantity',
 };
 
-const isTechnicalMessage = (message) =>
-    typeof message === "string" && TECHNICAL_PATTERNS.some((re) => re.test(message));
+const humanizeField = (field = '') => {
+  const key = String(field).replace(/^\d+\./, '').replace(/\[\d+\]/g, '');
+  return FIELD_LABELS[key] || key.replace(/_/g, ' ').trim() || 'this field';
+};
 
-/**
- * @param {unknown} err - RTK unwrap error or axios error shape
- * @param {string} fallback
- */
-export function getApiErrorMessage(err, fallback = "Request failed") {
-    const data = err?.data ?? err?.response?.data;
-    const code = data?.code;
-    if (code && FRIENDLY_BY_CODE[code]) {
-        return FRIENDLY_BY_CODE[code];
-    }
+/** Readable message from RTK Query / axios error payload. */
+export const getApiErrorMessage = (err, fallback = 'Something went wrong. Please try again.') => {
+  const data = err?.data ?? err?.response?.data;
+  if (!data) return err?.message || fallback;
 
-    const raw = data?.message ?? err?.message;
-    if (!raw || typeof raw !== "string") {
-        return fallback;
-    }
+  if (data.message && data.message !== 'Validation failed') {
+    return data.message;
+  }
 
-    const trimmed = raw.trim();
-    if (!trimmed || isTechnicalMessage(trimmed)) {
-        return fallback;
-    }
+  const fields = data.details?.fields;
+  if (Array.isArray(fields) && fields.length > 0) {
+    return fields
+      .map((f) => f.message || `Please fill ${humanizeField(f.field)}.`)
+      .join(' ');
+  }
 
-    return trimmed.length > 200 ? `${trimmed.slice(0, 197)}…` : trimmed;
-}
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    return data.errors
+      .map((f) => f.message || `Please fill ${humanizeField(f.field)}.`)
+      .join(' ');
+  }
+
+  return data.message || fallback;
+};

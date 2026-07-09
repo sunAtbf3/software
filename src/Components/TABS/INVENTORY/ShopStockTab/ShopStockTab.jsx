@@ -631,13 +631,13 @@ export default function ShopStockTab() {
                                             <div className="flex items-center justify-center gap-1">
                                                 {canEdit && firstVariant && (
                                                     <>
-                                                        {/* <button 
+                                                        <button 
                                                             onClick={() => handleVariantQuantity(firstVariant, group.name)} 
                                                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded-md transition-colors" 
                                                             title="Adjust Quantity"
                                                         >
-                                                            <Edit2 size={15} />
-                                                        </button> */}
+                                                       <Edit2 size={15} />
+                                                        </button>
                                                         <button 
                                                             onClick={() => handleVariantMinMax(firstVariant)} 
                                                             className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-40" 

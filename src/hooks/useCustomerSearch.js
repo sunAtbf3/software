@@ -27,10 +27,14 @@ export function useCustomerSearch(mobileInput) {
             triggerSearch({ mobile: mobileInput });
         } else {
             setOfflineCustomer(null);
+            resetSearch();
         }
-    }, [mobileInput, triggerSearch, isOnline]);
+    }, [mobileInput, triggerSearch, isOnline, resetSearch]);
 
-    const foundCustomer = isOnline ? getCustomerFromSearch(searchResults) : offlineCustomer;
+    const hasFullMobile = mobileInput?.length === 10;
+    const foundCustomer = hasFullMobile
+        ? (isOnline ? getCustomerFromSearch(searchResults) : offlineCustomer)
+        : null;
     const isSearching = isLoading || offlineSearching;
 
     const clearSearch = () => {

@@ -4,7 +4,7 @@
 // FIXED: Added View Details (Eye) icon, Emergency badge, Rejection reason display
 // UI: Restyled to match Purchase Bills clean/calm aesthetic
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import { X, Plus, Eye, RefreshCw, CheckCircle, XCircle, Truck, Package, Ban, Search, MapPin, Warehouse, Store, Info, ShoppingCart } from "lucide-react";
@@ -64,7 +64,7 @@ const fmtDate = (iso) => {
 
 export default function TransferRequestsTab() {
     const dispatch = useDispatch();
-    const [, setUrlSearchParams] = useSearchParams();
+    const [urlSearchParams, setUrlSearchParams] = useSearchParams();
     const { user } = useSelector((state) => state.auth);
     const {
         statusFilter,
@@ -101,6 +101,37 @@ export default function TransferRequestsTab() {
 
     const requests = data?.requests || [];
     const meta = data?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
+
+    const openRequestId = urlSearchParams.get("openRequestId");
+
+    useEffect(() => {
+        if (!openRequestId) return undefined;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const fullRequest = await fetchRequestDetail(openRequestId).unwrap();
+                if (!cancelled) {
+                    dispatch(setViewRequestData(fullRequest));
+                    dispatch(openViewRequestModal());
+                }
+            } catch {
+                if (!cancelled) toast.error("Failed to load request details");
+            } finally {
+                if (!cancelled) {
+                    setUrlSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.delete("openRequestId");
+                        return next;
+                    }, { replace: true });
+                }
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [openRequestId, dispatch, fetchRequestDetail, setUrlSearchParams]);
 
     const totalRequests = meta.total;
     const pendingCount = requests.filter(r => r.status === "REQUESTED").length;

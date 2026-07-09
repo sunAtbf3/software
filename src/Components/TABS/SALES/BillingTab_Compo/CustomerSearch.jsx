@@ -79,9 +79,21 @@ export default function CustomerSearch() {
                 </div>
             )}
 
-            {/* Found but not yet selected: show "Select" button */}
-            {foundCustomer && !selectedCustomer && (
-                <div className="mt-3 p-3 border border-blue-200 bg-blue-50 rounded-lg">
+            {/* Found but not yet selected — click anywhere on card to select */}
+            {foundCustomer && !selectedCustomer && customerMobileInput.length === 10 && (
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleSelectCustomer}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectCustomer();
+                        }
+                    }}
+                    className="mt-3 p-3 border border-blue-200 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100/80 hover:border-blue-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1"
+                    aria-label={`Select customer ${foundCustomer.name}`}
+                >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
                             {foundCustomer.is_gst_registered ? (
@@ -101,12 +113,9 @@ export default function CustomerSearch() {
                                 </span>
                             )}
                         </div>
-                        <button
-                            onClick={handleSelectCustomer}
-                            className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 self-start sm:self-auto"
-                        >
+                        <span className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg self-start sm:self-auto pointer-events-none">
                             <UserCheck size={12} /> Select
-                        </button>
+                        </span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-600">
                         <span>📞 {foundCustomer.mobile}</span>
@@ -116,6 +125,7 @@ export default function CustomerSearch() {
                     {foundCustomer.is_gst_registered && foundCustomer.gst_number && (
                         <p className="text-xs text-gray-600 mt-1">GST: {foundCustomer.gst_number}</p>
                     )}
+                    {/* <p className="text-[10px] text-blue-600/80 mt-2">Click anywhere on this card to select</p> */}
                 </div>
             )}
 

@@ -17,6 +17,7 @@ import {
 import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
+import { useShopPricingVisibility, isFranchiseShopType } from "../../../../utils/shopPricingVisibility";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -26,6 +27,8 @@ const toNumber = (value, defaultValue = 0) => {
 export default function CartPanel() {
     const dispatch = useDispatch();
     const { cart, manualCart, billType } = useSelector((state) => state.billing);
+    const { shopType } = useShopPricingVisibility();
+    const franchiseBillingLocked = isFranchiseShopType(shopType);
     const withGst = isWithGstBill(billType);
 
     const items = billType === BILL_TYPES.NON_LISTED ? manualCart : cart;
@@ -104,6 +107,22 @@ export default function CartPanel() {
                                             <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1 py-0.5 rounded">
                                                 MRP: ₹{toNumber(item.mrp).toFixed(2)}
                                             </span>
+                                        ) : franchiseBillingLocked ? (
+                                            <>
+                                                <span className="text-[10px] text-gray-600 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
+                                                    Special (₹{toNumber(item.special_price ?? item.retail_price).toFixed(2)})
+                                                </span>
+                                                {formatGstPercentLabel(item.gst_percent) ? (
+                                                    <span className="text-[10px] font-medium text-indigo-700">
+                                                        {item.gst_type === "IGST" ? "IGST" : item.gst_type === "EXEMPT" ? "Exempt" : "CGST+SGST"}{" "}
+                                                        {formatGstPercentLabel(item.gst_percent)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-amber-700" title="Set GST % in product master">
+                                                        GST not set
+                                                    </span>
+                                                )}
+                                            </>
                                         ) : (
                                             <>
                                                 <select

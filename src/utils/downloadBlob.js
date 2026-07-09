@@ -20,6 +20,7 @@ export const downloadBlobFile = (blob, filename) => {
 export const downloadBlob = downloadBlobFile;
 
 export const CHALLAN_READY_STATUSES = new Set([
+    "APPROVED",
     "DISPATCHED",
     "IN_TRANSIT",
     "PARTIALLY_RECEIVED",

@@ -1,33 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
-
-const DEMO_NOTIFICATIONS = [
-    {
-        id: 1,
-        title: "Low stock alert",
-        message: "Product 'Basmati Rice 5kg' is below minimum stock level.",
-        time: "5 min ago",
-        unread: true,
-    },
-    {
-        id: 2,
-        title: "New purchase received",
-        message: "GRN #GRN-1042 from Sharma Traders has been recorded.",
-        time: "1 hour ago",
-        unread: true,
-    },
-    {
-        id: 3,
-        title: "Payment reminder",
-        message: "Vendor payment of ₹12,500 is due tomorrow.",
-        time: "Today, 9:30 AM",
-        unread: false,
-    },
-];
+import { useNavigate } from "react-router-dom";
+import { useTransferNotifications } from "../../../hooks/useTransferNotifications";
+import { formatAlertTime } from "../../../utils/transferNotifications/deriveTransferAlerts";
 
 const Notification = () => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
-    const unreadCount = DEMO_NOTIFICATIONS.filter((n) => n.unread).length;
+    const { alerts, unreadCount, markSeen, markAllSeen } = useTransferNotifications();
+    const visibleAlerts = alerts.filter((a) => a.unread);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -49,6 +30,22 @@ const Notification = () => {
             document.removeEventListener("keydown", handleEscape);
         };
     }, [isOpen]);
+
+    const handleAlertClick = (alert) => {
+        markSeen(alert.key);
+        setIsOpen(false);
+
+        const params = new URLSearchParams({
+            tab: "transfers",
+            ctab: alert.navigateTab,
+        });
+        if (alert.kind === "bulk") {
+            params.set("openBulkId", alert.requestId);
+        } else {
+            params.set("openRequestId", alert.requestId);
+        }
+        navigate(`/dashboard?${params.toString()}`);
+    };
 
     return (
         <div ref={containerRef} className="relative">
@@ -75,7 +72,7 @@ const Notification = () => {
                 </svg>
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center text-[10px] font-semibold text-white bg-red-600 rounded-full leading-none">
-                        {unreadCount}
+                        {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                 )}
             </button>
@@ -85,32 +82,47 @@ const Notification = () => {
                     <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                         <p className="text-sm font-semibold text-gray-800">Notifications</p>
                         {unreadCount > 0 && (
-                            <span className="text-[10px] text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
-                                {unreadCount} new
-                            </span>
+                            <button
+                                type="button"
+                                onClick={markAllSeen}
+                                className="text-[10px] text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded hover:bg-blue-100"
+                            >
+                                {unreadCount} new · Mark all read
+                            </button>
                         )}
                     </div>
 
                     <ul className="max-h-72 overflow-y-auto">
-                        {DEMO_NOTIFICATIONS.map((item) => (
-                            <li
-                                key={item.id}
-                                className={`px-3 py-2.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
-                                    item.unread ? "bg-blue-50/40" : ""
-                                }`}
-                            >
-                                <div className="flex items-start gap-2">
-                                    {item.unread && (
-                                        <span className="mt-1.5 w-1.5 h-1.5 shrink-0 rounded-full bg-blue-600" />
-                                    )}
-                                    <div className={item.unread ? "" : "pl-3.5"}>
-                                        <p className="text-xs font-semibold text-gray-800">{item.title}</p>
-                                        <p className="text-xs text-gray-600 mt-0.5 leading-snug">{item.message}</p>
-                                        <p className="text-[10px] text-gray-400 mt-1">{item.time}</p>
-                                    </div>
-                                </div>
+                        {visibleAlerts.length === 0 ? (
+                            <li className="px-3 py-6 text-center text-xs text-gray-500">
+                                No pending transfer alerts
                             </li>
-                        ))}
+                        ) : (
+                            visibleAlerts.map((item) => (
+                                <li key={item.key}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAlertClick(item)}
+                                        className={`w-full text-left px-3 py-2.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                                            item.unread ? "bg-blue-50/40" : ""
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            {item.unread && (
+                                                <span className="mt-1.5 w-1.5 h-1.5 shrink-0 rounded-full bg-blue-600" />
+                                            )}
+                                            <div className={item.unread ? "" : "pl-3.5"}>
+                                                <p className="text-xs font-semibold text-gray-800">{item.title}</p>
+                                                <p className="text-xs text-gray-600 mt-0.5 leading-snug">{item.message}</p>
+                                                <p className="text-[10px] text-gray-400 mt-1">
+                                                    {formatAlertTime(item.timestamp)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </li>
+                            ))
+                        )}
                     </ul>
 
                     <div className="px-3 py-2 border-t border-gray-200 text-center">

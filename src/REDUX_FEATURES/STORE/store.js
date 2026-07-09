@@ -36,6 +36,7 @@ import shopLevelsReducer from "../REDUX_SLICES/ShopLevels_api/shopLevelsSlice";
 import { bulkTransferApi } from "../REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
 import bulkTransferReducer from "../REDUX_SLICES/BulkTransfer_api/bulkTransferSlice";
 import { shopWarehouseCatalogApi } from "../REDUX_SLICES/ShopWarehouseCatalog_api/shopWarehouseCatalogApi";
+import { appSettingsApi } from "../REDUX_SLICES/AppSettings_api/appSettingsApi";
 import { warehousePeerCatalogApi } from "../REDUX_SLICES/WarehousePeerCatalog_api/warehousePeerCatalogApi";
 
 
@@ -51,6 +52,7 @@ import { cashbankApi } from "../REDUX_SLICES/Cashbank_api/cashbankApi";
 import { dashboardApi } from "../REDUX_SLICES/Dashboard_api/dashboardApi";
 import { backupApi } from "../REDUX_SLICES/Backup_api/backupApi";
 import offlineReducer from "../REDUX_SLICES/Offline_api/offlineSlice";
+import transferNotificationReducer from "../REDUX_SLICES/TransferNotification_api/transferNotificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -91,6 +93,7 @@ export const store = configureStore({
     bulkTransfer: bulkTransferReducer,
     [bulkTransferApi.reducerPath]: bulkTransferApi.reducer,
     [shopWarehouseCatalogApi.reducerPath]: shopWarehouseCatalogApi.reducer,
+    [appSettingsApi.reducerPath]: appSettingsApi.reducer,
     [warehousePeerCatalogApi.reducerPath]: warehousePeerCatalogApi.reducer,
 
     customer: customerReducer,
@@ -105,6 +108,7 @@ export const store = configureStore({
     [dashboardApi.reducerPath]: dashboardApi.reducer,
     [backupApi.reducerPath]: backupApi.reducer,
     offline: offlineReducer,
+    transferNotification: transferNotificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -128,6 +132,7 @@ export const store = configureStore({
       shopLevelsApi.middleware,
       bulkTransferApi.middleware,
       shopWarehouseCatalogApi.middleware,
+      appSettingsApi.middleware,
       warehousePeerCatalogApi.middleware,
       transferApi.middleware,
       customerApi.middleware,

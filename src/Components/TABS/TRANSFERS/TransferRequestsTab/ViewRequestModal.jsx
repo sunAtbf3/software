@@ -3,13 +3,17 @@
 // Modal for viewing transfer request details
 // Shows all details including rejection reason if rejected
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, CheckCircle, XCircle, Truck, Package, Ban, Calendar, MapPin, User, FileText, Download } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { closeViewRequestModal } from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferRequest_api/transferRequestSlice";
-import { useLazyDownloadTransferChallanPdfQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferRequest_api/transferRequestApi";
+import {
+    useLazyDownloadTransferChallanPdfQuery,
+    useLazyGetTransferRequestByIdQuery,
+} from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferRequest_api/transferRequestApi";
 import { downloadBlobFile, CHALLAN_READY_STATUSES } from "../../../../utils/downloadBlob";
+import { ROLES } from "../../../roles";
 
 const STATUS_BADGE = {
     REQUESTED: "bg-yellow-100 text-yellow-700",
@@ -34,12 +38,23 @@ const fmtDateTime = (iso) => {
 
 export default function ViewRequestModal({ onSuccess }) {
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
     const { showViewRequestModal, viewRequestData } = useSelector((state) => state.transferRequest);
     const [downloadChallan, { isFetching: isDownloading }] = useLazyDownloadTransferChallanPdfQuery();
+    const [fetchRequestDetail, { data: requestDetail }] = useLazyGetTransferRequestByIdQuery();
+
+    useEffect(() => {
+        if (showViewRequestModal && viewRequestData?.request_id) {
+            fetchRequestDetail(viewRequestData.request_id);
+        }
+    }, [showViewRequestModal, viewRequestData?.request_id, fetchRequestDetail]);
 
     if (!showViewRequestModal || !viewRequestData) return null;
 
-    const request = viewRequestData;
+    const request = requestDetail || viewRequestData;
+    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
+    const isFranchiseTransfer = request.is_franchise_transfer || request.to_shop?.shop_type === "FRANCHISE";
+    const franchisePricing = request.franchise_pricing;
     const isEmergency = request.priority === "HIGH";
     const isRejected = request.status === "REJECTED";
     const canPrintChallan = CHALLAN_READY_STATUSES.has(request.status);
@@ -193,13 +208,35 @@ export default function ViewRequestModal({ onSuccess }) {
                         </div>
                     )}
 
-                    {request.unit_cost_snapshot != null && (
+                    {request.unit_cost_snapshot != null && isWarehouseUser && !isFranchiseTransfer && (
                         <div className="bg-gray-50 rounded-lg p-3 text-sm">
                             <p className="text-xs text-gray-500">Transfer valuation (at dispatch)</p>
                             <p className="font-medium text-gray-800">
                                 Unit cost: ₹{Number(request.unit_cost_snapshot).toFixed(2)} × {request.quantity} = ₹
                                 {Number(request.line_value_snapshot || 0).toFixed(2)}
                             </p>
+                        </div>
+                    )}
+
+                    {isFranchiseTransfer && franchisePricing && (
+                        <div className="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
+                            <p className="text-xs font-medium text-indigo-800">Franchise transfer pricing</p>
+                            <p>
+                                MRP: ₹{Number(franchisePricing.mrp || 0).toFixed(2)} × {request.quantity} = ₹
+                                {Number(franchisePricing.mrp_line_value || 0).toFixed(2)}
+                            </p>
+                            <p>
+                                F.Price ({franchisePricing.markup_percent}%): ₹
+                                {Number(franchisePricing.franchise_unit_price || 0).toFixed(2)} × {request.quantity} = ₹
+                                {Number(franchisePricing.franchise_line_value || 0).toFixed(2)}
+                            </p>
+                            {isWarehouseUser && request.variant && (
+                                <p className="text-xs text-gray-600 pt-1 border-t border-indigo-100">
+                                    Purchase: ₹{Number(request.variant.purchase_price || 0).toFixed(2)}
+                                    {" · "}
+                                    Special: ₹{Number(request.variant.special_price || 0).toFixed(2)}
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -214,7 +251,7 @@ export default function ViewRequestModal({ onSuccess }) {
                             className="px-4 py-2 border border-blue-200 text-blue-700 rounded-lg text-sm hover:bg-blue-50 flex items-center gap-2 disabled:opacity-50"
                         >
                             <Download size={16} />
-                            {isDownloading ? "Downloading…" : "Transfer Challan (PDF)"}
+                            {isDownloading ? "Downloading…" : isFranchiseTransfer ? "Franchise Transfer Bill (PDF)" : "Transfer Challan (PDF)"}
                         </button>
                     )}
                     <button 

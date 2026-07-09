@@ -32,10 +32,11 @@ const initialState = {
 
     // Action Forms
     approveItems: [],
-    approveType: "full", // 'full' or 'partial'
+    approveType: "full",
+    transferBillType: "NON_GST_INVOICE",
     trackingNumber: "",
     expectedDelivery: "",
-    receiveQuantity: "",
+    receiveItems: [],
     receiveRemarks: "",
     cancelReason: "",
     rejectReason: "",
@@ -130,6 +131,7 @@ const bulkTransferSlice = createSlice({
             state.selectedRequest = action.payload;
             state.approveItems = [];
             state.approveType = "full";
+            state.transferBillType = "NON_GST_INVOICE";
             state.actionErrors = {};
         },
         closeApproveModal: (state) => {
@@ -137,6 +139,7 @@ const bulkTransferSlice = createSlice({
             state.selectedRequest = null;
             state.approveItems = [];
             state.approveType = "full";
+            state.transferBillType = "NON_GST_INVOICE";
             state.actionErrors = {};
         },
 
@@ -159,13 +162,30 @@ const bulkTransferSlice = createSlice({
         setApproveType: (state, action) => {
             state.approveType = action.payload;
         },
+        setTransferBillType: (state, action) => {
+            state.transferBillType = action.payload;
+        },
         setApproveItem: (state, action) => {
-            const { variant_id, approved } = action.payload;
-            const existing = state.approveItems.find(i => i.variant_id === variant_id);
+            const { variant_id, approved, quantity } = action.payload;
+            const existing = state.approveItems.find((i) => i.variant_id === variant_id);
             if (existing) {
-                existing.approved = approved;
+                if (approved !== undefined) existing.approved = approved;
+                if (quantity !== undefined) existing.quantity = quantity;
             } else {
-                state.approveItems.push({ variant_id, approved });
+                state.approveItems.push({
+                    variant_id,
+                    approved: approved !== false,
+                    quantity,
+                });
+            }
+        },
+        setApproveItemQuantity: (state, action) => {
+            const { variant_id, quantity } = action.payload;
+            const existing = state.approveItems.find((i) => i.variant_id === variant_id);
+            if (existing) {
+                existing.quantity = quantity;
+            } else {
+                state.approveItems.push({ variant_id, approved: true, quantity });
             }
         },
 
@@ -195,19 +215,39 @@ const bulkTransferSlice = createSlice({
         openReceiveModal: (state, action) => {
             state.showReceiveModal = true;
             state.selectedRequest = action.payload;
-            state.receiveQuantity = "";
+            state.receiveItems = (action.payload?.items || [])
+                .map((item) => {
+                    if (item.is_approved === false) return null;
+                    const requested = Number(item.requested_quantity ?? item.quantity) || 0;
+                    const approved =
+                        item.approved_quantity != null
+                            ? Number(item.approved_quantity) || 0
+                            : requested;
+                    if (approved <= 0) return null;
+                    const received = Number(item.received_quantity ?? 0);
+                    const inTransit = Math.max(0, approved - received);
+                    if (inTransit <= 0) return null;
+                    return { variant_id: item.variant_id, quantity: String(inTransit) };
+                })
+                .filter(Boolean);
             state.receiveRemarks = "";
             state.actionErrors = {};
         },
         closeReceiveModal: (state) => {
             state.showReceiveModal = false;
             state.selectedRequest = null;
-            state.receiveQuantity = "";
+            state.receiveItems = [];
             state.receiveRemarks = "";
             state.actionErrors = {};
         },
-        setReceiveQuantity: (state, action) => {
-            state.receiveQuantity = action.payload;
+        setReceiveItemQuantity: (state, action) => {
+            const { variant_id, quantity } = action.payload;
+            const existing = state.receiveItems.find((i) => i.variant_id === variant_id);
+            if (existing) {
+                existing.quantity = quantity;
+            } else {
+                state.receiveItems.push({ variant_id, quantity });
+            }
         },
         setReceiveRemarks: (state, action) => {
             state.receiveRemarks = action.payload;
@@ -274,14 +314,16 @@ export const {
     closeRejectModal,
     setRejectReason,
     setApproveType,
+    setTransferBillType,
     setApproveItem,
+    setApproveItemQuantity,
     openDispatchModal,
     closeDispatchModal,
     setTrackingNumber,
     setExpectedDelivery,
     openReceiveModal,
     closeReceiveModal,
-    setReceiveQuantity,
+    setReceiveItemQuantity,
     setReceiveRemarks,
     openCancelModal,
     closeCancelModal,

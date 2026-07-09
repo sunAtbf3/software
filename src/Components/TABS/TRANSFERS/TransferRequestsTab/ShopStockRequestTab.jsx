@@ -223,6 +223,7 @@ export default function ShopStockRequestTab() {
                         onSelectionChange={handleSelectionChange}
                         onSelectAllProduct={handleSelectAllProduct}
                         isLoading={catalogLoading}
+                        franchisePricing={!!catalogData?.franchise_shop_pricing_view}
                         emptyMessage={
                             catalogMode === "new"
                                 ? "No new products with stock at this warehouse."

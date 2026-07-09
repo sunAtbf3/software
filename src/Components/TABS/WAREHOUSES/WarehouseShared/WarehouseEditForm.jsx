@@ -45,6 +45,9 @@ export default function WarehouseEditForm({ formData, formErrors, selectedWareho
                 manager_name: formData.manager_name?.trim() || undefined,
                 is_active: formData.is_active,
                 remarks: formData.remarks?.trim() || undefined,
+                gstin: formData.gstin?.trim()?.toUpperCase() || null,
+                legal_name: formData.legal_name?.trim() || null,
+                state_code: formData.state_code?.trim() || null,
             };
 
             await updateWarehouse(payload).unwrap();
