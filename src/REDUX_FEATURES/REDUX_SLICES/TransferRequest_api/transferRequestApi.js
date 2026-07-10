@@ -126,9 +126,10 @@ export const transferRequestApi = createApi({
 
         // ── PATCH /transfer-requests/:requestId/approve ───────────────────────
         approveTransferRequest: builder.mutation({
-            query: ({ requestId, idempotencyKey }) => ({
+            query: ({ requestId, transfer_bill_type, idempotencyKey }) => ({
                 url: `/transfer-requests/${requestId}/approve`,
                 method: "PATCH",
+                data: transfer_bill_type ? { transfer_bill_type } : {},
                 headers: { "Idempotency-Key": idempotencyKey },
             }),
             invalidatesTags: (result, error, { requestId }) => [

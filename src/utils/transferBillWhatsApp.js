@@ -1,3 +1,5 @@
+import { getTransferBillTypeLabel } from "../constants/transferBillTypes";
+
 export const TRANSFER_BILL_READY_STATUSES = new Set([
     "APPROVED",
     "DISPATCHED",
@@ -24,12 +26,11 @@ export const openTransferBillWhatsApp = (request) => {
     }
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "https://api.bizcentro.cloud/api/v1";
-    const shareUrl = `${apiBaseUrl}/bulk-transfer-requests/public/${token}`;
+    const shareUrl = `${apiBaseUrl}/transfer-bills/public/${token}`;
     const billNum = request.transfer_bill_number || request.bulk_request_number || "—";
     const shopName = request.to_shop?.shop_name || "";
     const amount = Number(request.franchise_bill_totals?.final_amount || 0).toFixed(2);
-    const billTypeLabel =
-        request.transfer_bill_type === "GST_INVOICE" ? "GST Invoice" : "Non-GST Invoice";
+    const billTypeLabel = getTransferBillTypeLabel(request.transfer_bill_type);
     const date = new Date(request.transfer_bill_generated_at || request.approved_at || Date.now()).toLocaleDateString("en-IN");
 
     const msg = [

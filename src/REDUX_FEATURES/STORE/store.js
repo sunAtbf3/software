@@ -51,6 +51,8 @@ import { debitNoteApi } from "../REDUX_SLICES/DebitNote_api/debitNoteApi";
 import { cashbankApi } from "../REDUX_SLICES/Cashbank_api/cashbankApi";
 import { dashboardApi } from "../REDUX_SLICES/Dashboard_api/dashboardApi";
 import { backupApi } from "../REDUX_SLICES/Backup_api/backupApi";
+import { transferBillApi } from "../REDUX_SLICES/TransferBill_api/transferBillApi";
+import transferBillReducer from "../REDUX_SLICES/TransferBill_api/transferBillSlice";
 import offlineReducer from "../REDUX_SLICES/Offline_api/offlineSlice";
 import transferNotificationReducer from "../REDUX_SLICES/TransferNotification_api/transferNotificationSlice";
 
@@ -109,6 +111,8 @@ export const store = configureStore({
     [backupApi.reducerPath]: backupApi.reducer,
     offline: offlineReducer,
     transferNotification: transferNotificationReducer,
+    transferBill: transferBillReducer,
+    [transferBillApi.reducerPath]: transferBillApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -142,5 +146,6 @@ export const store = configureStore({
       cashbankApi.middleware,
       dashboardApi.middleware,
       backupApi.middleware,
+      transferBillApi.middleware,
     ),
 });

@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
-const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
+const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
+// const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
              
 
 // ✅ Access token stored in memory (set by Redux)

@@ -32,6 +32,7 @@ import {
     getBulkReceiveableItems,
 } from "../../../../utils/bulkTransfer.utils";
 import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
+import { TRANSFER_BILL_TYPES, getTransferBillTypeShortLabel } from "../../../../constants/transferBillTypes";
 import { ROLES } from "../../../roles";
 import {
     closeApproveModal,
@@ -363,12 +364,12 @@ export default function BulkActionModals({ onSuccess }) {
                         {isFranchiseApprove && (
                             <div className="border border-blue-100 bg-blue-50/50 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-semibold text-blue-900">Transfer bill type (required)</p>
-                                <div className="flex gap-3">
+                                <div className="grid grid-cols-3 gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => dispatch(setTransferBillType("NON_GST_INVOICE"))}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium border ${
-                                            transferBillType === "NON_GST_INVOICE"
+                                        onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.NON_GST))}
+                                        className={`py-2 rounded-lg text-sm font-medium border ${
+                                            transferBillType === TRANSFER_BILL_TYPES.NON_GST
                                                 ? "bg-blue-600 text-white border-blue-600"
                                                 : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                                         }`}
@@ -377,18 +378,29 @@ export default function BulkActionModals({ onSuccess }) {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => dispatch(setTransferBillType("GST_INVOICE"))}
+                                        onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.GST))}
                                         className={`flex-1 py-2 rounded-lg text-sm font-medium border ${
-                                            transferBillType === "GST_INVOICE"
-                                                ? "bg-blue-600 text-white border-blue-600"
+                                            transferBillType === TRANSFER_BILL_TYPES.GST
+                                                ? "bg-green-600 text-white border-green-600"
                                                 : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                                         }`}
                                     >
                                         GST Bill
                                     </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.RECEIPT))}
+                                        className={`py-2 rounded-lg text-sm font-medium border ${
+                                            transferBillType === TRANSFER_BILL_TYPES.RECEIPT
+                                                ? "bg-amber-600 text-white border-amber-600"
+                                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        Receipt
+                                    </button>
                                 </div>
                                 <p className="text-[11px] text-blue-800">
-                                    Bill uses MRP + Franchise Price. GST is calculated on franchise price per product.
+                                    Bill uses MRP + Franchise Price. GST is calculated on franchise price per product (GST bill only).
                                 </p>
                             </div>
                         )}
@@ -1028,7 +1040,7 @@ export default function BulkActionModals({ onSuccess }) {
                                     {isDownloadingChallan
                                         ? "Downloading…"
                                         : displayRequest.transfer_bill_number
-                                          ? `Transfer Bill (${displayRequest.transfer_bill_type === "GST_INVOICE" ? "GST" : "Non-GST"})`
+                                          ? `Transfer Bill (${getTransferBillTypeShortLabel(displayRequest.transfer_bill_type)})`
                                           : isFranchiseTransfer
                                             ? "Franchise Transfer Bill (PDF)"
                                             : "Transfer Challan (PDF)"}

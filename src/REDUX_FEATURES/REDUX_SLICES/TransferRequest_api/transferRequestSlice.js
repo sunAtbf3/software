@@ -42,6 +42,7 @@ const initialState = {
         request_remarks: "",
     },
     rejectReason: "",
+    transferBillType: "NON_GST_INVOICE",
     cancelReason: "",
     trackingNumber: "",
     expectedDelivery: "",
@@ -129,16 +130,21 @@ const transferRequestSlice = createSlice({
             state.showApproveRejectModal = true;
             state.selectedRequest = action.payload;
             state.rejectReason = "";
+            state.transferBillType = "NON_GST_INVOICE";
             state.actionErrors = {};
         },
         closeApproveRejectModal: (state) => {
             state.showApproveRejectModal = false;
             state.selectedRequest = null;
             state.rejectReason = "";
+            state.transferBillType = "NON_GST_INVOICE";
             state.actionErrors = {};
         },
         setRejectReason: (state, action) => {
             state.rejectReason = action.payload;
+        },
+        setTransferBillType: (state, action) => {
+            state.transferBillType = action.payload;
         },
 
         // ── Dispatch Modal ──────────────────────────────────────────────────
@@ -261,6 +267,7 @@ export const {
     openApproveRejectModal,
     closeApproveRejectModal,
     setRejectReason,
+    setTransferBillType,
     openDispatchModal,
     closeDispatchModal,
     setTrackingNumber,

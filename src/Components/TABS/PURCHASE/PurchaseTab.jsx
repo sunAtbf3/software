@@ -1,13 +1,20 @@
 import React from "react";
 import { useSearchParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { PURCHASE_TAB_REGISTRY } from "./purchaseTabRegistry";
 import { filterInternalTabsByRole } from "../../../Components/roles";
+import { TRANSFER_BILLS_TAB_ID, getTransferBillsTabLabel } from "../../../constants/transferBillTabLabels";
 import SubTabBar from "../../shared/SubTabBar";
 
 const PurchaseTab = () => {
     const [searchParams, setSearchParams] = useSearchParams();
+    const { user } = useSelector((state) => state.auth);
 
-    const filteredTabs = filterInternalTabsByRole("purchase", PURCHASE_TAB_REGISTRY);
+    const filteredTabs = filterInternalTabsByRole("purchase", PURCHASE_TAB_REGISTRY).map((tab) =>
+        tab.id === TRANSFER_BILLS_TAB_ID
+            ? { ...tab, label: getTransferBillsTabLabel(user?.role) }
+            : tab
+    );
     const activeCtab = searchParams.get("ctab") || filteredTabs[0]?.id;
     const activeConfig = filteredTabs.find((t) => t.id === activeCtab) || filteredTabs[0];
     const SubComponent = activeConfig?.component ?? null;
