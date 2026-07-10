@@ -35,7 +35,7 @@ export const generateIdempotencyKey = () => {
 export const transferApi = createApi({
     reducerPath: "transferApi",
     baseQuery: axiosBaseQuery(),
-    tagTypes: ["Transfer", "StockLedger", "ProductStock"],
+    tagTypes: ["Transfer", "StockLedger", "TransferHistory", "ProductStock"],
 
     endpoints: (builder) => ({
 
@@ -70,6 +70,30 @@ export const transferApi = createApi({
                 if (to_date) params.to_date = to_date;
                 return { url: "/stock/ledger/export", method: "GET", params, responseType: "blob" };
             },
+        }),
+
+        // GET /transfer-history — grouped transfer requests (bulk + single)
+        getTransferHistory: builder.query({
+            query: ({
+                page = 1,
+                limit = 20,
+                request_type = "",
+                status = "",
+                from_date = "",
+                to_date = "",
+            }) => {
+                const params = { page, limit };
+                if (request_type) params.request_type = request_type;
+                if (status) params.status = status;
+                if (from_date) params.from_date = from_date;
+                if (to_date) params.to_date = to_date;
+                return { url: "/transfer-history", method: "GET", params };
+            },
+            providesTags: [{ type: "TransferHistory", id: "LIST" }],
+            transformResponse: (response) => ({
+                transfers: response.data || [],
+                meta: response.meta || { total: 0, page: 1, limit: 20, totalPages: 1 },
+            }),
         }),
 
         // GET /stock/ledger — list all ledger entries
@@ -166,6 +190,7 @@ export const {
     // Mutations
     useReconcileStockMutation,
     // Queries
+    useGetTransferHistoryQuery,
     useGetStockLedgerQuery,
     useGetVariantLedgerQuery,
     useGetWarehouseLedgerQuery,

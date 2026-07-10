@@ -69,6 +69,7 @@ export const SUB_TAB_PERMISSIONS = {
     "transfers.internal.transfer-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.bulk-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "transfers.internal.shop-transfer-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 
 
     // Inventory internal horizontal tabs (from inventoryTabRegistry.js)
@@ -119,7 +120,7 @@ export const SUB_TAB_PERMISSIONS = {
     "utilities.internal.pettycashbook": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
 
     // Purchase internal horizontal tabs (from purchaseTabRegistry.js)
-    "purchase.internal.stock-inward-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "purchase.internal.stock-inward-bills": ["SHOP_OWNER", "SHOP_MANAGER"],
     "purchase.internal.purchase-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "purchase.internal.payment-out": ["SUPER_ADMIN", "WH_MANAGER"],
     "purchase.internal.bill-payment-status": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],

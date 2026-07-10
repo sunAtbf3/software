@@ -1,5 +1,8 @@
-/** Purchase sub-tab id for franchise transfer bill history */
+/** Purchase sub-tab id — shop roles only */
 export const TRANSFER_BILLS_TAB_ID = "stock-inward-bills";
+
+/** Transfers sub-tab id — warehouse / admin roles */
+export const SHOP_TRANSFER_BILLS_TAB_ID = "shop-transfer-bills";
 
 const SHOP_ROLES = new Set(["SHOP_OWNER", "SHOP_MANAGER"]);
 

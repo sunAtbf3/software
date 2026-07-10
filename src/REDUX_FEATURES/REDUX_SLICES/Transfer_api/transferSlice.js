@@ -34,11 +34,10 @@ const initialState = {
     
     // Filters for Transfer History tab
     ledgerFilters: {
-        movement_type: "",
+        request_type: "",
+        status: "",
         from_date: "",
         to_date: "",
-        variant_id: "",
-        product_id: "",
     },
     ledgerCurrentPage: 1,
     ledgerPageSize: 20,
@@ -140,8 +139,13 @@ const transferSlice = createSlice({
         },
         
         // ── Ledger Filters (for Transfer History tab) ────────────────────────
-        setLedgerMovementType: (state, action) => {
-            state.ledgerFilters.movement_type = action.payload;
+        setLedgerRequestType: (state, action) => {
+            state.ledgerFilters.request_type = action.payload;
+            state.ledgerCurrentPage = 1;
+        },
+
+        setLedgerStatus: (state, action) => {
+            state.ledgerFilters.status = action.payload;
             state.ledgerCurrentPage = 1;
         },
         
@@ -149,16 +153,6 @@ const transferSlice = createSlice({
             const { from_date, to_date } = action.payload;
             if (from_date !== undefined) state.ledgerFilters.from_date = from_date;
             if (to_date !== undefined) state.ledgerFilters.to_date = to_date;
-            state.ledgerCurrentPage = 1;
-        },
-        
-        setLedgerVariantId: (state, action) => {
-            state.ledgerFilters.variant_id = action.payload;
-            state.ledgerCurrentPage = 1;
-        },
-        
-        setLedgerProductId: (state, action) => {
-            state.ledgerFilters.product_id = action.payload;
             state.ledgerCurrentPage = 1;
         },
         
@@ -173,11 +167,10 @@ const transferSlice = createSlice({
         
         resetLedgerFilters: (state) => {
             state.ledgerFilters = {
-                movement_type: "",
+                request_type: "",
+                status: "",
                 from_date: "",
                 to_date: "",
-                variant_id: "",
-                product_id: "",
             };
             state.ledgerCurrentPage = 1;
         },
@@ -203,10 +196,9 @@ export const {
     setIsSubmitting,
     setIdempotencyKey,
     // Ledger filter actions
-    setLedgerMovementType,
+    setLedgerRequestType,
+    setLedgerStatus,
     setLedgerDateRange,
-    setLedgerVariantId,
-    setLedgerProductId,
     setLedgerCurrentPage,
     setLedgerPageSize,
     resetLedgerFilters,
