@@ -18,7 +18,7 @@ const axiosBaseQuery = () => async ({ url, method, data }) => {
 export const appSettingsApi = createApi({
     reducerPath: "appSettingsApi",
     baseQuery: axiosBaseQuery(),
-    tagTypes: ["FranchiseSettings"],
+    tagTypes: ["FranchiseSettings", "OnlineStockSettings", "CompanyInvoiceSettings"],
     endpoints: (builder) => ({
         getFranchiseSettings: builder.query({
             query: () => ({
@@ -37,10 +37,48 @@ export const appSettingsApi = createApi({
             invalidatesTags: ["FranchiseSettings"],
             transformResponse: (response) => response.data,
         }),
+        getOnlineStockSettings: builder.query({
+            query: () => ({
+                url: "/settings/online-stock",
+                method: "GET",
+            }),
+            providesTags: ["OnlineStockSettings"],
+            transformResponse: (response) => response.data,
+        }),
+        updateOnlineStockSettings: builder.mutation({
+            query: (body) => ({
+                url: "/settings/online-stock",
+                method: "PUT",
+                data: body,
+            }),
+            invalidatesTags: ["OnlineStockSettings"],
+            transformResponse: (response) => response.data,
+        }),
+        getCompanyInvoiceSettings: builder.query({
+            query: () => ({
+                url: "/settings/company",
+                method: "GET",
+            }),
+            providesTags: ["CompanyInvoiceSettings"],
+            transformResponse: (response) => response.data,
+        }),
+        updateCompanyInvoiceSettings: builder.mutation({
+            query: (body) => ({
+                url: "/settings/company",
+                method: "PUT",
+                data: body,
+            }),
+            invalidatesTags: ["CompanyInvoiceSettings"],
+            transformResponse: (response) => response.data,
+        }),
     }),
 });
 
 export const {
     useGetFranchiseSettingsQuery,
     useUpdateFranchiseSettingsMutation,
+    useGetOnlineStockSettingsQuery,
+    useUpdateOnlineStockSettingsMutation,
+    useGetCompanyInvoiceSettingsQuery,
+    useUpdateCompanyInvoiceSettingsMutation,
 } = appSettingsApi;

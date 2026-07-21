@@ -1,99 +1,185 @@
-// TABS/SETTINGS/CompanyDetailsTab/CompanyDetailsTab.jsx
+import React, { useEffect, useState } from "react";
+import { Building2, Save } from "lucide-react";
+import { toast } from "../../../shared/ToastConfig";
+import {
+    useGetCompanyInvoiceSettingsQuery,
+    useUpdateCompanyInvoiceSettingsMutation,
+} from "../../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
+import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 
-import React from "react";
-import { Building2 } from "lucide-react";
-
-const INFO_ROWS = [
-    { label: "Company Name", value: "OfferWale Baba" },
-    { label: "Business Type", value: "Wholesale & Retail" },
-    { label: "GSTIN", value: "07AABCU9603R1ZX" },
-    { label: "PAN Number", value: "AABCU9603R" },
-    { label: "CIN", value: "U74999DL2020PTC123456" },
-    { label: "Phone", value: "+91 98765 43210" },
-    { label: "Email", value: "info@offerwalebaba.com" },
-    { label: "Website", value: "www.offerwalebaba.com" },
-];
-
-const ADDRESS_ROWS = [
-    { label: "Address Line 1", value: "14, Azad Market Road" },
-    { label: "Address Line 2", value: "Near Metro Station" },
-    { label: "City", value: "Delhi" },
-    { label: "State", value: "Delhi" },
-    { label: "Pincode", value: "110006" },
-    { label: "Country", value: "India" },
-];
-
-function ReadOnlyRow({ label, value }) {
-    return (
-        <div className="flex justify-between py-2 border-b border-gray-50">
-            <span className="text-xs text-gray-400">{label}</span>
-            <span className="text-sm text-gray-700 font-medium">{value}</span>
-        </div>
-    );
-}
+const EMPTY = {
+    transfer_invoice_legal_name: "",
+    transfer_invoice_gstin: "",
+    transfer_invoice_state_code: "",
+    transfer_invoice_address: "",
+    transfer_invoice_city: "",
+    transfer_invoice_phone: "",
+};
 
 export default function CompanyDetailsTab() {
+    const { data, isLoading, isFetching, refetch } = useGetCompanyInvoiceSettingsQuery();
+    const [updateSettings, { isLoading: isSaving }] = useUpdateCompanyInvoiceSettingsMutation();
+    const [form, setForm] = useState(EMPTY);
+
+    useEffect(() => {
+        if (!data) return;
+        setForm({
+            transfer_invoice_legal_name: data.transfer_invoice_legal_name || "",
+            transfer_invoice_gstin: data.transfer_invoice_gstin || "",
+            transfer_invoice_state_code: data.transfer_invoice_state_code || "",
+            transfer_invoice_address: data.transfer_invoice_address || "",
+            transfer_invoice_city: data.transfer_invoice_city || "",
+            transfer_invoice_phone: data.transfer_invoice_phone || "",
+        });
+    }, [data]);
+
+    const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+    const handleSave = async () => {
+        const legal = form.transfer_invoice_legal_name.trim();
+        const gstin = form.transfer_invoice_gstin.trim().toUpperCase();
+        if (!legal) {
+            toast.error("Company legal name is required");
+            return;
+        }
+        if (gstin && gstin.length !== 15) {
+            toast.error("GSTIN must be 15 characters");
+            return;
+        }
+        try {
+            await updateSettings({
+                transfer_invoice_legal_name: legal,
+                transfer_invoice_gstin: gstin || null,
+                transfer_invoice_state_code: form.transfer_invoice_state_code.trim() || null,
+                transfer_invoice_address: form.transfer_invoice_address.trim() || null,
+                transfer_invoice_city: form.transfer_invoice_city.trim() || null,
+                transfer_invoice_phone: form.transfer_invoice_phone.trim() || null,
+            }).unwrap();
+            toast.success("Company details saved");
+            refetch();
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, "Failed to save company details"));
+        }
+    };
+
+    if (isLoading) {
+        return <div className="p-6 text-sm text-gray-500">Loading company details…</div>;
+    }
+
+    const inputCls =
+        "w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
     return (
-        <div className="space-y-5 bg-gray-50 min-h-screen px-1 py-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-200">
+        <div className="space-y-6 max-w-2xl">
+            <div>
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <Building2 size={20} className="text-blue-600" />
+                    Company Details
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                    Legal name and GSTIN used on all warehouse → shop stock transfer bills
+                    (GST / non-GST). Warehouses keep their own Location ID, name, address, and
+                    manager on the bill.
+                </p>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Company Details</h2>
-                    <p className="text-sm text-gray-400 mt-0.5">Manage your business information and branding</p>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Company legal name *
+                    </label>
+                    <input
+                        type="text"
+                        value={form.transfer_invoice_legal_name}
+                        onChange={(e) => setField("transfer_invoice_legal_name", e.target.value)}
+                        className={inputCls}
+                        placeholder="e.g. OfferWale Baba Private Limited"
+                    />
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Company GSTIN
+                        </label>
+                        <input
+                            type="text"
+                            value={form.transfer_invoice_gstin}
+                            onChange={(e) => setField("transfer_invoice_gstin", e.target.value.toUpperCase())}
+                            className={inputCls}
+                            placeholder="15-character GSTIN"
+                            maxLength={15}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                            State code (optional)
+                        </label>
+                        <input
+                            type="text"
+                            value={form.transfer_invoice_state_code}
+                            onChange={(e) => setField("transfer_invoice_state_code", e.target.value)}
+                            className={inputCls}
+                            placeholder="Auto from GSTIN if blank"
+                            maxLength={2}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Registered address (optional)
+                    </label>
+                    <input
+                        type="text"
+                        value={form.transfer_invoice_address}
+                        onChange={(e) => setField("transfer_invoice_address", e.target.value)}
+                        className={inputCls}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
+                        <input
+                            type="text"
+                            value={form.transfer_invoice_city}
+                            onChange={(e) => setField("transfer_invoice_city", e.target.value)}
+                            className={inputCls}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                        <input
+                            type="text"
+                            value={form.transfer_invoice_phone}
+                            onChange={(e) => setField("transfer_invoice_phone", e.target.value)}
+                            className={inputCls}
+                        />
+                    </div>
+                </div>
+
+                {data?.updated_at && (
+                    <p className="text-xs text-gray-400">
+                        Last updated: {new Date(data.updated_at).toLocaleString("en-IN")}
+                        {isFetching ? " · refreshing…" : ""}
+                    </p>
+                )}
+
                 <button
                     type="button"
-                    className="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
-                    Edit Details
+                    <Save size={16} />
+                    {isSaving ? "Saving…" : "Save company details"}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Business Information</h3>
-                    {INFO_ROWS.map((row) => (
-                        <ReadOnlyRow key={row.label} label={row.label} value={row.value} />
-                    ))}
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Registered Address</h3>
-                    {ADDRESS_ROWS.map((row) => (
-                        <ReadOnlyRow key={row.label} label={row.label} value={row.value} />
-                    ))}
-
-                    <h3 className="text-sm font-semibold text-gray-700 mt-5 mb-3">Branding</h3>
-                    <div className="w-20 h-20 bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-center text-gray-300">
-                        <Building2 size={28} />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">Upload company logo (PNG, JPG — max 2MB)</p>
-                    <div className="w-full h-16 bg-gray-50 border border-dashed border-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-400 mt-3">
-                        Letterhead preview
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">GST Configuration</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1">Default GST Rate</p>
-                        <p className="text-sm text-gray-700 font-medium">18%</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1">GST Type</p>
-                        <p className="text-sm text-gray-700 font-medium">Regular</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-gray-400 mb-1">HSN/SAC Code</p>
-                        <p className="text-sm text-gray-700 font-medium">6217</p>
-                    </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 mt-4">
-                    <p className="text-xs text-blue-600">
-                        GST details are used on all invoices and purchase bills generated by the system.
-                    </p>
-                </div>
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+                Bill header uses this company legal name + GSTIN. Location ID, warehouse name,
+                address, and manager still come from the dispatching warehouse.
             </div>
         </div>
     );

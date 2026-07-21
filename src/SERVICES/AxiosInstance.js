@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
-// const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
+// const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
+const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
              
 
 // ✅ Access token stored in memory (set by Redux)
@@ -20,7 +20,7 @@ const AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL,
   withCredentials: true, // ✅ Refresh token cookie automatically sent
   headers: {
-    "Content-Type": "application/json",
+    "Content-Type": "application/json", 
   },
 });
 

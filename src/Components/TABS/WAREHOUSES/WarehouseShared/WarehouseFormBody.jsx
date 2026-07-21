@@ -91,9 +91,10 @@ export default function WarehouseFormBody({ formData, onChange, formErrors }) {
             </div>
 
             <div className="col-span-2 border-t border-gray-100 pt-4 mt-1">
-                <p className="text-xs font-semibold text-gray-700 mb-1">GST (optional)</p>
+                <p className="text-xs font-semibold text-gray-700 mb-1">Warehouse GST (legacy / optional)</p>
                 <p className="text-[11px] text-gray-500 mb-3">
-                    Required only when approving franchise transfers with GST bill type from this warehouse.
+                    Stock transfer bill legal name and GSTIN come from Settings → Company Details
+                    (Super Admin). These warehouse fields are optional and not used on transfer bills.
                 </p>
             </div>
 
