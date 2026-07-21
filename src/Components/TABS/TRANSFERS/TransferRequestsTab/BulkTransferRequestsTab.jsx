@@ -6,13 +6,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
-import { X, Plus, RefreshCw, Package, Truck, CheckCircle, XCircle, Ban, Eye, ClipboardList } from "lucide-react";
+import { X, Plus, RefreshCw, Package, Truck, CheckCircle, XCircle, Ban, Eye, ClipboardList, ChevronLeft } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { useGetWarehousesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Warehouse_api/warehouseApi";
 import { useGetShopsQuery, useGetMyShopQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopApi";
 import { useLazyGetWarehouseStockCatalogQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ShopWarehouseCatalog_api/shopWarehouseCatalogApi";
 import { useLazyGetPeerStockCatalogQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/WarehousePeerCatalog_api/warehousePeerCatalogApi";
 import VariantCatalogPicker from "./TransferRequestShared/VariantCatalogPicker";
+import BulkRequestPreviewTable from "./TransferRequestShared/BulkRequestPreviewTable";
 import { useGetBulkTransferRequestsQuery, useCreateBulkTransferRequestMutation, useLazyGetBulkTransferRequestByIdQuery, generateBulkIdempotencyKey } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
 import {
     setStatusFilter,
@@ -59,6 +60,7 @@ export default function BulkTransferRequestsTab() {
     const [catalogMode, setCatalogMode] = useState("all");
     const [catalogSearch, setCatalogSearch] = useState("");
     const [catalogSelection, setCatalogSelection] = useState({});
+    const [createStep, setCreateStep] = useState("select");
     
     const userShopId = user?.shop_id || "";
     const userWarehouseId = user?.warehouse_id || "";
@@ -146,6 +148,7 @@ export default function BulkTransferRequestsTab() {
     useEffect(() => {
         if (!showCreateModal) {
             setCatalogSelection({});
+            setCreateStep("select");
             return;
         }
         const sel = {};
@@ -250,6 +253,63 @@ export default function BulkTransferRequestsTab() {
             return next;
         });
     };
+
+    const removeSelectedVariant = (variantId) => {
+        setCatalogSelection((prev) => ({
+            ...prev,
+            [variantId]: { ...prev[variantId], selected: false },
+        }));
+    };
+
+    const handleCatalogModeChange = (nextMode) => {
+        if (nextMode === catalogMode) return;
+        if (selectedCatalogItems.length > 0) {
+            const ok = window.confirm(
+                "Changing catalog mode will clear your selected variants. Continue?"
+            );
+            if (!ok) return;
+            setCatalogSelection({});
+            setCreateStep("select");
+        }
+        setCatalogMode(nextMode);
+    };
+
+    const validateSelectedItems = () => {
+        if (selectedCatalogItems.length === 0) {
+            return "Select at least one variant";
+        }
+        const invalid = selectedCatalogItems.filter(
+            (item) =>
+                !item.quantity ||
+                parseInt(item.quantity, 10) <= 0 ||
+                parseInt(item.quantity, 10) > (item.available_stock ?? 0)
+        );
+        if (invalid.length > 0) {
+            return "Enter valid quantity for each selected variant (within warehouse stock)";
+        }
+        return null;
+    };
+
+    const handleNextPreview = () => {
+        const itemError = validateSelectedItems();
+        if (itemError) {
+            dispatch(setCreateErrors({ items: itemError }));
+            toast.error(itemError);
+            return;
+        }
+        dispatch(setCreateErrors({}));
+        setCreateStep("preview");
+    };
+
+    const handleCloseCreateModal = () => {
+        dispatch(closeCreateModal());
+        setCreateStep("select");
+    };
+
+    const resetCatalogForWarehouseChange = () => {
+        setCatalogSelection({});
+        setCreateStep("select");
+    };
     
     // Get available actions based on user role and request status
     const getAvailableActions = (request) => {
@@ -344,15 +404,11 @@ export default function BulkTransferRequestsTab() {
             toast.error("Please fix the errors");
             return;
         }
-        
-        const invalidItems = selectedCatalogItems.filter(
-            (item) =>
-                !item.quantity ||
-                parseInt(item.quantity, 10) <= 0 ||
-                parseInt(item.quantity, 10) > (item.available_stock ?? 0)
-        );
-        if (invalidItems.length > 0) {
-            toast.error("Please enter valid quantity for all selected variants (within warehouse stock)");
+
+        const itemError = validateSelectedItems();
+        if (itemError) {
+            dispatch(setCreateErrors({ items: itemError }));
+            toast.error(itemError);
             return;
         }
         
@@ -381,6 +437,7 @@ export default function BulkTransferRequestsTab() {
             
             await createBulkRequest({ idempotencyKey: generateBulkIdempotencyKey(), ...payload }).unwrap();
             toast.success("Bulk transfer request created successfully");
+            setCreateStep("select");
             dispatch(closeCreateModal());
             dispatch(clearBulkItems());
             refetch();
@@ -617,9 +674,11 @@ export default function BulkTransferRequestsTab() {
                                           : "Warehouse → shop: add multiple variants in one request"}
                                 </p>
                             </div>
-                            <button onClick={() => dispatch(closeCreateModal())} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+                            <button onClick={handleCloseCreateModal} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
                         </div>
                         <div className="p-4 sm:p-6 space-y-4 flex-1 min-w-0">
+                            {createStep === "select" ? (
+                            <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {isWhBulkFlow ? (
                                     <>
@@ -635,7 +694,7 @@ export default function BulkTransferRequestsTab() {
                                                 value={createForm.from_warehouse_id}
                                                 onChange={(e) => {
                                                     dispatch(updateCreateForm({ from_warehouse_id: e.target.value, items: [] }));
-                                                    setCatalogSelection({});
+                                                    resetCatalogForWarehouseChange();
                                                 }}
                                                 className={inputCls("from_warehouse_id", createErrors)}
                                             >
@@ -656,7 +715,7 @@ export default function BulkTransferRequestsTab() {
                                                 value={createForm.from_warehouse_id}
                                                 onChange={(e) => {
                                                     dispatch(updateCreateForm({ from_warehouse_id: e.target.value, items: [] }));
-                                                    setCatalogSelection({});
+                                                    resetCatalogForWarehouseChange();
                                                 }}
                                                 className={inputCls("from_warehouse_id", createErrors)}
                                             >
@@ -700,10 +759,7 @@ export default function BulkTransferRequestsTab() {
                                             <label className="block text-xs text-gray-500 mb-1">Catalog mode</label>
                                             <select
                                                 value={catalogMode}
-                                                onChange={(e) => {
-                                                    setCatalogMode(e.target.value);
-                                                    setCatalogSelection({});
-                                                }}
+                                                onChange={(e) => handleCatalogModeChange(e.target.value)}
                                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                                             >
                                                 <option value="all">All with WH stock</option>
@@ -739,9 +795,34 @@ export default function BulkTransferRequestsTab() {
                                         <p className="text-xs text-red-500">{createErrors.items}</p>
                                     )}
                                     {selectedCatalogItems.length > 0 && (
-                                        <p className="text-xs text-gray-500">
-                                            {selectedCatalogItems.length} variant(s) selected for this request
-                                        </p>
+                                        <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-3 space-y-2">
+                                            <p className="text-xs font-medium text-blue-800">
+                                                Selected for this request ({selectedCatalogItems.length})
+                                            </p>
+                                            <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
+                                                {selectedCatalogItems.map((item) => (
+                                                    <span
+                                                        key={item.variant_id}
+                                                        className="inline-flex items-center gap-1.5 pl-2.5 pr-1 py-1 rounded-full bg-white border border-blue-200 text-xs text-gray-700"
+                                                    >
+                                                        <span className="font-mono text-blue-700">{item.product_code || "—"}</span>
+                                                        <span className="text-gray-400 hidden sm:inline">·</span>
+                                                        <span className="max-w-[8rem] truncate hidden sm:inline">
+                                                            {item.product_name}
+                                                        </span>
+                                                        <span className="tabular-nums text-gray-500">×{item.quantity || 1}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeSelectedVariant(item.variant_id)}
+                                                            className="p-0.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                            title="Remove"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -759,16 +840,78 @@ export default function BulkTransferRequestsTab() {
                                     placeholder="Monthly restock notes" 
                                 />
                             </div>
+                            </>
+                            ) : (
+                            <>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 space-y-1">
+                                <p>
+                                    <span className="text-gray-400">From:</span>{" "}
+                                    {warehouses.find((w) => w.warehouse_id === createForm.from_warehouse_id)?.warehouse_name || "—"}
+                                </p>
+                                <p>
+                                    <span className="text-gray-400">To:</span>{" "}
+                                    {isWhBulkFlow
+                                        ? myWarehouseLabel
+                                        : shops.find((s) => s.shop_id === createForm.to_shop_id)?.shop_name || myShopLabel || "—"}
+                                </p>
+                            </div>
+                            <BulkRequestPreviewTable
+                                items={selectedCatalogItems}
+                                onQuantityChange={(variantId, quantity) =>
+                                    handleCatalogSelectionChange(variantId, { quantity })
+                                }
+                                onRemove={removeSelectedVariant}
+                            />
+                            {createErrors.items && (
+                                <p className="text-xs text-red-500">{createErrors.items}</p>
+                            )}
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Remarks</label>
+                                <textarea 
+                                    value={createForm.request_remarks} 
+                                    onChange={(e) => dispatch(updateCreateForm({ request_remarks: e.target.value }))} 
+                                    rows={2} 
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-gray-300" 
+                                    placeholder="Monthly restock notes" 
+                                />
+                            </div>
+                            </>
+                            )}
                         </div>
-                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 sm:px-6 py-4 flex justify-end gap-2 shrink-0">
-                            <button onClick={() => dispatch(closeCreateModal())} className="px-4 py-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
-                            <button 
-                                onClick={handleCreateSubmit} 
-                                disabled={selectedCatalogItems.length === 0} 
-                                className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                            >
-                                Create Bulk Request
-                            </button>
+                        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 sm:px-6 py-4 flex justify-between gap-2 shrink-0">
+                            {createStep === "select" ? (
+                                <>
+                                    <button onClick={handleCloseCreateModal} className="px-4 py-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
+                                    <button
+                                        onClick={handleNextPreview}
+                                        disabled={selectedCatalogItems.length === 0}
+                                        className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        Next: Review ({selectedCatalogItems.length})
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCreateStep("select")}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Back
+                                    </button>
+                                    <div className="flex gap-2">
+                                        <button onClick={handleCloseCreateModal} className="px-4 py-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">Cancel</button>
+                                        <button
+                                            onClick={handleCreateSubmit}
+                                            disabled={selectedCatalogItems.length === 0}
+                                            className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            Create Bulk Request
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
     </div>

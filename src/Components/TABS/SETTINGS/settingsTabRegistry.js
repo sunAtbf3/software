@@ -4,7 +4,7 @@ import { lazy } from "react";
 const UsersTab = lazy(() => import("./UserTab/UsersTab"));
 const ShopsTab = lazy(() => import("./ShopsTab/ShopsTab"));
 const VendorsTab = lazy(() => import("../VENDOR/VendorsTab"));
-const CompanyDetailsTab = lazy(() => import("./CompanyDetailsTab/CompanyDetailsTab"));
+// const CompanyDetailsTab = lazy(() => import("./CompanyDetailsTab/CompanyDetailsTab"));
 const BankDetailsTab = lazy(() => import("./BankDetailsTab/BankDetailsTab"));
 const StaffCodesTab = lazy(() => import("./StaffCodesTab/StaffCodesTab"));
 const FranchiseSettingsTab = lazy(() => import("./FranchiseSettingsTab/FranchiseSettingsTab"));
@@ -43,12 +43,12 @@ export const SETTINGS_TAB_REGISTRY = [
         icon: "M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2",
         component: VendorsTab,
     },
-    {
-        id: "companydetails",
-        label: "Company Details",
-        icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
-        component: CompanyDetailsTab,
-    },
+    // {
+    //     id: "companydetails",
+    //     label: "Company Details",
+    //     icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
+    //     component: CompanyDetailsTab,
+    // },
     {
         id: "bankdetails",
         label: "Bank Details",

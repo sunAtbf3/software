@@ -293,7 +293,7 @@ export const syncCurrentUserFromAuth = (user) => {
 
 // Role permissions for tabs (controls which tabs appear in sidebar)
 export const ROLE_PERMISSIONS = {
-    [ROLES.SUPER_ADMIN]: ["dashboard", "purchase", "inventory", "archive", "transfers", "warehouses", "parties", "reports", "settings", "vendors", "cashbank", "teammembers", "backup", "utilities"],
+    [ROLES.SUPER_ADMIN]: ["dashboard", "purchase", "inventory", "archive", "transfers", "warehouses", "parties", "reports", "settings", "vendors", "cashbank", "teammembers", "backup", "utilities", "companydetails"],
     [ROLES.ACCOUNTANT]: ["dashboard", "sales", "purchase", "parties", "reports", "cashbank"],
     [ROLES.BILLING_STAFF]: ["dashboard", "sales", "parties", "transfers", "cashbank"],
     [ROLES.STOCK_LISTER]: ["dashboard", "inventory", "transfers", "cashbank"],
