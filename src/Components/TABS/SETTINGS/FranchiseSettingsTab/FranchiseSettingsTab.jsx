@@ -96,9 +96,9 @@ export default function FranchiseSettingsTab() {
 
                 <p className="text-sm text-gray-500 mt-1">
 
-                    F.Price = (purchase price + expenses) × (1 + markup%). Applied on warehouse → franchise
-
-                    shop transfers only. GST identity for transfer bills is configured per warehouse.
+                    F.Price = total cost + (special price − total cost) × markup%. Total cost =
+                    purchase + expenses. Applied on warehouse → franchise shop transfers only.
+                    GST identity for transfer bills is configured in Company Details.
 
                 </p>
 
