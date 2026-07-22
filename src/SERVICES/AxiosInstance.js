@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
+// const DEFAULT_API_BASE_URL = "https://api.bizcentro.cloud/api/v1";
 // const DEFAULT_API_BASE_URL = "http://localhost:3443/api/v1";
              
 
@@ -23,6 +23,7 @@ const AxiosInstance = axios.create({
     "Content-Type": "application/json", 
   },
 });
+console.log(import.meta.env.VITE_API_BASE_URL, "import.meta.env.VITE_API_BASE_URL");
 
 // ✅ Read token from memory, not from cookie
 AxiosInstance.interceptors.request.use((config) => {
