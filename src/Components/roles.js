@@ -233,6 +233,12 @@ export const ACTION_PERMISSIONS = {
     "inward.arrive": ["SUPER_ADMIN", "WH_MANAGER"],
     "inward.map": ["SUPER_ADMIN", "WH_MANAGER"],
     "inward.cancel": ["SUPER_ADMIN", "WH_MANAGER"],
+    "bulkTransfer.create": [
+        "WH_MANAGER",
+        "WH_STOCK_LISTER",
+        "SHOP_OWNER",
+        "SHOP_MANAGER",
+    ],
 };
 
 /**

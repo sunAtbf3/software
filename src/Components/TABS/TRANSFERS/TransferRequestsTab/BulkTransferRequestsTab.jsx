@@ -34,7 +34,7 @@ import {
     openViewModal,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferSlice";
 import BulkActionModals from "./BulkActionModals";
-import { CURRENT_USER } from "../../../roles";
+import { CURRENT_USER, can } from "../../../roles";
 
 const STATUS_BADGE = {
     REQUESTED: "bg-yellow-50 text-yellow-700 border border-yellow-200",
@@ -70,8 +70,7 @@ export default function BulkTransferRequestsTab() {
     const isWhBulkFlow = isWarehouseStaff && !!userWarehouseId;
     // const isShopOwnerFlow = userRole === "SHOP_OWNER" && !!userShopId;
     const isShopOwnerFlow = (userRole === "SHOP_OWNER" || userRole === "SHOP_MANAGER") && !!userShopId;
-    const canCreateBulk =
-        userRole === "SUPER_ADMIN" || isShopOwnerFlow || isWhBulkFlow;
+    const canCreateBulk = can("bulkTransfer.create");
     
     const { data: warehousesData } = useGetWarehousesQuery(
         { page: 1, limit: 50, is_active: "true" },
