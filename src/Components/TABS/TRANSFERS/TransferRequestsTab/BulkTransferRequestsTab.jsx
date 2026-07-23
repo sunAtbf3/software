@@ -673,7 +673,7 @@ export default function BulkTransferRequestsTab() {
     <div className="flex items-center justify-center min-h-screen p-2 sm:p-4 lg:p-6">
         <div className="fixed inset-0 bg-black/40" />
 
-                    <div className="relative bg-white rounded-xl border border-gray-200 w-full max-w-[min(1280px,calc(100vw-1rem))] sm:max-w-[min(1280px,calc(100vw-2rem))] max-h-[92vh] overflow-y-auto flex flex-col">
+                    <div className="relative bg-white rounded-xl border border-gray-200 w-full max-w-[min(1536px,calc(100vw-1rem))] sm:max-w-[min(1536px,calc(100vw-2rem))] max-h-[92vh] overflow-y-auto flex flex-col">
                         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex justify-between shrink-0">
                             <div>
                                 <h3 className="text-base font-semibold text-gray-900">Create Bulk Transfer Request</h3>
