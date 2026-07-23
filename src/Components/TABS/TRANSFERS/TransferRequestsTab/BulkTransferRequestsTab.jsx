@@ -220,9 +220,17 @@ export default function BulkTransferRequestsTab() {
                     product_code: s.product_code,
                     quantity: s.quantity,
                     available_stock: s.available_stock,
+                    mrp: s.mrp ?? null,
+                    special_price: s.special_price ?? null,
+                    franchise_unit_price: s.franchise_unit_price ?? null,
+                    purchase_price: s.purchase_price ?? null,
                 })),
         [catalogSelection]
     );
+
+    const showFranchisePreviewPricing =
+        !!catalogData?.franchise_shop_pricing_view ||
+        (!!catalogData?.is_franchise_shop && !isWhBulkFlow);
 
     const handleCatalogSelectionChange = (variantId, patch) => {
         setCatalogSelection((prev) => ({
@@ -244,6 +252,10 @@ export default function BulkTransferRequestsTab() {
                         sku: v.sku,
                         product_code: v.product_code,
                         available_stock: v.warehouse_available,
+                        mrp: v.mrp ?? null,
+                        special_price: v.special_price ?? null,
+                        franchise_unit_price: v.franchise_unit_price ?? null,
+                        purchase_price: v.purchase_price ?? null,
                     };
                 } else {
                     next[v.variant_id] = { ...next[v.variant_id], selected: false };
@@ -856,6 +868,7 @@ export default function BulkTransferRequestsTab() {
                             </div>
                             <BulkRequestPreviewTable
                                 items={selectedCatalogItems}
+                                showFranchisePricing={showFranchisePreviewPricing}
                                 onQuantityChange={(variantId, quantity) =>
                                     handleCatalogSelectionChange(variantId, { quantity })
                                 }

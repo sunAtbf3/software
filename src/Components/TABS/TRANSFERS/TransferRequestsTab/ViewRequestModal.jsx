@@ -226,6 +226,11 @@ export default function ViewRequestModal({ onSuccess }) {
                                 {Number(franchisePricing.mrp_line_value || 0).toFixed(2)}
                             </p>
                             <p>
+                                Spl/Sale Price: ₹{Number(franchisePricing.special_price || 0).toFixed(2)} ×{" "}
+                                {request.quantity} = ₹
+                                {Number(franchisePricing.special_line_value || 0).toFixed(2)}
+                            </p>
+                            <p>
                                 F.Price ({franchisePricing.markup_percent}%): ₹
                                 {Number(franchisePricing.franchise_unit_price || 0).toFixed(2)} × {request.quantity} = ₹
                                 {Number(franchisePricing.franchise_line_value || 0).toFixed(2)}
@@ -233,8 +238,6 @@ export default function ViewRequestModal({ onSuccess }) {
                             {isWarehouseUser && request.variant && (
                                 <p className="text-xs text-gray-600 pt-1 border-t border-indigo-100">
                                     Purchase: ₹{Number(request.variant.purchase_price || 0).toFixed(2)}
-                                    {" · "}
-                                    Special: ₹{Number(request.variant.special_price || 0).toFixed(2)}
                                 </p>
                             )}
                         </div>

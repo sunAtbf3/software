@@ -64,6 +64,10 @@ export default function ShopStockRequestTab() {
                         sku: v.sku,
                         product_code: v.product_code,
                         available_stock: v.warehouse_available,
+                        mrp: v.mrp ?? null,
+                        special_price: v.special_price ?? null,
+                        franchise_unit_price: v.franchise_unit_price ?? null,
+                        purchase_price: v.purchase_price ?? null,
                     };
                 } else {
                     next[v.variant_id] = { ...next[v.variant_id], selected: false };

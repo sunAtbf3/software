@@ -14,6 +14,10 @@ const buildSelectionPatch = (product, variant, checked, existingQty) => {
         sku: variant.sku,
         product_code: variant.product_code,
         available_stock: maxQty,
+        mrp: variant.mrp ?? null,
+        special_price: variant.special_price ?? null,
+        franchise_unit_price: variant.franchise_unit_price ?? null,
+        purchase_price: variant.purchase_price ?? null,
     };
 };
 
@@ -90,14 +94,6 @@ function VariantCard({
                         <span className="text-gray-600 tabular-nums">{fmtMoney(variant.purchase_price)}</span>
                     </div>
                 )}
-                {showSpecial && (
-                    <div className="flex justify-between gap-2">
-                        <span className="text-gray-400">Special</span>
-                        <span className="text-gray-700 tabular-nums">
-                            {variant.special_price != null ? fmtMoney(variant.special_price) : "—"}
-                        </span>
-                    </div>
-                )}
                 {showMrp && (
                     <div className="flex justify-between gap-2">
                         <span className="text-gray-400">MRP</span>
@@ -109,6 +105,14 @@ function VariantCard({
                         <span className="text-indigo-500">F. Price</span>
                         <span className="font-medium text-indigo-700 tabular-nums">
                             {fmtMoney(variant.franchise_unit_price)}
+                        </span>
+                    </div>
+                )}
+                {showSpecial && (
+                    <div className="flex justify-between gap-2">
+                        <span className="text-emerald-600">Spl/Sale Price</span>
+                        <span className="font-medium text-emerald-700 tabular-nums">
+                            {variant.special_price != null ? fmtMoney(variant.special_price) : "—"}
                         </span>
                     </div>
                 )}
@@ -169,7 +173,8 @@ export default function VariantCatalogPicker({
     }
 
     const showPurchase = warehouseFranchiseView;
-    const showSpecial = warehouseFranchiseView || !franchisePricing;
+    // Franchise shop managers need Spl/Sale Price to compare against F.Price (cost).
+    const showSpecial = true;
     const showMrp = franchisePricing || warehouseFranchiseView;
     const showFranchisePrice = franchisePricing || warehouseFranchiseView;
 
@@ -204,53 +209,58 @@ export default function VariantCatalogPicker({
 
                         return (
                             <div
-                                key={`group-m-${product.product_id}`}
-                                className="flex items-center justify-between gap-2 px-1 py-1 bg-slate-50 rounded-lg"
+                                key={`group-${product.product_id}`}
+                                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
                             >
-                                <div className="min-w-0 text-xs">
-                                    <span className="font-semibold text-gray-700">{product.name}</span>
-                                    <span className="text-gray-400 ml-1">· {variants.length} variants</span>
+                                <div className="flex items-center justify-between gap-2 min-w-0">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-gray-700 truncate">
+                                            {product.name}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 font-mono">
+                                            {product.product_code} · {variants.length} variants
+                                        </p>
+                                    </div>
+                                    {onSelectAllProduct && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onSelectAllProduct(product, !allSelected)}
+                                            className="text-xs text-blue-600 hover:underline shrink-0"
+                                        >
+                                            {allSelected ? "Clear all" : "Select all"}
+                                        </button>
+                                    )}
                                 </div>
-                                {onSelectAllProduct && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onSelectAllProduct(product, !allSelected)}
-                                        className="text-xs text-blue-600 hover:underline shrink-0"
-                                    >
-                                        {allSelected ? "Clear" : "All"}
-                                    </button>
-                                )}
                             </div>
                         );
                     }
 
-                    const { product, variant, isMulti } = row;
                     return (
                         <VariantCard
-                            key={`card-${variant.variant_id}`}
-                            product={product}
-                            variant={variant}
-                            isMulti={isMulti}
+                            key={row.variant.variant_id}
+                            product={row.product}
+                            variant={row.variant}
+                            isMulti={row.isMulti}
                             {...cardProps}
                         />
                     );
                 })}
             </div>
 
-            {/* md+ — full-width table inside container */}
-            <div className="hidden md:block border border-gray-200 rounded-lg overflow-hidden bg-white w-full min-w-0">
-                <div className="max-h-[min(60vh,28rem)] overflow-y-auto w-full">
-                    <table className="w-full table-fixed text-xs lg:text-sm">
+            {/* Desktop / tablet — table */}
+            <div className="hidden md:block border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto max-h-[min(60vh,28rem)] overflow-y-auto">
+                    <table className="w-full min-w-[720px] text-sm">
                         <colgroup>
-                            <col className="w-[3%]" />
-                            <col className="w-[20%] lg:w-[22%]" />
-                            <col className="w-[11%] lg:w-[12%]" />
+                            <col className="w-[4%]" />
+                            <col className="w-[28%]" />
+                            <col className="w-[14%]" />
                             <col className="w-[8%]" />
                             <col className="w-[8%]" />
                             {showPurchase && <col className="w-[9%]" />}
-                            {showSpecial && <col className="w-[9%]" />}
                             {showMrp && <col className="w-[9%]" />}
                             {showFranchisePrice && <col className="w-[9%]" />}
+                            {showSpecial && <col className="w-[10%]" />}
                             <col className="w-[10%]" />
                         </colgroup>
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
@@ -273,11 +283,6 @@ export default function VariantCatalogPicker({
                                         Purchase
                                     </th>
                                 )}
-                                {showSpecial && (
-                                    <th className="px-1 lg:px-2 py-2 text-right text-[10px] lg:text-xs font-semibold text-gray-500">
-                                        Special
-                                    </th>
-                                )}
                                 {showMrp && (
                                     <th className="px-1 lg:px-2 py-2 text-right text-[10px] lg:text-xs font-semibold text-gray-500">
                                         MRP
@@ -286,6 +291,11 @@ export default function VariantCatalogPicker({
                                 {showFranchisePrice && (
                                     <th className="px-1 lg:px-2 py-2 text-right text-[10px] lg:text-xs font-semibold text-indigo-600">
                                         F. Price
+                                    </th>
+                                )}
+                                {showSpecial && (
+                                    <th className="px-1 lg:px-2 py-2 text-right text-[10px] lg:text-xs font-semibold text-emerald-700">
+                                        Spl/Sale Price
                                     </th>
                                 )}
                                 <th className="px-1 lg:px-2 py-2 text-center text-[10px] lg:text-xs font-semibold text-gray-500">
@@ -411,13 +421,6 @@ export default function VariantCatalogPicker({
                                                 {fmtMoney(variant.purchase_price)}
                                             </td>
                                         )}
-                                        {showSpecial && (
-                                            <td className="px-1 lg:px-2 py-2 text-right align-middle tabular-nums text-gray-700 text-[10px] lg:text-xs">
-                                                {variant.special_price != null
-                                                    ? fmtMoney(variant.special_price)
-                                                    : "—"}
-                                            </td>
-                                        )}
                                         {showMrp && (
                                             <td className="px-1 lg:px-2 py-2 text-right align-middle tabular-nums text-gray-700 text-[10px] lg:text-xs">
                                                 {fmtMoney(variant.mrp)}
@@ -426,6 +429,13 @@ export default function VariantCatalogPicker({
                                         {showFranchisePrice && (
                                             <td className="px-1 lg:px-2 py-2 text-right align-middle tabular-nums text-indigo-700 font-medium text-[10px] lg:text-xs">
                                                 {fmtMoney(variant.franchise_unit_price)}
+                                            </td>
+                                        )}
+                                        {showSpecial && (
+                                            <td className="px-1 lg:px-2 py-2 text-right align-middle tabular-nums text-emerald-700 font-medium text-[10px] lg:text-xs">
+                                                {variant.special_price != null
+                                                    ? fmtMoney(variant.special_price)
+                                                    : "—"}
                                             </td>
                                         )}
                                         <td className="px-1 lg:px-2 py-2 text-center align-middle">

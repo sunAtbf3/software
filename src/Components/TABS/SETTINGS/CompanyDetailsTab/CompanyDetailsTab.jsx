@@ -14,6 +14,7 @@ const EMPTY = {
     transfer_invoice_address: "",
     transfer_invoice_city: "",
     transfer_invoice_phone: "",
+    transfer_invoice_email: "",
 };
 
 const inputCls =
@@ -53,6 +54,7 @@ export default function CompanyDetailsTab() {
             transfer_invoice_address: data.transfer_invoice_address || "",
             transfer_invoice_city: data.transfer_invoice_city || "",
             transfer_invoice_phone: data.transfer_invoice_phone || "",
+            transfer_invoice_email: data.transfer_invoice_email || "",
         });
     }, [data]);
 
@@ -61,12 +63,17 @@ export default function CompanyDetailsTab() {
     const handleSave = async () => {
         const legal = form.transfer_invoice_legal_name.trim();
         const gstin = form.transfer_invoice_gstin.trim().toUpperCase();
+        const email = form.transfer_invoice_email.trim();
         if (!legal) {
             toast.error("Company legal name is required");
             return;
         }
         if (gstin && gstin.length !== 15) {
             toast.error("GSTIN must be 15 characters");
+            return;
+        }
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            toast.error("Enter a valid company email");
             return;
         }
         try {
@@ -77,6 +84,7 @@ export default function CompanyDetailsTab() {
                 transfer_invoice_address: form.transfer_invoice_address.trim() || null,
                 transfer_invoice_city: form.transfer_invoice_city.trim() || null,
                 transfer_invoice_phone: form.transfer_invoice_phone.trim() || null,
+                transfer_invoice_email: email || null,
             }).unwrap();
             toast.success("Company details saved");
             refetch();
@@ -226,14 +234,31 @@ export default function CompanyDetailsTab() {
                                 />
                             </div>
                         </div>
+                        <div>
+                            <label className={labelCls}>
+                                Email <span className="font-normal text-gray-400">(optional)</span>
+                            </label>
+                            <input
+                                type="email"
+                                value={form.transfer_invoice_email}
+                                onChange={(e) => setField("transfer_invoice_email", e.target.value)}
+                                className={inputCls}
+                                placeholder="company@example.com"
+                                autoComplete="email"
+                            />
+                            <p className="mt-1.5 text-[11px] text-gray-400">
+                                Phone and email print on GST and Non-GST stock transfer bill headers.
+                            </p>
+                        </div>
                     </section>
                 </div>
 
                 <div className="mx-5 md:mx-7 mb-5 md:mb-7 flex gap-3 rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
                     <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <p className="text-xs text-blue-800 leading-relaxed">
-                        Bill header uses this company legal name and GSTIN. Location ID, warehouse name,
-                        address, and manager still come from the dispatching warehouse.
+                        Bill header uses this company legal name, GSTIN, phone, and email.
+                        Location ID, warehouse name, address, and dispatched-by still come from the
+                        dispatching warehouse.
                     </p>
                 </div>
 

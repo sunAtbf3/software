@@ -427,17 +427,12 @@ export default function BulkActionModals({ onSuccess }) {
                         {approveType === "partial" && (
                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain">
-                                <table className="w-full min-w-[980px] text-sm">
+                                <table className="w-full min-w-[640px] text-sm">
                                     <colgroup>
-                                        <col className="w-[38%]" />
-                                        <col className="w-[8%]" />
-                                        <col className="w-[8%]" />
-                                        <col className="w-[8%]" />
-                                        {isFranchiseTransfer && <col className="w-[10%]" />}
-                                        {isFranchiseTransfer && <col className="w-[10%]" />}
-                                        {isFranchiseTransfer && isWarehouseUser && <col className="w-[9%]" />}
-                                        {isFranchiseTransfer && isWarehouseUser && <col className="w-[9%]" />}
-                                        <col className="w-[10%]" />
+                                        <col className="w-[46%]" />
+                                        <col className="w-[18%]" />
+                                        <col className="w-[22%]" />
+                                        <col className="w-[14%]" />
                                     </colgroup>
                                     <thead className="bg-gray-50">
                                         <tr>
@@ -1027,7 +1022,10 @@ export default function BulkActionModals({ onSuccess }) {
                                         : "Franchise bill totals"}
                                 </p>
                                 <p>Subtotal (MRP): ₹{Number(franchiseTotals.mrp_subtotal || 0).toFixed(2)}</p>
-                                <p>Discount: ₹{Number(franchiseTotals.discount || 0).toFixed(2)}</p>
+                                <p>
+                                    Total Special Price: ₹
+                                    {Number(franchiseTotals.special_subtotal || 0).toFixed(2)}
+                                </p>
                                 <p className="font-semibold text-indigo-900">
                                     Final (F.Price): ₹{Number(franchiseTotals.final_amount || 0).toFixed(2)}
                                 </p>

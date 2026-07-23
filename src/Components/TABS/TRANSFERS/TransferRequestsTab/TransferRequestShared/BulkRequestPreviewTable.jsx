@@ -1,7 +1,19 @@
 import React, { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 
-export default function BulkRequestPreviewTable({ items = [], onQuantityChange, onRemove }) {
+const fmtMoney = (value) => {
+    if (value == null || value === "") return "—";
+    const n = Number(value);
+    if (!Number.isFinite(n)) return "—";
+    return `₹${n.toFixed(2)}`;
+};
+
+export default function BulkRequestPreviewTable({
+    items = [],
+    onQuantityChange,
+    onRemove,
+    showFranchisePricing = false,
+}) {
     const totalQty = useMemo(
         () =>
             items.reduce((sum, item) => {
@@ -32,7 +44,7 @@ export default function BulkRequestPreviewTable({ items = [], onQuantityChange, 
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[min(55vh,28rem)] overflow-y-auto">
-                    <table className="w-full min-w-[640px] text-sm">
+                    <table className={`w-full text-sm ${showFranchisePricing ? "min-w-[860px]" : "min-w-[640px]"}`}>
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
@@ -44,6 +56,19 @@ export default function BulkRequestPreviewTable({ items = [], onQuantityChange, 
                                 <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
                                     WH Stock
                                 </th>
+                                {showFranchisePricing && (
+                                    <>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                                            MRP
+                                        </th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-indigo-600">
+                                            F. Price
+                                        </th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">
+                                            Spl/Sale Price
+                                        </th>
+                                    </>
+                                )}
                                 <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">
                                     Qty
                                 </th>
@@ -78,6 +103,19 @@ export default function BulkRequestPreviewTable({ items = [], onQuantityChange, 
                                         <td className="px-3 py-2.5 text-right tabular-nums text-gray-600 align-middle">
                                             {maxQty}
                                         </td>
+                                        {showFranchisePricing && (
+                                            <>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-gray-700 align-middle text-xs">
+                                                    {fmtMoney(item.mrp)}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-indigo-700 font-medium align-middle text-xs">
+                                                    {fmtMoney(item.franchise_unit_price)}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 font-medium align-middle text-xs">
+                                                    {fmtMoney(item.special_price)}
+                                                </td>
+                                            </>
+                                        )}
                                         <td className="px-3 py-2.5 text-center align-middle">
                                             <input
                                                 type="number"
