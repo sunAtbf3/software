@@ -62,6 +62,47 @@ const fmtDate = (iso) => {
     return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+const formatVariantAttributes = (attributes) => {
+    if (!attributes) return "";
+    if (Array.isArray(attributes)) {
+        return attributes
+            .map((a) => {
+                if (!a) return "";
+                if (typeof a === "string") return a;
+                const key = a.key ?? a.name;
+                const value = a.value;
+                if (key && value != null) return `${key}: ${value}`;
+                return value != null ? String(value) : "";
+            })
+            .filter(Boolean)
+            .join(" · ");
+    }
+    if (typeof attributes === "object") {
+        return Object.entries(attributes)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · ");
+    }
+    return String(attributes);
+};
+
+const normalizeStockSearchVariants = (result) => {
+    if (!result) return [];
+    if (Array.isArray(result.variants) && result.variants.length) {
+        return result.variants;
+    }
+    // Backward compat for older API shape
+    if (result.variant) {
+        return [
+            {
+                variant: result.variant,
+                warehouses: result.warehouses || [],
+                shops: result.shops || [],
+            },
+        ];
+    }
+    return [];
+};
+
 export default function TransferRequestsTab() {
     const dispatch = useDispatch();
     const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -158,8 +199,12 @@ export default function TransferRequestsTab() {
 
             const result = await triggerSearch(params).unwrap();
             setSearchResults(result);
-            
-            if (!result.warehouses?.length && !result.shops?.length) {
+
+            const variantRows = normalizeStockSearchVariants(result);
+            const hasStock = variantRows.some(
+                (row) => (row.warehouses?.length || 0) > 0 || (row.shops?.length || 0) > 0
+            );
+            if (!hasStock) {
                 toast.info("No stock found matching your search");
             }
         } catch (err) {
@@ -304,9 +349,10 @@ export default function TransferRequestsTab() {
     };
 
     const product = searchResults?.product;
-    const variant = searchResults?.variant;
-    const warehouses = searchResults?.warehouses || [];
-    const shops = searchResults?.shops || [];
+    const variantRows = normalizeStockSearchVariants(searchResults);
+    const anyStockFound = variantRows.some(
+        (row) => (row.warehouses?.length || 0) > 0 || (row.shops?.length || 0) > 0
+    );
 
     return (
         <div className="space-y-5 bg-gray-50 min-h-screen px-1 py-1">
@@ -429,97 +475,166 @@ export default function TransferRequestsTab() {
             {searchResults && (
                 <div className="space-y-4">
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <h3 className="font-semibold text-gray-800 text-sm">{product?.name}</h3>
-                        <div className="flex gap-4 mt-1.5 text-xs text-gray-400 font-mono">
-                            <span>Code: {product?.product_code}</span>
-                            <span>SKU: {variant?.sku}</span>
-                            {variant?.system_barcode && <span>Barcode: {variant?.system_barcode}</span>}
+                        <h3 className="font-semibold text-gray-800 text-sm">{product?.name || "Product"}</h3>
+                        <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-400 font-mono">
+                            <span>Code: {product?.product_code || "—"}</span>
+                            <span>
+                                {variantRows.length} variant{variantRows.length === 1 ? "" : "s"} found
+                            </span>
                         </div>
                     </div>
 
-                    {warehouses.length > 0 && (
-                        <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                <Warehouse size={13} /> Warehouses
-                            </h4>
-                            <div className="space-y-2">
-                                {warehouses.map((wh, idx) => (
-                                    <div key={idx} className="bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-gray-300 transition-colors">
-                                        <div className="flex items-center justify-between flex-wrap gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-                                                    <Warehouse size={14} className="text-blue-500" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-800">{wh.warehouse_name}</p>
-                                                    <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
-                                                        <span className="flex items-center gap-1"><MapPin size={9} /> {wh.city}</span>
-                                                        <span>Stock: <span className="font-semibold text-gray-600">{wh.stock_quantity} units</span></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {userShopId && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleAddToBulkCart(wh, product, variant)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                                                    >
-                                                        <ShoppingCart size={12} /> Add to bulk
-                                                    </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRequestClick(wh, product, variant, false)}
-                                                    className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                    {variantRows.map((row) => {
+                        const variant = row.variant || {};
+                        const warehouses = row.warehouses || [];
+                        const shops = row.shops || [];
+                        const attrs = formatVariantAttributes(variant.attributes);
+                        const stocked = warehouses.length > 0 || shops.length > 0;
+
+                        return (
+                            <div
+                                key={variant.variant_id || variant.sku}
+                                className="bg-white rounded-xl border border-gray-200 p-4 space-y-3"
+                            >
+                                <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 pb-3">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-800 font-mono">
+                                            {variant.product_code || variant.sku || "Variant"}
+                                        </p>
+                                        <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-400">
+                                            {variant.sku && variant.sku !== variant.product_code && (
+                                                <span className="font-mono">SKU: {variant.sku}</span>
+                                            )}
+                                            {attrs && <span title={attrs}>{attrs}</span>}
+                                            {variant.system_barcode && (
+                                                <span className="font-mono">Barcode: {variant.system_barcode}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {!stocked && (
+                                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                            No stock at any location
+                                        </span>
+                                    )}
+                                </div>
+
+                                {warehouses.length > 0 && (
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                            <Warehouse size={13} /> Warehouses
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {warehouses.map((wh) => (
+                                                <div
+                                                    key={`${variant.variant_id}-${wh.warehouse_id}`}
+                                                    className="border border-gray-200 rounded-lg px-4 py-3 hover:border-gray-300 transition-colors"
                                                 >
-                                                    Create Request
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {shops.length > 0 && (
-                        <div>
-                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                <Store size={13} /> Shops
-                            </h4>
-                            <div className="space-y-2">
-                                {shops.map((shop, idx) => (
-                                    <div key={idx} className="bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-gray-300 transition-colors">
-                                        <div className="flex items-center justify-between flex-wrap gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-                                                    <Store size={14} className="text-green-500" />
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-800">{shop.shop_name}</p>
-                                                    <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
-                                                        <span className="flex items-center gap-1"><MapPin size={9} /> {shop.city}</span>
-                                                        <span>Stock: <span className="font-semibold text-gray-600">{shop.stock_quantity} units</span></span>
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                                                <Warehouse size={14} className="text-blue-500" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-800">
+                                                                    {wh.warehouse_name}
+                                                                </p>
+                                                                <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <MapPin size={9} /> {wh.city}
+                                                                    </span>
+                                                                    <span>
+                                                                        Stock:{" "}
+                                                                        <span className="font-semibold text-gray-600">
+                                                                            {wh.stock_quantity} units
+                                                                        </span>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {userShopId && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleAddToBulkCart(wh, product, variant)
+                                                                    }
+                                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                                                                >
+                                                                    <ShoppingCart size={12} /> Add to bulk
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    handleRequestClick(wh, product, variant, false)
+                                                                }
+                                                                className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                                                            >
+                                                                Create Request
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRequestClick(shop, product, variant, false)}
-                                                className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                                            >
-                                                Create Request
-                                            </button>
+                                            ))}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                                )}
 
-                    {warehouses.length === 0 && shops.length === 0 && (
+                                {shops.length > 0 && (
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                            <Store size={13} /> Shops
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {shops.map((shop) => (
+                                                <div
+                                                    key={`${variant.variant_id}-${shop.shop_id}`}
+                                                    className="border border-gray-200 rounded-lg px-4 py-3 hover:border-gray-300 transition-colors"
+                                                >
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+                                                                <Store size={14} className="text-green-500" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-800">
+                                                                    {shop.shop_name}
+                                                                </p>
+                                                                <div className="flex gap-3 mt-0.5 text-xs text-gray-400">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <MapPin size={9} /> {shop.city}
+                                                                    </span>
+                                                                    <span>
+                                                                        Stock:{" "}
+                                                                        <span className="font-semibold text-gray-600">
+                                                                            {shop.stock_quantity} units
+                                                                        </span>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleRequestClick(shop, product, variant, false)
+                                                            }
+                                                            className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                                                        >
+                                                            Create Request
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {!anyStockFound && (
                         <div className="text-center py-10 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-                            No stock found
+                            No stock found for any matching variant
                         </div>
                     )}
                 </div>

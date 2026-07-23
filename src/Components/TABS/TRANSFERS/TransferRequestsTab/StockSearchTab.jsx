@@ -75,8 +75,20 @@ export default function StockSearchTab() {
 
             const result = await triggerSearch(params).unwrap();
             dispatch(setSearchResults(result));
-            
-            if (!result.warehouses?.length && !result.shops?.length) {
+
+            const rows =
+                Array.isArray(result.variants) && result.variants.length
+                    ? result.variants
+                    : [
+                          {
+                              warehouses: result.warehouses || [],
+                              shops: result.shops || [],
+                          },
+                      ];
+            const hasStock = rows.some(
+                (row) => (row.warehouses?.length || 0) > 0 || (row.shops?.length || 0) > 0
+            );
+            if (!hasStock) {
                 toast.info("No stock found matching your search");
             }
         } catch (err) {
