@@ -28,7 +28,6 @@ import ProductView from "./ProductShared/ProductView";
 import { CURRENT_USER, can } from "../../../Components/roles";
 import BulkUploadTab from "./BulkUploadTab/BulkUploadTab";
 import BulkActionBar from "./BulkActionBar/BulkActionBar";
-import VariantBulkActionBar from "./BulkActionBar/VariantBulkActionBar";
 import BarcodeLabelModal from "./ProductShared/Barcode_Compo/BarcodeLabelModal";
 
 const StatusBadge = ({ isActive }) => (
@@ -231,73 +230,62 @@ export default function InventoryTab() {
     }
   };
 
-  const handleBulkAction = async (action, productIds) => {
+  const clearAllSelection = () => {
+    dispatch(clearSelectedProducts());
+    clearSelectedVariants();
+  };
+
+  /** Products: Activate / Archive. Variants: Activate / Deactivate only. */
+  const handleBulkAction = async (action) => {
+    const productIds = selectedProductIds;
+    const variantRows = selectedVariants;
+
+    if (!productIds.length && !variantRows.length) {
+      throw { data: { message: "Nothing selected" } };
+    }
+
+    if (productIds.length && variantRows.length) {
+      throw { data: { message: "Select either products or variants — not both" } };
+    }
+
     if (action === "activate") {
-      const items = productIds.map(id => ({ product_id: id, is_active: true }));
-      await bulkUpdate(items).unwrap();
-    } else if (action === "deactivate") {
-      const items = productIds.map(id => ({ product_id: id, is_active: false }));
-      await bulkUpdate(items).unwrap();
-    } else if (action === "archive") {
-      await bulkArchive(productIds).unwrap();
-    }
-    refetch();
-  };
-
-  const reportVariantBulkResult = (result, actionLabel) => {
-    const updated = result?.updated ?? 0;
-    const failed = Array.isArray(result?.failed) ? result.failed : [];
-    if (failed.length === 0) {
-      toast.success(`${updated} variant(s) ${actionLabel} successfully`);
-      return true;
-    }
-    const first = failed[0];
-    const extra = failed.length > 1 ? ` (+${failed.length - 1} more)` : "";
-    toast.error(
-      `${updated} updated, ${failed.length} failed: ${first?.message || "Update failed"}${extra}`
-    );
-    return updated > 0;
-  };
-
-  const handleVariantBulkAction = async (action) => {
-    if (!selectedVariants.length) {
-      toast.warning("No variants selected");
-      return;
-    }
-
-    if (action === "labels") {
-      setSelectedVariantsForBarcode(
-        selectedVariants.map((row) => ({
-          variant: row.variant,
-          product: row.product,
-        }))
-      );
-      setShowBarcodeModal(true);
-      return;
-    }
-
-    if (action !== "activate" && action !== "deactivate") {
-      toast.error("Unsupported variant action");
-      return;
-    }
-
-    const isActive = action === "activate";
-    const items = selectedVariants.map((row) => ({
-      product_id: row.product_id,
-      variant_id: row.variant_id,
-      is_active: isActive,
-    }));
-
-    try {
+      const items = productIds.length
+        ? productIds.map((id) => ({ product_id: id, is_active: true }))
+        : variantRows.map((row) => ({
+            product_id: row.product_id,
+            variant_id: row.variant_id,
+            is_active: true,
+          }));
       const result = await bulkUpdate(items).unwrap();
-      reportVariantBulkResult(result, isActive ? "activated" : "deactivated");
-      clearSelectedVariants();
-      refetch();
-      refetchStats();
-    } catch (err) {
-      // Toast handled by VariantBulkActionBar; rethrow so busy state clears correctly
-      throw err;
+      const failed = Array.isArray(result?.failed) ? result.failed : [];
+      if (failed.length) {
+        throw { data: { message: failed[0]?.message || "Some updates failed" } };
+      }
+    } else if (action === "deactivate") {
+      if (!variantRows.length) {
+        throw { data: { message: "Deactivate is only for variants" } };
+      }
+      const items = variantRows.map((row) => ({
+        product_id: row.product_id,
+        variant_id: row.variant_id,
+        is_active: false,
+      }));
+      const result = await bulkUpdate(items).unwrap();
+      const failed = Array.isArray(result?.failed) ? result.failed : [];
+      if (failed.length) {
+        throw { data: { message: failed[0]?.message || "Some variant updates failed" } };
+      }
+    } else if (action === "archive") {
+      if (!productIds.length) {
+        throw { data: { message: "Archive is only for products" } };
+      }
+      await bulkArchive(productIds).unwrap();
+    } else {
+      throw { data: { message: "Unsupported action" } };
     }
+
+    refetch();
+    refetchStats();
   };
 
   const toggleSelectProduct = (productId) => {
@@ -845,24 +833,13 @@ export default function InventoryTab() {
         </div>
       )}
 
-      {/* Bulk Action Bar (products only — archive/activate) */}
-      {selectedProductIds.length > 0 && (
+      {/* One bulk bar for products and/or variants */}
+      {(selectedProductIds.length > 0 || selectedVariants.length > 0) && (
         <BulkActionBar
-          selectedCount={selectedProductIds.length}
-          selectedProductIds={selectedProductIds}
+          selectedProductCount={selectedProductIds.length}
+          selectedVariantCount={selectedVariants.length}
           onBulkAction={handleBulkAction}
-        />
-      )}
-
-      {/* Variant selection bar — never calls product archive DELETE */}
-      {selectedVariants.length > 0 && (
-        <VariantBulkActionBar
-          selectedCount={selectedVariants.length}
-          offsetForProductBar={selectedProductIds.length > 0}
-          onClear={clearSelectedVariants}
-          onGetLabels={() => handleVariantBulkAction("labels")}
-          onActivate={() => handleVariantBulkAction("activate")}
-          onDeactivate={() => handleVariantBulkAction("deactivate")}
+          onClear={clearAllSelection}
         />
       )}
 

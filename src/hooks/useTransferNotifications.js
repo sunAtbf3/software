@@ -15,7 +15,7 @@ import {
     selectSeenAlertKeys,
 } from "../REDUX_FEATURES/REDUX_SLICES/TransferNotification_api/transferNotificationSlice";
 
-const POLL_INTERVAL_MS = 45000;
+// const POLL_INTERVAL_MS = 45000;
 const LIST_LIMIT = 50;
 
 export function useTransferNotifications() {
@@ -33,12 +33,12 @@ export function useTransferNotifications() {
 
     const { data: bulkData, isFetching: bulkFetching } = useGetBulkTransferRequestsQuery(
         { page: 1, limit: LIST_LIMIT },
-        { skip: skipPoll, pollingInterval: POLL_INTERVAL_MS }
+        { skip: skipPoll}
     );
 
     const { data: singleData, isFetching: singleFetching } = useGetTransferRequestsQuery(
         { page: 1, limit: LIST_LIMIT },
-        { skip: skipPoll, pollingInterval: POLL_INTERVAL_MS }
+        { skip: skipPoll}
     );
 
     useEffect(() => {

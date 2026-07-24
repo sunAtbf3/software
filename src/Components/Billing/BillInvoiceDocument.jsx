@@ -78,14 +78,13 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
   const gstSplit = buildTaxSummaryFromLines(items);
   const taxRates = getTaxRatePercents(items, gstSplit.tax_mode);
   const cust = bill.customer || {};
-  const showStateCode = !isNonGst && !isNonListed;
   const posName = displayVal(
     formatCityStateLabel(cust.city, cust.state_code || bill.place_of_supply_state_code, {
-      withCode: showStateCode,
+      withCode: false,
     })
   );
   const dispatchName = displayVal(
-    formatCityStateLabel(shop.city, shop.state_code, { withCode: showStateCode })
+    formatCityStateLabel(shop.city, shop.state_code, { withCode: false })
   );
 
   // Bank details visibility logic: only if NOT non-gst, estimate, or non-listed
@@ -168,12 +167,9 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 ].filter(Boolean).join(" | ")}
               </div>
             )}
-            {shop.address && (
-              <div className="bi-center-line">{shop.address}</div>
-            )}
-            {(shop.city || shop.pincode) && (
+            {[shop.address, shop.city, shop.pincode].filter(Boolean).length > 0 && (
               <div className="bi-center-line">
-                {[shop.city, shop.pincode].filter(Boolean).join(" - ")}
+                {[shop.address, shop.city, shop.pincode].filter(Boolean).join(", ")}
               </div>
             )}
             {shop.phone && (
