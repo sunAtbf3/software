@@ -28,6 +28,7 @@ import ProductView from "./ProductShared/ProductView";
 import { CURRENT_USER, can } from "../../../Components/roles";
 import BulkUploadTab from "./BulkUploadTab/BulkUploadTab";
 import BulkActionBar from "./BulkActionBar/BulkActionBar";
+import VariantBulkActionBar from "./BulkActionBar/VariantBulkActionBar";
 import BarcodeLabelModal from "./ProductShared/Barcode_Compo/BarcodeLabelModal";
 
 const StatusBadge = ({ isActive }) => (
@@ -55,6 +56,8 @@ export default function InventoryTab() {
   const [expandedProducts, setExpandedProducts] = useState({});
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [selectedVariantsForBarcode, setSelectedVariantsForBarcode] = useState([]);
+  /** @type {[{ variant_id: string, product_id: string, variant: object, product: object }]} */
+  const [selectedVariants, setSelectedVariants] = useState([]);
   const [exporting, setExporting] = useState(false);
 
   const handleExportProducts = async () => {
@@ -162,6 +165,59 @@ export default function InventoryTab() {
     return product.variants.filter(v => v.variant_id !== primaryVariantId);
   };
 
+  const buildProductBrief = (product) => ({
+    product_id: product.product_id,
+    name: product.name,
+    product_code: product.product_code,
+    brand_name: product.brand_name,
+  });
+
+  const clearSelectedVariants = () => setSelectedVariants([]);
+
+  const isVariantSelected = (variantId) =>
+    selectedVariants.some((row) => row.variant_id === variantId);
+
+  const toggleSelectVariant = (entry) => {
+    if (!entry?.variant_id || !entry?.product_id) return;
+    setSelectedVariants((prev) => {
+      if (prev.some((row) => row.variant_id === entry.variant_id)) {
+        return prev.filter((row) => row.variant_id !== entry.variant_id);
+      }
+      return [
+        ...prev,
+        {
+          variant_id: entry.variant_id,
+          product_id: entry.product_id,
+          variant: entry.variant,
+          product: entry.product,
+        },
+      ];
+    });
+  };
+
+  const toggleSelectAllVariantsForProduct = (product, variantsList) => {
+    if (!product?.product_id || !Array.isArray(variantsList) || variantsList.length === 0) return;
+    const ids = variantsList.map((v) => v.variant_id);
+    const allSelected = ids.every((id) => selectedVariants.some((row) => row.variant_id === id));
+    const productBrief = buildProductBrief(product);
+
+    setSelectedVariants((prev) => {
+      if (allSelected) {
+        return prev.filter((row) => !ids.includes(row.variant_id));
+      }
+      const next = prev.filter((row) => !ids.includes(row.variant_id));
+      variantsList.forEach((variant) => {
+        next.push({
+          variant_id: variant.variant_id,
+          product_id: product.product_id,
+          variant,
+          product: productBrief,
+        });
+      });
+      return next;
+    });
+  };
+
   const handleArchive = async (productId, name) => {
     if (!window.confirm(`Archive "${name}"? This will soft delete the product.`)) return;
     try {
@@ -169,6 +225,7 @@ export default function InventoryTab() {
       toast.success(`"${name}" archived successfully`);
       refetch();
       dispatch(clearSelectedProducts());
+      clearSelectedVariants();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to archive product");
     }
@@ -185,6 +242,62 @@ export default function InventoryTab() {
       await bulkArchive(productIds).unwrap();
     }
     refetch();
+  };
+
+  const reportVariantBulkResult = (result, actionLabel) => {
+    const updated = result?.updated ?? 0;
+    const failed = Array.isArray(result?.failed) ? result.failed : [];
+    if (failed.length === 0) {
+      toast.success(`${updated} variant(s) ${actionLabel} successfully`);
+      return true;
+    }
+    const first = failed[0];
+    const extra = failed.length > 1 ? ` (+${failed.length - 1} more)` : "";
+    toast.error(
+      `${updated} updated, ${failed.length} failed: ${first?.message || "Update failed"}${extra}`
+    );
+    return updated > 0;
+  };
+
+  const handleVariantBulkAction = async (action) => {
+    if (!selectedVariants.length) {
+      toast.warning("No variants selected");
+      return;
+    }
+
+    if (action === "labels") {
+      setSelectedVariantsForBarcode(
+        selectedVariants.map((row) => ({
+          variant: row.variant,
+          product: row.product,
+        }))
+      );
+      setShowBarcodeModal(true);
+      return;
+    }
+
+    if (action !== "activate" && action !== "deactivate") {
+      toast.error("Unsupported variant action");
+      return;
+    }
+
+    const isActive = action === "activate";
+    const items = selectedVariants.map((row) => ({
+      product_id: row.product_id,
+      variant_id: row.variant_id,
+      is_active: isActive,
+    }));
+
+    try {
+      const result = await bulkUpdate(items).unwrap();
+      reportVariantBulkResult(result, isActive ? "activated" : "deactivated");
+      clearSelectedVariants();
+      refetch();
+      refetchStats();
+    } catch (err) {
+      // Toast handled by VariantBulkActionBar; rethrow so busy state clears correctly
+      throw err;
+    }
   };
 
   const toggleSelectProduct = (productId) => {
@@ -215,13 +328,15 @@ export default function InventoryTab() {
     dispatch(closeEditForm());
     refetch();
     dispatch(clearSelectedProducts());
+    clearSelectedVariants();
   };
 
   const handleRefresh = () => {
     refetch();
     refetchStats();
     dispatch(clearSelectedProducts());
-};
+    clearSelectedVariants();
+  };
 
   const getCategoryName = (id) => categories.find(c => c.category_id === id)?.name || "—";
 
@@ -599,8 +714,23 @@ export default function InventoryTab() {
                           <table className="w-full min-w-[720px] lg:min-w-0 text-sm">
                             <thead className="bg-gray-50">
                               <tr>
+                                <th className="px-3 py-2 w-10">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSelectAllVariantsForProduct(p, nonPrimaryVariants)}
+                                    className="text-gray-400 hover:text-indigo-600 transition-colors"
+                                    title="Select all nested variants for this product"
+                                  >
+                                    {nonPrimaryVariants.every((v) => isVariantSelected(v.variant_id)) ? (
+                                      <CheckSquare size={16} className="text-indigo-600" />
+                                    ) : (
+                                      <Square size={16} />
+                                    )}
+                                  </button>
+                                </th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Variant SKU</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Barcode</th>
+                                <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Status</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Special Price</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Wholesale</th>
                                 <th className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left">Purchase Price</th>
@@ -612,6 +742,26 @@ export default function InventoryTab() {
                             <tbody className="divide-y divide-gray-100">
                               {nonPrimaryVariants.map((variant) => (
                                 <tr key={variant.variant_id} className="hover:bg-gray-50">
+                                  <td className="px-3 py-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        toggleSelectVariant({
+                                          variant_id: variant.variant_id,
+                                          product_id: p.product_id,
+                                          variant,
+                                          product: buildProductBrief(p),
+                                        })
+                                      }
+                                      className="text-gray-400 hover:text-indigo-600 transition-colors"
+                                    >
+                                      {isVariantSelected(variant.variant_id) ? (
+                                        <CheckSquare size={16} className="text-indigo-600" />
+                                      ) : (
+                                        <Square size={16} />
+                                      )}
+                                    </button>
+                                  </td>
                                   <td className="px-4 py-2">
                                     <span className="font-mono text-xs text-gray-600">
                                       {variant.product_code || variant.sku || "—"}
@@ -621,6 +771,9 @@ export default function InventoryTab() {
                                     <span className="font-mono text-xs text-gray-400">
                                       {variant.system_barcode || "—"}
                                     </span>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <StatusBadge isActive={variant.is_active !== false} />
                                   </td>
                                   <td className="px-4 py-2">
                                     <span className="text-sm font-semibold text-blue-600">
@@ -655,12 +808,7 @@ export default function InventoryTab() {
                                   </td>
                                   <td className="px-4 py-2">
                                     <button
-                                      onClick={() => handleSingleVariantBarcode(variant, {
-                                        product_id: p.product_id,
-                                        name: p.name,
-                                        product_code: p.product_code,
-                                        brand_name: p.brand_name,
-                                      })}
+                                      onClick={() => handleSingleVariantBarcode(variant, buildProductBrief(p))}
                                       className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center gap-1"
                                     >
                                       <Printer size={12} />
@@ -697,12 +845,24 @@ export default function InventoryTab() {
         </div>
       )}
 
-      {/* Bulk Action Bar */}
+      {/* Bulk Action Bar (products only — archive/activate) */}
       {selectedProductIds.length > 0 && (
         <BulkActionBar
           selectedCount={selectedProductIds.length}
           selectedProductIds={selectedProductIds}
           onBulkAction={handleBulkAction}
+        />
+      )}
+
+      {/* Variant selection bar — never calls product archive DELETE */}
+      {selectedVariants.length > 0 && (
+        <VariantBulkActionBar
+          selectedCount={selectedVariants.length}
+          offsetForProductBar={selectedProductIds.length > 0}
+          onClear={clearSelectedVariants}
+          onGetLabels={() => handleVariantBulkAction("labels")}
+          onActivate={() => handleVariantBulkAction("activate")}
+          onDeactivate={() => handleVariantBulkAction("deactivate")}
         />
       )}
 
