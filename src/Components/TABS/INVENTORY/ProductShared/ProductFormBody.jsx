@@ -264,7 +264,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Wholesale Price <span className="text-red-500">*</span>
             </label>
-            <input type="number" step="0.01" {...field("wholesale_price")} placeholder="Franchise / B2B" className={inputCls("wholesale_price")} />
+            <input type="number" step="0.01" {...field("wholesale_price")} placeholder="B2B" className={inputCls("wholesale_price")} />
             {errorMsg("wholesale_price")}
           </div>
 
