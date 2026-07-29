@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 /** Single source for all toast timing, theme, and styling. */
 export const APP_TOAST_SETTINGS = {
   position: "top-right",
-  autoClose: 100,
+  autoClose: 2000,
   hideProgressBar: false,
   newestOnTop: true,
   closeOnClick: true,
