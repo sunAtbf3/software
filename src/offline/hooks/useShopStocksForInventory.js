@@ -9,19 +9,12 @@ import { useOfflineEvent } from './useOfflineStatus';
 const matchesSearch = (stock, query) => {
   if (!query) return true;
   const q = query.toLowerCase().trim();
+  if (!q) return true;
   const product = stock.variant?.product || {};
-  const variant = stock.variant || {};
-  const haystack = [
-    product.name,
-    product.product_code,
-    variant.sku,
-    variant.product_code,
-    variant.system_barcode,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return haystack.includes(q);
+  const name = String(product.name || '').toLowerCase();
+  const code = String(product.product_code || '').toLowerCase();
+  // Same as online API: product name + product_code only (not SKU/barcode).
+  return name.includes(q) || code.includes(q);
 };
 
 /**
@@ -107,18 +100,22 @@ export const useShopStocksForInventory = (
 
   const onlineStocks = onlineData?.stocks || [];
   const onlineMeta = onlineData?.meta || { total: 0, page: 1, limit: 20, totalPages: 1 };
+  const hasSearch = Boolean(String(search || '').trim());
 
   const usingOfflineCache = !isOnline
     ? localStocks.length > 0
-    : !(onlineLoading || onlineFetching) && !onlineStocks.length && localStocks.length > 0;
+    : !(onlineLoading || onlineFetching) && !onlineStocks.length && localStocks.length > 0 && !hasSearch;
+
+  // When online + search: always trust API (even empty) so barcode-offline matches cannot leak.
+  const useOnlineResults = isOnline && (onlineStocks.length > 0 || hasSearch || !usingOfflineCache);
 
   return {
-    stocks: isOnline && onlineStocks.length ? onlineStocks : offlineResult.stocks,
-    meta: isOnline && onlineStocks.length ? onlineMeta : offlineResult.meta,
+    stocks: useOnlineResults ? onlineStocks : offlineResult.stocks,
+    meta: useOnlineResults ? onlineMeta : offlineResult.meta,
     isLoading: isOnline ? onlineLoading && !onlineStocks.length : localLoading,
     isFetching: isOnline ? onlineFetching : false,
     isOnline,
-    usingOfflineCache,
+    usingOfflineCache: useOnlineResults ? false : usingOfflineCache,
     refetch: refreshAll,
   };
 };

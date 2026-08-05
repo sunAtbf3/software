@@ -18,6 +18,10 @@
   background-color: var(--color-app-sidebar) !important;
 }
 
+.text-app-sidebar {
+  color: var(--color-app-sidebar) !important;
+}
+
 .bg-app-accent {
   background-color: var(--color-app-accent) !important;
 }

@@ -246,7 +246,7 @@ export default function InventoryStockTab() {
                     {!isChild ? (
                         <div>
                             <p className="font-semibold text-gray-800 text-sm leading-tight">{product.name || "—"}</p>
-                            <p className="text-xs font-mono text-gray-400 mt-0.5">{product.product_code || "—"}</p>
+                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{product.product_code || "—"}</p>
                             {isVariantSummary && stock.batch_count > 1 && (
                                 <span className="inline-block mt-1 text-[10px] font-medium text-indigo-500 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5">
                                     {stock.batch_count} batches

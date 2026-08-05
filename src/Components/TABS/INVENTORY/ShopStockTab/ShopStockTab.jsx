@@ -525,7 +525,7 @@ export default function ShopStockTab() {
                                         {/* Product */}
                                         <td className="px-4 py-3">
                                             <p className="font-semibold text-gray-800">{group.name || "—"}</p>
-                                            <p className="text-xs font-mono text-gray-400">{group.product_code || "—"}</p>
+                                            <p className="text-xs font-semibold text-blue-600">{group.product_code || "—"}</p>
                                         </td>
                                         
                                         {/* Variant SKU */}
