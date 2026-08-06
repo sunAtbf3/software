@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
+import { Eye, EyeOff } from "lucide-react";
 import {
     useUpdateUserMutation,
     usePatchUserStatusMutation,
@@ -50,6 +51,7 @@ export default function UserEditForm({
     const [resetPass, setResetPass] = useState("");
     const [resetPassErr, setResetPassErr] = useState("");
     const [resetSuccess, setResetSuccess] = useState(false);
+    const [showResetPass, setShowResetPass] = useState(false);
 
     const validate = () => {
         const errors = {};
@@ -284,15 +286,26 @@ export default function UserEditForm({
                             )}
                             <div className="flex gap-3 items-start text-gray-700">
                                 <div className="flex-1">
-                                    <input
-                                        type="password"
-                                        value={resetPass}
-                                        onChange={(e) => { setResetPass(e.target.value); setResetPassErr(""); setResetSuccess(false); }}
-                                        placeholder="New password for this user"
-                                        autoComplete="new-password"
-                                        className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${resetPassErr ? "border-red-400" : "border-gray-300"
-                                            }`}
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showResetPass ? "text" : "password"}
+                                            value={resetPass}
+                                            onChange={(e) => { setResetPass(e.target.value); setResetPassErr(""); setResetSuccess(false); }}
+                                            placeholder="New password for this user"
+                                            autoComplete="new-password"
+                                            className={`w-full px-3 py-2 pr-10 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${resetPassErr ? "border-red-400" : "border-gray-300"
+                                                }`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowResetPass((prev) => !prev)}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                            aria-label={showResetPass ? "Hide password" : "Show password"}
+                                            tabIndex={-1}
+                                        >
+                                            {showResetPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                    </div>
                                     {resetPassErr && <p className="text-xs text-red-500 mt-1">{resetPassErr}</p>}
                                 </div>
                                 <button
