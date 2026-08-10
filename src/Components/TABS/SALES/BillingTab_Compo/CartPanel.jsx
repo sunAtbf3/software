@@ -17,7 +17,7 @@ import {
 import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
-import { useShopPricingVisibility, isFranchiseShopType } from "../../../../utils/shopPricingVisibility";
+import { useShopPricingVisibility, isSpecialPriceOnlyShopType } from "../../../../utils/shopPricingVisibility";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -27,8 +27,10 @@ const toNumber = (value, defaultValue = 0) => {
 export default function CartPanel() {
     const dispatch = useDispatch();
     const { cart, manualCart, billType } = useSelector((state) => state.billing);
-    const { shopType } = useShopPricingVisibility();
-    const franchiseBillingLocked = isFranchiseShopType(shopType);
+    const { shopType, isShopScoped } = useShopPricingVisibility();
+    // OWNER + FRANCHISE (and shop staff while type loads): Special price only — no MRP dropdown.
+    const specialPriceOnlyBilling =
+        isShopScoped || isSpecialPriceOnlyShopType(shopType);
     const withGst = isWithGstBill(billType);
 
     const items = billType === BILL_TYPES.NON_LISTED ? manualCart : cart;
@@ -107,7 +109,7 @@ export default function CartPanel() {
                                             <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1 py-0.5 rounded">
                                                 MRP: ₹{toNumber(item.mrp).toFixed(2)}
                                             </span>
-                                        ) : franchiseBillingLocked ? (
+                                        ) : specialPriceOnlyBilling ? (
                                             <>
                                                 <span className="text-[10px] text-gray-600 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
                                                     Special (₹{toNumber(item.special_price ?? item.retail_price).toFixed(2)})

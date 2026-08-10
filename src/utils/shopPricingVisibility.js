@@ -5,6 +5,10 @@ const SHOP_SCOPED_ROLES = new Set(["SHOP_OWNER", "SHOP_MANAGER", "BILLING_STAFF"
 
 export const isFranchiseShopType = (shopType) => shopType === "FRANCHISE";
 
+/** Billing counter: no MRP/Special dropdown — SPECIAL only (OWNER + FRANCHISE). */
+export const isSpecialPriceOnlyShopType = (shopType) =>
+  shopType === "OWNER" || shopType === "FRANCHISE";
+
 export const canViewWholesalePrice = (user, shopType) => {
   if (!user?.role) return true;
   if (!SHOP_SCOPED_ROLES.has(user.role)) return true;
