@@ -394,6 +394,16 @@
   font-weight: bold;
 }
 
+.bill-invoice-doc.thermal table.bi-table-thermal th.bi-th-wrap {
+  line-height: 1.05;
+  vertical-align: bottom;
+  padding-bottom: 3px;
+}
+
+.bill-invoice-doc.thermal table.bi-table-thermal th.bi-th-wrap span {
+  display: block;
+}
+
 .bill-invoice-doc.thermal .bi-foot-thermal {
   display: flex;
   justify-content: space-between;

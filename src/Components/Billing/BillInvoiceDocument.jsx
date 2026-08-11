@@ -12,6 +12,8 @@ import {
   resolveLineBrand,
   resolveLineWarranty,
   lineMrp,
+  lineSpecialPrice,
+  formatComboPriceCell,
   lineSpecialTotal,
   calcMrpDiscount,
   buildTaxSummaryFromLines,
@@ -72,6 +74,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
   const isNonGst = billType === BILL_TYPES.WITHOUT_GST || isNonListed || isEstimate;
   const shop = bill.shop || {};
   const items = bill.items || [];
+  const showComboPriceCol = items.some((item) => item?.combo_applied === true);
   const gst = shopGstin(bill);
   const legalName = bill.gst_config?.legal_name?.trim() || shop.shop_name || "";
   const mrpDiscount = calcMrpDiscount(items);
@@ -226,24 +229,38 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
         <table className="bi-table-thermal">
           <thead>
             <tr>
-              <th style={{ textAlign: "left", width: "42%" }}>Item</th>
-              <th style={{ textAlign: "center", width: "13%" }}>Qty</th>
-              <th style={{ textAlign: "right", width: "25%" }}>Spl.Price</th>
-              <th style={{ textAlign: "right", width: "20%" }}>Total</th>
+              <th style={{ textAlign: "left", width: showComboPriceCol ? "34%" : "40%" }}>Item</th>
+              <th style={{ textAlign: "center", width: "10%" }}>Qty</th>
+              <th
+                className="bi-th-wrap"
+                style={{ textAlign: "right", width: showComboPriceCol ? "18%" : "25%" }}
+              >
+                <span>Spl.</span>
+                <span>Price</span>
+              </th>
+              {showComboPriceCol && (
+                <th className="bi-th-wrap" style={{ textAlign: "right", width: "18%" }}>
+                  <span>Combo</span>
+                  <span>Price</span>
+                </th>
+              )}
+              <th style={{ textAlign: "right", width: showComboPriceCol ? "20%" : "25%" }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, idx) => {
               const name = truncateProductName(resolveLineProductName(item));
               const metaLines = resolveLineMeta(item, { isNonListed });
+              const comboCell = formatComboPriceCell(item);
+              const thermalColSpan = showComboPriceCol ? 5 : 4;
               return (
                 <Fragment key={idx}>
                   <tr style={{ fontWeight: "bold" }}>
-                    <td colSpan={4} style={{ paddingTop: "4px" }}>{name}</td>
+                    <td colSpan={thermalColSpan} style={{ paddingTop: "4px" }}>{name}</td>
                   </tr>
                   {metaLines.map((entry, mi) => (
                     <tr key={`${idx}-meta-${mi}`}>
-                      <td colSpan={4}>
+                      <td colSpan={thermalColSpan}>
                         <BillMetaLine entry={entry} />
                       </td>
                     </tr>
@@ -251,12 +268,15 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   <tr>
                     <td style={{ textAlign: "left" }}>MRP: ₹{fmtNum(lineMrp(item))}</td>
                     <td style={{ textAlign: "center" }}>{item.quantity}</td>
-                    <td style={{ textAlign: "right" }}>₹{fmtNum(item.unit_price)}</td>
+                    <td style={{ textAlign: "right" }}>₹{fmtNum(lineSpecialPrice(item))}</td>
+                    {showComboPriceCol && (
+                      <td style={{ textAlign: "right" }}>{comboCell ? `₹${comboCell}` : ""}</td>
+                    )}
                     <td style={{ textAlign: "right" }}>₹{fmtNum(lineSpecialTotal(item))}</td>
                   </tr>
                   {idx < items.length - 1 && (
                     <tr className="bi-item-separator">
-                      <td colSpan={4} />
+                      <td colSpan={thermalColSpan} />
                     </tr>
                   )}
                 </Fragment>
@@ -426,27 +446,52 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
         <thead>
           <tr>
             {(isNonGst
-              ? [
-                { label: "S.No.", width: "4.5%" },
-                { label: "Product Name", width: "24%" },
-                { label: "Brand", width: "10%" },
-                { label: "Warranty", width: "10%" },
-                { label: "Qty", width: "5.5%" },
-                { label: "MRP", width: "12%" },
-                { label: "Special Price", width: "13%" },
-                { label: "Total", width: "21%" }
-              ]
-              : [
-                { label: "S.No.", width: "4.5%" },
-                { label: "Product Name", width: "20%" },
-                { label: "Brand", width: "9%" },
-                { label: "Warranty", width: "9%" },
-                { label: "HSN Code", width: "8%" },
-                { label: "Qty", width: "5.5%" },
-                { label: "MRP", width: "11%" },
-                { label: "Special Price", width: "12%" },
-                { label: "Total", width: "21%" }
-              ]
+              ? showComboPriceCol
+                ? [
+                  { label: "S.No.", width: "4%" },
+                  { label: "Product Name", width: "20%" },
+                  { label: "Brand", width: "9%" },
+                  { label: "Warranty", width: "9%" },
+                  { label: "Qty", width: "5%" },
+                  { label: "MRP", width: "11%" },
+                  { label: "Special Price", width: "12%" },
+                  { label: "Combo Price", width: "12%" },
+                  { label: "Total", width: "18%" },
+                ]
+                : [
+                  { label: "S.No.", width: "4%" },
+                  { label: "Product Name", width: "24%" },
+                  { label: "Brand", width: "10%" },
+                  { label: "Warranty", width: "10%" },
+                  { label: "Qty", width: "6%" },
+                  { label: "MRP", width: "14%" },
+                  { label: "Special Price", width: "14%" },
+                  { label: "Total", width: "18%" },
+                ]
+              : showComboPriceCol
+                ? [
+                  { label: "S.No.", width: "4%" },
+                  { label: "Product Name", width: "17%" },
+                  { label: "Brand", width: "8%" },
+                  { label: "Warranty", width: "8%" },
+                  { label: "HSN Code", width: "7%" },
+                  { label: "Qty", width: "5%" },
+                  { label: "MRP", width: "10%" },
+                  { label: "Special Price", width: "11%" },
+                  { label: "Combo Price", width: "11%" },
+                  { label: "Total", width: "19%" },
+                ]
+                : [
+                  { label: "S.No.", width: "4%" },
+                  { label: "Product Name", width: "22%" },
+                  { label: "Brand", width: "9%" },
+                  { label: "Warranty", width: "9%" },
+                  { label: "HSN Code", width: "8%" },
+                  { label: "Qty", width: "5%" },
+                  { label: "MRP", width: "12%" },
+                  { label: "Special Price", width: "12%" },
+                  { label: "Total", width: "19%" },
+                ]
             ).map((col) => (
               <th key={col.label} style={{ width: col.width }}>
                 {col.label}
@@ -460,6 +505,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
             const attrParts = resolveItemVariantAttributes(item);
             const brand = resolveLineBrand(item);
             const warranty = resolveLineWarranty(item);
+            const comboCell = formatComboPriceCell(item);
             const productNameCell = (
               <div className="bi-product-cell">
                 <div>{name}</div>
@@ -478,7 +524,8 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 displayVal(warranty),
                 item.quantity,
                 fmtNum(lineMrp(item)),
-                fmtNum(item.unit_price),
+                fmtNum(lineSpecialPrice(item)),
+                ...(showComboPriceCol ? [comboCell] : []),
                 fmtNum(lineSpecialTotal(item)),
               ]
               : [
@@ -489,7 +536,8 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 displayVal(item.hsn_code),
                 item.quantity,
                 fmtNum(lineMrp(item)),
-                fmtNum(item.unit_price),
+                fmtNum(lineSpecialPrice(item)),
+                ...(showComboPriceCol ? [comboCell] : []),
                 fmtNum(lineSpecialTotal(item)),
               ];
             return (

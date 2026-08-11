@@ -917,6 +917,9 @@ export default function BulkActionModals({ onSuccess }) {
                                                 <>
                                                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">MRP</th>
                                                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">F.Price</th>
+                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 leading-tight">
+                                                        Combo<br />Price
+                                                    </th>
                                                 </>
                                             )}
                                             {isFranchiseTransfer && isWarehouseUser && (
@@ -975,6 +978,11 @@ export default function BulkActionModals({ onSuccess }) {
                                                                     ? `₹${Number(fp.franchise_unit_price).toFixed(2)}`
                                                                     : "—"}
                                                             </td>
+                                                            <td className="px-3 py-2 text-right text-blue-700 font-medium">
+                                                                {fp?.combo_applied && fp?.combo_unit_price != null
+                                                                    ? `₹${Number(fp.combo_unit_price).toFixed(2)}`
+                                                                    : "—"}
+                                                            </td>
                                                         </>
                                                     )}
                                                     {isFranchiseTransfer && isWarehouseUser && (
@@ -1006,7 +1014,7 @@ export default function BulkActionModals({ onSuccess }) {
                                             <td className="px-3 py-2 text-right font-semibold">{viewTotalRequested}</td>
                                             <td className="px-3 py-2 text-right font-semibold">{viewTotalSent ?? "—"}</td>
                                             <td className="px-3 py-2 text-right font-semibold">{viewTotalReceived}</td>
-                                            <td className="px-3 py-2" colSpan={isFranchiseTransfer ? (isWarehouseUser ? 5 : 3) : 1}></td>
+                                            <td className="px-3 py-2" colSpan={isFranchiseTransfer ? (isWarehouseUser ? 6 : 4) : 1}></td>
                                         </tr>
                                     </tfoot>
                                 </table>

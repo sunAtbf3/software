@@ -30,6 +30,7 @@ const flattenStockRow = (row) => {
     gst_percent: product.gst_percent ?? 0,
     gst_type: product.gst_type ?? null,
     image_url: variant.images?.[0]?.url ?? null,
+    combo_eligible: variant.combo_eligible === true,
     server_updated_at: row.updated_at ?? variant.updated_at ?? product.updated_at ?? null,
     cached_at: nowIso(),
     variant,

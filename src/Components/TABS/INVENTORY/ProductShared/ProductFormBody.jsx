@@ -387,6 +387,25 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             {formData.is_active ? "Active" : "Inactive"}
           </span>
         </div>
+        <div className="flex items-center gap-3 pt-5">
+          <label className="text-xs font-medium text-gray-600">Combo Eligible</label>
+          <button
+            type="button"
+            onClick={() => onChange({ combo_eligible: !formData.combo_eligible })}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              formData.combo_eligible === true ? "bg-blue-600" : "bg-gray-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                formData.combo_eligible === true ? "translate-x-4" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className={`text-xs font-medium ${formData.combo_eligible === true ? "text-blue-600" : "text-gray-400"}`}>
+            {formData.combo_eligible === true ? "Yes" : "No"}
+          </span>
+        </div>
       </div>
 
       {/* ── Section 7: Images with Delete + Replace ───────────────────────── */}

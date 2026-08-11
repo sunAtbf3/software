@@ -190,6 +190,7 @@ export default function ProductEditForm({
           low_stock_threshold: toNumber(formData.low_stock_threshold, 10),
           remarks: formData.remarks?.trim() || undefined,
           is_active: formData.is_active,
+          combo_eligible: formData.combo_eligible === true,
         }).unwrap();
 
         await handleSyncVariantImages(
@@ -225,6 +226,7 @@ export default function ProductEditForm({
             low_stock_threshold: v.low_stock_threshold ? toNumber(v.low_stock_threshold) : undefined,
             remarks: v.remarks || undefined,
             is_active: v.is_active !== false,
+            combo_eligible: v.combo_eligible === true,
           }).unwrap();
           
           await handleSyncVariantImages(
@@ -253,6 +255,7 @@ export default function ProductEditForm({
             low_stock_threshold: v.low_stock_threshold ? toNumber(v.low_stock_threshold) : 10,
             remarks: v.remarks || undefined,
             is_active: v.is_active !== false,
+            combo_eligible: v.combo_eligible === true,
           }).unwrap();
           
           if ((v.newImages || []).length > 0 && created?.variant_id) {
@@ -451,6 +454,7 @@ export default function ProductEditForm({
                             imagesToDelete: v.imagesToDelete || [],
                             newImages: v.newImages || [],
                             is_active: v.is_active !== false,
+                            combo_eligible: v.combo_eligible === true,
                           }));
                         }}
                         className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer font-medium flex-shrink-0 ml-3"

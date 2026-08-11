@@ -78,6 +78,40 @@ export const lineMrp = (item) => {
   return Number(item.unit_price) || 0;
 };
 
+/** Catalog special price for invoice Special Price column. */
+export const lineSpecialPrice = (item) => {
+  const snap = item.special_unit_price;
+  if (snap != null && Number.isFinite(Number(snap)) && Number(snap) >= 0) {
+    return Number(snap);
+  }
+  const fromVariant = item.variant?.special_price;
+  if (fromVariant != null && Number.isFinite(Number(fromVariant)) && Number(fromVariant) >= 0) {
+    return Number(fromVariant);
+  }
+  // Legacy bills / non-combo: charged unit_price was shown as special.
+  if (!item.combo_applied) return Number(item.unit_price) || 0;
+  return Number(item.unit_price) || 0;
+};
+
+/**
+ * Combo per-unit for invoice Combo Price column.
+ * Blank when combo was not applied on this line.
+ */
+export const lineComboPrice = (item) => {
+  if (!item?.combo_applied) return null;
+  if (item.combo_unit_price != null && Number.isFinite(Number(item.combo_unit_price))) {
+    return Number(item.combo_unit_price);
+  }
+  // Fallback: charged blended unit when combo applied but snapshot missing.
+  return Number(item.unit_price) || 0;
+};
+
+export const formatComboPriceCell = (item) => {
+  const combo = lineComboPrice(item);
+  return combo == null ? "" : fmtNum(combo);
+};
+
+/** Row total uses charged unit_price (combo-aware when applied). */
 export const lineSpecialTotal = (item) =>
   roundMoney((Number(item.unit_price) || 0) * (Number(item.quantity) || 0));
 
@@ -85,9 +119,9 @@ export const calcMrpDiscount = (items) => {
   let total = 0;
   for (const item of items || []) {
     const mrp = lineMrp(item);
-    const special = Number(item.unit_price) || 0;
+    const charged = Number(item.unit_price) || 0;
     const qty = Number(item.quantity) || 0;
-    total = roundMoney(total + Math.max(0, mrp - special) * qty);
+    total = roundMoney(total + Math.max(0, mrp - charged) * qty);
   }
   return total;
 };

@@ -37,6 +37,7 @@ import { bulkTransferApi } from "../REDUX_SLICES/BulkTransfer_api/bulkTransferAp
 import bulkTransferReducer from "../REDUX_SLICES/BulkTransfer_api/bulkTransferSlice";
 import { shopWarehouseCatalogApi } from "../REDUX_SLICES/ShopWarehouseCatalog_api/shopWarehouseCatalogApi";
 import { appSettingsApi } from "../REDUX_SLICES/AppSettings_api/appSettingsApi";
+import { comboRuleApi } from "../REDUX_SLICES/ComboRule_api/comboRuleApi";
 import { warehousePeerCatalogApi } from "../REDUX_SLICES/WarehousePeerCatalog_api/warehousePeerCatalogApi";
 
 
@@ -96,6 +97,7 @@ export const store = configureStore({
     [bulkTransferApi.reducerPath]: bulkTransferApi.reducer,
     [shopWarehouseCatalogApi.reducerPath]: shopWarehouseCatalogApi.reducer,
     [appSettingsApi.reducerPath]: appSettingsApi.reducer,
+    [comboRuleApi.reducerPath]: comboRuleApi.reducer,
     [warehousePeerCatalogApi.reducerPath]: warehousePeerCatalogApi.reducer,
 
     customer: customerReducer,
@@ -137,6 +139,7 @@ export const store = configureStore({
       bulkTransferApi.middleware,
       shopWarehouseCatalogApi.middleware,
       appSettingsApi.middleware,
+      comboRuleApi.middleware,
       warehousePeerCatalogApi.middleware,
       transferApi.middleware,
       customerApi.middleware,

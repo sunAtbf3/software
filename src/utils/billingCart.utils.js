@@ -81,6 +81,7 @@ export const buildBillingCartItem = ({
   variant_attributes,
   price_type = "SPECIAL",
   quantity = 1,
+  combo_eligible = false,
 }) => {
   const unitPrice = toBillingNumber(special_price ?? retail_price);
   const gst = toBillingNumber(gst_percent);
@@ -106,6 +107,10 @@ export const buildBillingCartItem = ({
     hsn_code: hsn_code ? String(hsn_code).trim() : null,
     quantity_available:
       quantity_available != null ? toBillingNumber(quantity_available) : null,
+    combo_eligible: combo_eligible === true,
+    combo_applied: false,
+    combo_unit_price: null,
+    combo_units: 0,
     line_total: unitPrice * quantity,
     gst_amount: 0,
   };

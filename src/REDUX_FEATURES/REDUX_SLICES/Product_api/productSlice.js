@@ -34,6 +34,7 @@ const EMPTY_FORM = {
   remarks: "",
   attributes: [{ key: "", value: "" }],
   is_active: true,
+  combo_eligible: false,
   // IMAGE TRACKING FOR EDIT MODE
   imagesToKeep: [],
   imagesToDelete: [],
@@ -61,6 +62,7 @@ const EMPTY_VARIANT_FORM = {
   imagesToDelete: [],
   newImages: [],
   is_active: true,
+  combo_eligible: false,
   variant_id: null,
   variant_code: null,
   system_barcode: null,
@@ -150,6 +152,7 @@ const buildFormDataFromProduct = (p) => {
     remarks: p.remarks || "",
     attributes: attributesForForm(primaryVariant.attributes),
     is_active: p.is_active ?? true,
+    combo_eligible: primaryVariant.combo_eligible === true,
     imagesToKeep: imagesWithIds,
     imagesToDelete: [],
     newImages: [],
@@ -182,6 +185,7 @@ const buildVariantsFromProduct = (p) => {
     imagesToDelete: [],
     newImages: [],
     is_active: v.is_active !== false,
+    combo_eligible: v.combo_eligible === true,
   }));
 };
 
@@ -377,6 +381,7 @@ const productSlice = createSlice({
           imagesToDelete: existing.imagesToDelete || [],
           newImages: existing.newImages || [],
           is_active: existing.is_active !== false,
+          combo_eligible: existing.combo_eligible === true,
         };
       }
     },
@@ -408,6 +413,7 @@ const productSlice = createSlice({
         imagesToDelete: v.imagesToDelete || [],
         newImages: v.newImages || [],
         is_active: v.is_active !== false,
+        combo_eligible: v.combo_eligible === true,
       };
     },
 

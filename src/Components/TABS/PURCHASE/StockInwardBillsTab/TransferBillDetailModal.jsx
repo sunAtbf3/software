@@ -70,6 +70,9 @@ export default function TransferBillDetailModal({ bill, onClose }) {
                                             <th className="px-3 py-2 text-right">MRP</th>
                                             <th className="px-3 py-2 text-right">Spl/Sale Price</th>
                                             <th className="px-3 py-2 text-right">F. Price</th>
+                                            <th className="px-3 py-2 text-right leading-tight">
+                                                Combo<br />Price
+                                            </th>
                                             <th className="px-3 py-2 text-right">Total F. Price</th>
                                         </tr>
                                     </thead>
@@ -81,6 +84,11 @@ export default function TransferBillDetailModal({ bill, onClose }) {
                                                 <td className="px-3 py-2 text-right">{fmtMoney(line.unit_mrp)}</td>
                                                 <td className="px-3 py-2 text-right">{fmtMoney(line.unit_special_price)}</td>
                                                 <td className="px-3 py-2 text-right">{fmtMoney(line.unit_franchise_price)}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    {line.combo_applied && line.unit_combo_price != null
+                                                        ? fmtMoney(line.unit_combo_price)
+                                                        : "—"}
+                                                </td>
                                                 <td className="px-3 py-2 text-right font-medium">{fmtMoney(line.line_franchise_total)}</td>
                                             </tr>
                                         ))}
@@ -93,7 +101,7 @@ export default function TransferBillDetailModal({ bill, onClose }) {
                             <div className="bg-indigo-50 rounded-lg p-3 space-y-1 text-sm">
                                 <p>MRP Subtotal: {fmtMoney(totals.mrp_subtotal)}</p>
                                 <p>Total Special Price: {fmtMoney(totals.special_subtotal)}</p>
-                                <p className="font-semibold text-indigo-900">Final (F.Price): {fmtMoney(totals.final_amount)}</p>
+                                <p className="font-semibold text-indigo-900">Final (charged): {fmtMoney(totals.final_amount)}</p>
                             </div>
                         )}
                     </div>

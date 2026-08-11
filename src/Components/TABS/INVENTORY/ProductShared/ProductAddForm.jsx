@@ -64,6 +64,7 @@ const buildCompleteVariantsArray = (formData, extraVariants) => {
     low_stock_threshold: formData.low_stock_threshold ? toNumber(formData.low_stock_threshold) : 10,
     remarks: formData.remarks?.trim() || undefined,
     is_active: formData.is_active !== false,
+    combo_eligible: formData.combo_eligible === true,
   };
 
   const cleanedExtraVariants = extraVariants.map(({ newImages, imagesToKeep, imagesToDelete, ...rest }) => {

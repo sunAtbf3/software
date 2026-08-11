@@ -54,6 +54,9 @@ const buildBillSnapshot = ({
     quantity: item.quantity,
     unit_price: item.unit_price,
     mrp_unit_price: item.mrp ?? item.unit_price,
+    special_unit_price: item.unit_price,
+    combo_applied: false,
+    combo_unit_price: null,
     price_type: 'SPECIAL',
     line_total: item.unit_price * item.quantity,
     tax_amount: 0,
@@ -71,6 +74,11 @@ const buildBillSnapshot = ({
     quantity: item.quantity,
     unit_price: item.unit_price,
     mrp_unit_price: item.mrp ?? item.unit_price,
+    special_unit_price: item.special_price ?? item.retail_price ?? item.unit_price,
+    combo_applied: item.combo_applied === true,
+    combo_unit_price: item.combo_applied === true
+      ? (item.combo_unit_price ?? item.unit_price)
+      : null,
     price_type: item.price_type,
     line_total: item.line_total,
     tax_amount: item.gst_amount || 0,
@@ -81,6 +89,7 @@ const buildBillSnapshot = ({
     variant: {
       sku: item.system_barcode,
       mrp: item.mrp ?? item.unit_price,
+      special_price: item.special_price ?? item.retail_price ?? null,
       attributes: item.variant_attributes ?? null,
       product: { name: item.product_name },
     },

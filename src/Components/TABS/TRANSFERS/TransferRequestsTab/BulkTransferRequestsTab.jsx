@@ -15,6 +15,7 @@ import { useLazyGetPeerStockCatalogQuery } from "../../../../REDUX_FEATURES/REDU
 import VariantCatalogPicker from "./TransferRequestShared/VariantCatalogPicker";
 import BulkRequestPreviewTable from "./TransferRequestShared/BulkRequestPreviewTable";
 import { useGetBulkTransferRequestsQuery, useCreateBulkTransferRequestMutation, useLazyGetBulkTransferRequestByIdQuery, generateBulkIdempotencyKey } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
+import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
 import {
     setStatusFilter,
     setCurrentPage,
@@ -224,6 +225,7 @@ export default function BulkTransferRequestsTab() {
                     special_price: s.special_price ?? null,
                     franchise_unit_price: s.franchise_unit_price ?? null,
                     purchase_price: s.purchase_price ?? null,
+                    combo_eligible: s.combo_eligible === true,
                 })),
         [catalogSelection]
     );
@@ -231,6 +233,10 @@ export default function BulkTransferRequestsTab() {
     const showFranchisePreviewPricing =
         !!catalogData?.franchise_shop_pricing_view ||
         (!!catalogData?.is_franchise_shop && !isWhBulkFlow);
+
+    const { data: activeComboRules } = useGetActiveComboRulesQuery(undefined, {
+        skip: !showCreateModal,
+    });
 
     const handleCatalogSelectionChange = (variantId, patch) => {
         setCatalogSelection((prev) => ({
@@ -256,6 +262,7 @@ export default function BulkTransferRequestsTab() {
                         special_price: v.special_price ?? null,
                         franchise_unit_price: v.franchise_unit_price ?? null,
                         purchase_price: v.purchase_price ?? null,
+                        combo_eligible: v.combo_eligible === true,
                     };
                 } else {
                     next[v.variant_id] = { ...next[v.variant_id], selected: false };
@@ -800,6 +807,7 @@ export default function BulkTransferRequestsTab() {
                                             !!catalogData?.is_franchise_shop &&
                                             !catalogData?.franchise_shop_pricing_view
                                         }
+                                        activeComboRules={activeComboRules || []}
                                         emptyMessage="No products in catalog for this warehouse and mode."
                                     />
                                     {createErrors.items && (
@@ -822,6 +830,11 @@ export default function BulkTransferRequestsTab() {
                                                             {item.product_name}
                                                         </span>
                                                         <span className="tabular-nums text-gray-500">×{item.quantity || 1}</span>
+                                                        {item.combo_eligible === true && (
+                                                            <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-1 py-0.5 rounded">
+                                                                Combo
+                                                            </span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => removeSelectedVariant(item.variant_id)}
@@ -869,6 +882,7 @@ export default function BulkTransferRequestsTab() {
                             <BulkRequestPreviewTable
                                 items={selectedCatalogItems}
                                 showFranchisePricing={showFranchisePreviewPricing}
+                                activeComboRules={activeComboRules || []}
                                 onQuantityChange={(variantId, quantity) =>
                                     handleCatalogSelectionChange(variantId, { quantity })
                                 }

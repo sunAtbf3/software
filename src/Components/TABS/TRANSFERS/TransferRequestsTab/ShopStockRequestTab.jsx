@@ -9,6 +9,7 @@ import {
     generateBulkIdempotencyKey,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
 import VariantCatalogPicker from "./TransferRequestShared/VariantCatalogPicker";
+import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
 
 const MODE_OPTIONS = [
     { value: "existing", label: "Existing products", desc: "Already at your shop — restock selected variants" },
@@ -29,6 +30,8 @@ export default function ShopStockRequestTab() {
     const [fetchCatalog, { data: catalogData, isFetching: catalogLoading }] =
         useLazyGetWarehouseStockCatalogQuery();
     const [createBulkRequest, { isLoading: submitting }] = useCreateBulkTransferRequestMutation();
+
+    const { data: activeComboRules } = useGetActiveComboRulesQuery();
 
     const warehouses = warehousesData?.warehouses || [];
 
@@ -228,6 +231,7 @@ export default function ShopStockRequestTab() {
                         onSelectAllProduct={handleSelectAllProduct}
                         isLoading={catalogLoading}
                         franchisePricing={!!catalogData?.franchise_shop_pricing_view}
+                        activeComboRules={activeComboRules || []}
                         emptyMessage={
                             catalogMode === "new"
                                 ? "No new products with stock at this warehouse."

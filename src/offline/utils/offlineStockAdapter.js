@@ -26,6 +26,7 @@ export const mapLocalStockToApiRow = (row) => {
     purchase_price: row.purchase_price,
     product,
     images: row.image_url ? [{ url: row.image_url }] : [],
+    combo_eligible: row.combo_eligible === true,
   };
 
   return {
@@ -60,5 +61,6 @@ export const mapLocalStockToBarcodeProduct = (row) => {
     gst_type: row.gst_type,
     attributes: row.variant?.attributes ?? null,
     stock_available: row.quantity_available ?? 0,
+    combo_eligible: row.combo_eligible === true || row.variant?.combo_eligible === true,
   };
 };

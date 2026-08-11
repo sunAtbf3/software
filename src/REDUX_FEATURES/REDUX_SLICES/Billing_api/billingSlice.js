@@ -9,6 +9,7 @@ import { aggregateCartTax } from "../../../utils/billingTax";
 import { BILL_TYPES } from "../../../constants/billingBillTypes";
 import { CUSTOMER_TYPES } from "../../../constants/customerTypes";
 import { calculateGstOnAmount } from "../../../utils/billingCart.utils";
+import { applyComboPricingToLines } from "../../../utils/comboPricing.utils";
 
 // Helper: calculate line total
 const calculateLineTotal = (unit_price, quantity) => unit_price * quantity;
@@ -23,6 +24,61 @@ const applyLineGst = (item, billType) => {
         return;
     }
     item.gst_amount = calculateGstOnAmount(item.line_total, item.gst_percent);
+};
+
+const isSpecialLikePriceType = (priceType) =>
+    !priceType || priceType === "SPECIAL" || priceType === "RETAIL";
+
+const recalculateCartComboPricing = (state, rules = []) => {
+    try {
+        if (!Array.isArray(state.cart) || state.cart.length === 0) return;
+
+        const lines = state.cart.map((item) => ({
+            line_key: String(item.variant_id),
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+            special_price: Number(item.special_price ?? item.retail_price) || 0,
+            combo_eligible:
+                item.combo_eligible === true && isSpecialLikePriceType(item.price_type),
+        }));
+
+        const priced = applyComboPricingToLines(lines, Array.isArray(rules) ? rules : []);
+        const byKey = new Map(priced.map((row) => [row.line_key, row]));
+
+        state.cart.forEach((item) => {
+            if (!isSpecialLikePriceType(item.price_type)) {
+                item.combo_applied = false;
+                item.combo_unit_price = null;
+                item.combo_units = 0;
+                item.normal_units = item.quantity;
+                item.line_total = calculateLineTotal(item.unit_price, item.quantity);
+                applyLineGst(item, state.billType);
+                return;
+            }
+
+            const row = byKey.get(String(item.variant_id));
+            const base = Number(item.special_price ?? item.retail_price) || 0;
+
+            if (row && row.combo_applied) {
+                item.unit_price = Number(row.unit_price);
+                item.line_total = Number(row.line_total);
+                item.combo_applied = true;
+                item.combo_unit_price = row.combo_unit_price;
+                item.combo_units = row.combo_units;
+                item.normal_units = row.normal_units;
+            } else {
+                item.unit_price = base;
+                item.line_total = calculateLineTotal(base, item.quantity);
+                item.combo_applied = false;
+                item.combo_unit_price = null;
+                item.combo_units = 0;
+                item.normal_units = item.quantity;
+            }
+            applyLineGst(item, state.billType);
+        });
+    } catch {
+        // Fail soft — keep existing cart prices; backend remains authoritative on createBill.
+    }
 };
 
 const initialState = {
@@ -71,6 +127,7 @@ const billingSlice = createSlice({
 
             if (existing) {
                 existing.quantity += 1;
+                if (variant.combo_eligible === true) existing.combo_eligible = true;
                 existing.line_total = calculateLineTotal(existing.unit_price, existing.quantity);
                 applyLineGst(existing, state.billType);
             } else {
@@ -91,6 +148,10 @@ const billingSlice = createSlice({
                     gst_type: variant.gst_type || "CGST_SGST",
                     hsn_code: variant.hsn_code ?? variant.product?.hsn_code ?? null,
                     quantity_available: variant.quantity_available,
+                    combo_eligible: variant.combo_eligible === true,
+                    combo_applied: false,
+                    combo_unit_price: null,
+                    combo_units: 0,
                     line_total: variant.unit_price,
                     gst_amount: 0,
                 };
@@ -191,6 +252,14 @@ const billingSlice = createSlice({
         /** Re-apply GST math on all lines (e.g. after formula fix or page reload). */
         recalculateCartGst: (state) => {
             state.cart.forEach((item) => applyLineGst(item, state.billType));
+        },
+
+        /**
+         * Apply global combo rules to cart preview (SPECIAL/RETAIL only).
+         * Backend createBill remains authoritative.
+         */
+        applyComboPricing: (state, action) => {
+            recalculateCartComboPricing(state, action.payload || []);
         },
 
         // ── Customer Actions ─────────────────────────────────────────
@@ -335,6 +404,7 @@ export const {
     removeManualItem,
     updateManualItem,
     recalculateCartGst,
+    applyComboPricing,
     setSelectedCustomer,
     clearSelectedCustomer,
     setCustomerMobileInput,

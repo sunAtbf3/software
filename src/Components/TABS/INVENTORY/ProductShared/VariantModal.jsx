@@ -162,6 +162,7 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
       imagesToDelete: variantForm.imagesToDelete || [],
       newImages: variantForm.newImages || [],
       is_active: variantForm.is_active !== false,
+      combo_eligible: variantForm.combo_eligible === true,
     };
 
     // Remove null values to prevent backend validator rejection
@@ -206,6 +207,30 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${variantForm.is_active !== false ? "bg-indigo-500" : "bg-gray-300"}`}
             >
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${variantForm.is_active !== false ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div>
+              <span className="text-sm font-medium text-gray-700">Combo Eligible</span>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Optional — only ON variants join global special-price combo offers
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                dispatch(updateVariantForm({ combo_eligible: !variantForm.combo_eligible }))
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                variantForm.combo_eligible === true ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  variantForm.combo_eligible === true ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
             </button>
           </div>
 

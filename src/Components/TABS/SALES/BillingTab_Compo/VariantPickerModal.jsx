@@ -38,6 +38,7 @@ export default function VariantPickerModal() {
             gst_percent: variant.gst_percent,
             gst_type: variant.gst_type || "CGST_SGST",
             quantity_available: variant.quantity_available || 999999,
+            combo_eligible: variant.combo_eligible === true,
         });
         dispatch(addToCart(cartItem));
         dispatch(closeVariantPicker());

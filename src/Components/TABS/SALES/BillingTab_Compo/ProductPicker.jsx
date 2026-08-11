@@ -112,6 +112,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             hsn_code: result.hsn_code ?? result.product?.hsn_code,
             quantity_available: stockAvailable,
             attributes: result.attributes,
+            combo_eligible: result.combo_eligible === true,
         });
         dispatch(addToCart(cartItem));
         // toast.success(`${productName} added to cart`);
@@ -210,6 +211,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 hsn_code: product?.hsn_code,
                 quantity_available: stock.quantity_available,
                 attributes: variant?.attributes,
+                combo_eligible: variant?.combo_eligible === true,
             });
             dispatch(addToCart(cartItem));
             // toast.success(`${product?.name} added to cart`);

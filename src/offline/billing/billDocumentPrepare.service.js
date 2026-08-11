@@ -78,6 +78,14 @@ const enrichItemFromStock = async (item) => {
   return {
     ...item,
     mrp_unit_price: mrp,
+    special_unit_price:
+      item.special_unit_price ??
+      item.special_price ??
+      stock?.special_price ??
+      item.variant?.special_price ??
+      null,
+    combo_applied: item.combo_applied === true,
+    combo_unit_price: item.combo_applied === true ? (item.combo_unit_price ?? item.unit_price) : null,
     hsn_code: hsn,
     gst_percent: gstPercent,
     gst_type: gstType,
@@ -86,6 +94,11 @@ const enrichItemFromStock = async (item) => {
       ...(item.variant || {}),
       sku: item.variant?.sku || stock?.system_barcode || stock?.sku,
       mrp,
+      special_price:
+        item.variant?.special_price ??
+        item.special_unit_price ??
+        stock?.special_price ??
+        null,
       warranty,
       attributes: variantAttributes,
       product: {
