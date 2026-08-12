@@ -1,17 +1,18 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Power, PowerOff, Trash2, Save, X } from "lucide-react";
+import { Plus, Power, PowerOff, Trash2, Save, X, Search, Loader2 } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 import {
   useGetComboRulesQuery,
+  useGetMatchingComboVariantsQuery,
   useCreateComboRuleMutation,
   useUpdateComboRuleMutation,
   useSetComboRuleActiveMutation,
   useDeleteComboRuleMutation,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
+import { useUpdateVariantMutation } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productApi";
 
 const emptyForm = {
-  name: "",
   special_price_group: "",
   trigger_qty: "3",
   combo_price: "",
@@ -24,13 +25,45 @@ export default function ComboRulesTab() {
   const [updateRule, { isLoading: updating }] = useUpdateComboRuleMutation();
   const [setActive, { isLoading: toggling }] = useSetComboRuleActiveMutation();
   const [deleteRule, { isLoading: deleting }] = useDeleteComboRuleMutation();
+  const [updateVariant, { isLoading: updatingVariant }] = useUpdateVariantMutation();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [variantSearch, setVariantSearch] = useState("");
 
   const rules = data?.rules || [];
-  const busy = creating || updating || toggling || deleting;
+  const busy = creating || updating || toggling || deleting || updatingVariant;
+
+  const specialPriceGroup = Number(form.special_price_group);
+  const canLoadMatchingVariants =
+    showForm && Number.isFinite(specialPriceGroup) && specialPriceGroup > 0;
+  const {
+    data: matchingVariantsData,
+    isFetching: loadingMatchingVariants,
+    refetch: refetchMatchingVariants,
+  } = useGetMatchingComboVariantsQuery(
+    { special_price_group: specialPriceGroup },
+    { skip: !canLoadMatchingVariants }
+  );
+  const matchingVariants = matchingVariantsData?.variants || [];
+
+  const filteredMatchingVariants = useMemo(() => {
+    const search = variantSearch.trim().toLowerCase();
+    if (!search) return matchingVariants;
+    return matchingVariants.filter((variant) =>
+      [
+        variant.product_name,
+        variant.product_code,
+        variant.brand_name,
+        variant.sku,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+    );
+  }, [matchingVariants, variantSearch]);
 
   const perUnitPreview = useMemo(() => {
     const qty = Number(form.trigger_qty);
@@ -39,21 +72,30 @@ export default function ComboRulesTab() {
     return (price / qty).toFixed(2);
   }, [form.trigger_qty, form.combo_price]);
 
+  const generatedName = useMemo(() => {
+    const qty = Number(form.trigger_qty);
+    const price = Number(form.combo_price);
+    if (!Number.isInteger(qty) || qty < 2 || !Number.isFinite(price) || price <= 0) return "";
+    const priceText = Number.isInteger(price) ? String(price) : price.toFixed(2);
+    return `${qty} for ${priceText}`;
+  }, [form.trigger_qty, form.combo_price]);
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setVariantSearch("");
     setShowForm(true);
   };
 
   const openEdit = (rule) => {
     setEditingId(rule.combo_rule_id);
     setForm({
-      name: rule.name || "",
       special_price_group: String(rule.special_price_group ?? ""),
       trigger_qty: String(rule.trigger_qty ?? "3"),
       combo_price: String(rule.combo_price ?? ""),
       is_active: rule.is_active !== false,
     });
+    setVariantSearch("");
     setShowForm(true);
   };
 
@@ -61,11 +103,12 @@ export default function ComboRulesTab() {
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm);
+    setVariantSearch("");
   };
 
   const handleSave = async () => {
     const payload = {
-      name: form.name.trim(),
+      name: generatedName,
       special_price_group: Number(form.special_price_group),
       trigger_qty: Number(form.trigger_qty),
       combo_price: Number(form.combo_price),
@@ -73,7 +116,7 @@ export default function ComboRulesTab() {
     };
 
     if (!payload.name) {
-      toast.error("Rule name is required");
+      toast.error("Enter valid trigger qty and combo price");
       return;
     }
     if (!Number.isFinite(payload.special_price_group) || payload.special_price_group <= 0) {
@@ -128,6 +171,24 @@ export default function ComboRulesTab() {
     }
   };
 
+  const handleVariantToggle = async (variant) => {
+    try {
+      await updateVariant({
+        productId: variant.product_id,
+        variantId: variant.variant_id,
+        combo_eligible: !variant.combo_eligible,
+      }).unwrap();
+      toast.success(
+        !variant.combo_eligible
+          ? "Product added to combo eligibility"
+          : "Product removed from combo eligibility"
+      );
+      refetchMatchingVariants();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Failed to update combo eligibility"));
+    }
+  };
+
   if (isLoading) {
     return <div className="p-6 text-sm text-gray-500">Loading combo rules…</div>;
   }
@@ -164,10 +225,10 @@ export default function ComboRulesTab() {
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
               <input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder='e.g. 3 for ₹100'
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                value={generatedName}
+                readOnly
+                placeholder="Auto-generated from qty + combo price"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700"
               />
             </div>
             <div>
@@ -217,6 +278,96 @@ export default function ComboRulesTab() {
                 Active
               </label>
             </div>
+          </div>
+          <div className="border border-gray-200 rounded-xl p-3 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Matching Products</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Same special price wale variants yahan aayenge. Click karke combo eligible
+                  active/inactive toggle kar sakte ho.
+                </p>
+              </div>
+              {canLoadMatchingVariants && (
+                <div className="relative sm:w-72">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={variantSearch}
+                    onChange={(e) => setVariantSearch(e.target.value)}
+                    placeholder="Search matched products..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                </div>
+              )}
+            </div>
+
+            {!canLoadMatchingVariants ? (
+              <div className="text-xs text-gray-400 rounded-lg bg-gray-50 px-3 py-3">
+                Special price group enter karte hi matching products yahan dikhne lagenge.
+              </div>
+            ) : loadingMatchingVariants ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500 rounded-lg bg-gray-50 px-3 py-3">
+                <Loader2 size={14} className="animate-spin" />
+                Loading matched products…
+              </div>
+            ) : matchingVariants.length === 0 ? (
+              <div className="text-xs text-gray-400 rounded-lg bg-gray-50 px-3 py-3">
+                Is special price par koi active product/variant nahi mila.
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {filteredMatchingVariants.map((variant) => (
+                    <button
+                      key={variant.variant_id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => handleVariantToggle(variant)}
+                      className={`group inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-2 text-left transition ${
+                        variant.combo_eligible
+                          ? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
+                          : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      } disabled:opacity-60`}
+                      title={variant.combo_eligible ? "Click to deactivate" : "Click to activate"}
+                    >
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          variant.combo_eligible ? "bg-green-500" : "bg-gray-300"
+                        }`}
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium">
+                          {variant.product_name || variant.product_code}
+                        </span>
+                        <span className="block truncate text-[11px] opacity-75">
+                          {variant.product_code}
+                          {variant.brand_name ? ` • ${variant.brand_name}` : ""}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          variant.combo_eligible
+                            ? "bg-green-100 text-green-700"
+                            : "bg-white text-gray-500 border border-gray-200"
+                        }`}
+                      >
+                        {variant.combo_eligible ? "Active" : "Inactive"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                  <span>
+                    Showing {filteredMatchingVariants.length} of {matchingVariants.length} matched
+                    variants
+                  </span>
+                  <span>
+                    Active {matchingVariants.filter((v) => v.combo_eligible === true).length} /{" "}
+                    {matchingVariants.length}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
           {perUnitPreview && (
             <p className="text-xs text-blue-600">

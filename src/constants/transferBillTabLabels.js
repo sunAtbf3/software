@@ -10,9 +10,9 @@ export const isShopTransferBillViewer = (role) => SHOP_ROLES.has(role);
 
 /** Sidebar sub-tab + page title by role */
 export const getTransferBillsTabLabel = (role) =>
-    isShopTransferBillViewer(role) ? "Warehouse Purchase Bills" : "Shop Transfer Bills";
+    isShopTransferBillViewer(role) ? "Purchase History" : "Shop Transfer Bills";
 
 export const getTransferBillsPageSubtitle = (role) =>
     isShopTransferBillViewer(role)
-        ? "Bills for stock received from warehouse (bulk and single transfers)"
+        ? "Your shop's warehouse purchase / stock-inward bills — date filters apply to bill date"
         : "Transfer bills issued to franchise shops";

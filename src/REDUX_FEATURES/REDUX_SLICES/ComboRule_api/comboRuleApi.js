@@ -20,7 +20,7 @@ const axiosBaseQuery =
 export const comboRuleApi = createApi({
   reducerPath: "comboRuleApi",
   baseQuery: axiosBaseQuery(),
-  tagTypes: ["ComboRules", "ActiveComboRules"],
+  tagTypes: ["ComboRules", "ActiveComboRules", "ComboMatchingVariants"],
   endpoints: (builder) => ({
     getComboRules: builder.query({
       query: (params = {}) => ({
@@ -41,6 +41,19 @@ export const comboRuleApi = createApi({
       }),
       providesTags: ["ActiveComboRules"],
       transformResponse: (response) => response.data || [],
+    }),
+    getMatchingComboVariants: builder.query({
+      query: ({ special_price_group, search = "" }) => {
+        const params = { special_price_group };
+        if (search) params.search = search;
+        return {
+          url: "/combo-rules/matching-variants",
+          method: "GET",
+          params,
+        };
+      },
+      providesTags: ["ComboMatchingVariants"],
+      transformResponse: (response) => response.data,
     }),
     createComboRule: builder.mutation({
       query: (body) => ({
@@ -83,6 +96,7 @@ export const comboRuleApi = createApi({
 export const {
   useGetComboRulesQuery,
   useGetActiveComboRulesQuery,
+  useGetMatchingComboVariantsQuery,
   useCreateComboRuleMutation,
   useUpdateComboRuleMutation,
   useSetComboRuleActiveMutation,

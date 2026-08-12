@@ -106,13 +106,31 @@ export const billingApi = createApi({
             transformResponse: (response) => response.data,
         }),
 
-        // GET /bills — list bills with filters
+        // GET /bills — list bills with filters (shop scope enforced on backend)
         getBills: builder.query({
-            query: ({ page = 1, limit = 20, payment_status = "", from_date = "", to_date = "" }) => {
+            query: ({
+                page = 1,
+                limit = 20,
+                payment_status = "",
+                from_date = "",
+                to_date = "",
+                shop_id = "",
+                bill_number = "",
+                customer_mobile = "",
+                is_cancelled = "",
+                exclude_non_listed = "",
+            } = {}) => {
                 const params = { page, limit };
                 if (payment_status) params.payment_status = payment_status;
                 if (from_date) params.from_date = from_date;
                 if (to_date) params.to_date = to_date;
+                if (shop_id) params.shop_id = shop_id;
+                if (bill_number) params.bill_number = bill_number;
+                if (customer_mobile) params.customer_mobile = customer_mobile;
+                if (is_cancelled !== "" && is_cancelled != null) params.is_cancelled = is_cancelled;
+                if (exclude_non_listed !== "" && exclude_non_listed != null) {
+                    params.exclude_non_listed = exclude_non_listed;
+                }
                 return { url: "/bills", method: "GET", params };
             },
             providesTags: (result) => {
@@ -208,6 +226,16 @@ export const billingApi = createApi({
             transformResponse: (response) => response.data,
         }),
 
+        // GET /bills/reports/shop-overview — period sales aggregates (shop-scoped)
+        getShopOverview: builder.query({
+            query: ({ shop_id = "", from_date, to_date }) => {
+                const params = { from_date, to_date };
+                if (shop_id) params.shop_id = shop_id;
+                return { url: `/bills/reports/shop-overview`, method: "GET", params };
+            },
+            transformResponse: (response) => response.data,
+        }),
+
     }),
 });
 
@@ -219,5 +247,6 @@ export const {
     useAddPaymentMutation,
     useCancelBillMutation,
     useGetDailySummaryQuery,
-    useGetGSTReportQuery, 
+    useGetGSTReportQuery,
+    useGetShopOverviewQuery,
 } = billingApi;

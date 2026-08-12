@@ -28,6 +28,7 @@ export const SUB_TAB_PERMISSIONS = {
     // Sales sidebar dropdown
     "sales.billing": ["SUPER_ADMIN", "BILLING_STAFF", "SHOP_OWNER", "WH_MANAGER"],
     "sales.internal.offline-sync": ["SUPER_ADMIN", "BILLING_STAFF", "SHOP_OWNER", "SHOP_MANAGER"],
+    "sales.internal.sale-history": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF"],
     "sales.invoices": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "WH_MANAGER"],
     "sales.customers": ["SUPER_ADMIN", "SHOP_OWNER", "BILLING_STAFF", "WH_MANAGER"],
     "sales.wholesale": ["SUPER_ADMIN", "SHOP_OWNER", "WH_MANAGER"],
@@ -72,6 +73,7 @@ export const SUB_TAB_PERMISSIONS = {
     "transfers.internal.wh-stock-request": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
     "transfers.internal.transfer-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.bulk-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "transfers.internal.warehouse-products": ["SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.shop-transfer-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 

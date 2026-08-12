@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Eye, Download, FileText, RefreshCw } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
+import DateRangePresetBar from "../../../shared/DateRangePresetBar";
 import {
     useGetTransferBillsQuery,
     useGetTransferBillSummaryQuery,
@@ -19,8 +20,18 @@ import {
     resetFilters,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferBill_api/transferBillSlice";
 import { getTransferBillTypeShortLabel, TRANSFER_BILL_TYPES } from "../../../../constants/transferBillTypes";
-import { getTransferBillsPageSubtitle, getTransferBillsTabLabel, isShopTransferBillViewer } from "../../../../constants/transferBillTabLabels";
+import {
+    getTransferBillsPageSubtitle,
+    getTransferBillsTabLabel,
+    isShopTransferBillViewer,
+} from "../../../../constants/transferBillTabLabels";
 import { downloadBlobFile } from "../../../../utils/downloadBlob";
+import {
+    resolveDateRangePreset,
+    isValidDateRange,
+    formatDateRangeLabel,
+    todayIsoLocal,
+} from "../../../../utils/dateRangePresets";
 import TransferBillDetailModal from "./TransferBillDetailModal";
 
 const fmtDate = (iso) => {
@@ -28,7 +39,8 @@ const fmtDate = (iso) => {
     return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-const fmtMoney = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtMoney = (n) =>
+    `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function StockInwardBillsTab() {
     const dispatch = useDispatch();
@@ -49,21 +61,44 @@ export default function StockInwardBillsTab() {
     const pageTitle = getTransferBillsTabLabel(user?.role);
     const pageSubtitle = getTransferBillsPageSubtitle(user?.role);
 
-    const { data, isLoading, isFetching, refetch } = useGetTransferBillsQuery({
-        page: currentPage,
-        limit: pageSize,
-        search,
-        from_date: fromDate,
-        to_date: toDate,
-        transfer_bill_type: billTypeFilter,
-        source: sourceFilter,
-    });
+    const [datePreset, setDatePreset] = useState(shopView ? "last_30_days" : "all");
 
-    const { data: summary = [] } = useGetTransferBillSummaryQuery({
-        from_date: fromDate,
-        to_date: toDate,
-        transfer_bill_type: billTypeFilter,
-    });
+    const didInitRange = useRef(false);
+    useEffect(() => {
+        if (didInitRange.current) return;
+        didInitRange.current = true;
+        if (shopView && !fromDate && !toDate) {
+            const range = resolveDateRangePreset("last_30_days");
+            setDatePreset("last_30_days");
+            dispatch(setFromDate(range.from));
+            dispatch(setToDate(range.to));
+        }
+    }, [shopView, fromDate, toDate, dispatch]);
+
+    const rangeOk = isValidDateRange(fromDate, toDate);
+    const rangeError = rangeOk ? "" : "From date must be on or before To date";
+
+    const { data, isLoading, isFetching, isError, error, refetch } = useGetTransferBillsQuery(
+        {
+            page: currentPage,
+            limit: pageSize,
+            search,
+            from_date: fromDate,
+            to_date: toDate,
+            transfer_bill_type: billTypeFilter,
+            source: sourceFilter,
+        },
+        { skip: !rangeOk }
+    );
+
+    const { data: summary = [] } = useGetTransferBillSummaryQuery(
+        {
+            from_date: fromDate,
+            to_date: toDate,
+            transfer_bill_type: billTypeFilter,
+        },
+        { skip: !rangeOk }
+    );
 
     const [downloadPdf, { isFetching: isDownloading }] = useLazyDownloadTransferBillPdfQuery();
 
@@ -75,35 +110,78 @@ export default function StockInwardBillsTab() {
         [bills]
     );
 
+    const handlePresetChange = (presetId) => {
+        setDatePreset(presetId);
+        if (presetId === "all") {
+            dispatch(setFromDate(""));
+            dispatch(setToDate(""));
+            return;
+        }
+        if (presetId === "custom") {
+            const day = todayIsoLocal();
+            dispatch(setFromDate(day));
+            dispatch(setToDate(day));
+            return;
+        }
+        const range = resolveDateRangePreset(presetId);
+        dispatch(setFromDate(range.from));
+        dispatch(setToDate(range.to));
+    };
+
+    const handleCustomDateChange = (value) => {
+        setDatePreset("custom");
+        dispatch(setFromDate(value));
+        dispatch(setToDate(value));
+    };
+
     const handleDownload = async (bill) => {
         try {
             const blob = await downloadPdf({ source: bill.source, id: bill.id }).unwrap();
-            downloadBlobFile(blob, `transfer-bill-${bill.transfer_bill_number}.pdf`);
-        } catch {
-            toast.error("Failed to download bill PDF");
+            downloadBlobFile(blob, `${bill.transfer_bill_number || bill.id}.pdf`);
+            toast.success("PDF downloaded");
+        } catch (err) {
+            toast.error(err?.data?.message || err?.message || "PDF download failed");
         }
     };
 
+    const handleClear = () => {
+        dispatch(resetFilters());
+        if (shopView) {
+            const range = resolveDateRangePreset("last_30_days");
+            setDatePreset("last_30_days");
+            queueMicrotask(() => {
+                dispatch(setFromDate(range.from));
+                dispatch(setToDate(range.to));
+            });
+        } else {
+            setDatePreset("all");
+        }
+    };
+
+    const listErrorMsg = error?.data?.message || error?.error || "Failed to load purchase history";
+
     return (
-        <div className="space-y-5 bg-gray-50 min-h-screen px-1 py-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-gray-200">
+        <div className="space-y-4 p-1">
+            <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{pageTitle}</h2>
-                    <p className="text-sm text-gray-400 mt-0.5">{pageSubtitle}</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{pageTitle}</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">{pageSubtitle}</p>
                 </div>
                 <button
                     type="button"
-                    onClick={() => refetch()}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-500 text-sm rounded-lg hover:bg-gray-50"
+                    onClick={() => rangeOk && refetch()}
+                    disabled={!rangeOk || isFetching}
+                    className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                 >
-                    <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} /> Refresh
+                    <RefreshCw size={14} className={isFetching ? "animate-spin" : ""} />
+                    Refresh
                 </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl border border-gray-100 p-4">
                     <p className="text-xs uppercase tracking-wide font-medium text-gray-500">Total Bills</p>
-                    <p className="text-3xl font-bold text-gray-800">{meta.total}</p>
+                    <p className="text-3xl font-bold text-gray-800">{rangeOk ? meta.total : "—"}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-100 p-4">
                     <p className="text-xs uppercase tracking-wide font-medium text-gray-500">Page Value</p>
@@ -118,12 +196,28 @@ export default function StockInwardBillsTab() {
                 <div className="bg-white rounded-xl border border-gray-100 p-4">
                     <p className="text-xs uppercase tracking-wide font-medium text-gray-500">Date Range</p>
                     <p className="text-sm font-semibold text-gray-800 mt-1">
-                        {fromDate ? fmtDate(fromDate) : "All"} – {toDate ? fmtDate(toDate) : "Present"}
+                        {formatDateRangeLabel(fromDate, toDate)}
                     </p>
                 </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                <DateRangePresetBar
+                    activePreset={datePreset}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                    onPresetChange={handlePresetChange}
+                    onCustomDateChange={handleCustomDateChange}
+                    onFromChange={(v) => {
+                        setDatePreset("custom");
+                        dispatch(setFromDate(v));
+                    }}
+                    onToDateChange={(v) => {
+                        setDatePreset("custom");
+                        dispatch(setToDate(v || fromDate));
+                    }}
+                    rangeError={rangeError}
+                />
                 <div className="flex flex-col sm:flex-row gap-2">
                     <input
                         value={search}
@@ -133,13 +227,13 @@ export default function StockInwardBillsTab() {
                     />
                     <button
                         type="button"
-                        onClick={() => dispatch(resetFilters())}
+                        onClick={handleClear}
                         className="inline-flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 text-gray-500 text-sm px-3 py-2 rounded-lg"
                     >
                         <X size={14} /> Clear
                     </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <select
                         value={billTypeFilter}
                         onChange={(e) => dispatch(setBillTypeFilter(e.target.value))}
@@ -159,18 +253,6 @@ export default function StockInwardBillsTab() {
                         <option value="bulk">Bulk Only</option>
                         <option value="single">Single Only</option>
                     </select>
-                    <input
-                        type="date"
-                        value={fromDate}
-                        onChange={(e) => dispatch(setFromDate(e.target.value))}
-                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    />
-                    <input
-                        type="date"
-                        value={toDate}
-                        onChange={(e) => dispatch(setToDate(e.target.value))}
-                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    />
                 </div>
             </div>
 
@@ -192,9 +274,30 @@ export default function StockInwardBillsTab() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {isLoading ? (
+                            {!rangeOk ? (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-400">Loading bills...</td>
+                                    <td colSpan={8} className="px-4 py-12 text-center text-red-500 text-sm">
+                                        {rangeError}
+                                    </td>
+                                </tr>
+                            ) : isLoading ? (
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                                        Loading bills...
+                                    </td>
+                                </tr>
+                            ) : isError ? (
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-12 text-center">
+                                        <p className="text-sm text-red-600 mb-2">{listErrorMsg}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => refetch()}
+                                            className="text-sm text-blue-600 underline"
+                                        >
+                                            Try again
+                                        </button>
+                                    </td>
                                 </tr>
                             ) : bills.length === 0 ? (
                                 <tr>
@@ -206,8 +309,12 @@ export default function StockInwardBillsTab() {
                             ) : (
                                 bills.map((bill) => (
                                     <tr key={`${bill.source}-${bill.id}`} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-medium text-gray-800">{bill.transfer_bill_number}</td>
-                                        <td className="px-4 py-3 text-gray-600">{fmtDate(bill.transfer_bill_generated_at)}</td>
+                                        <td className="px-4 py-3 font-medium text-gray-800">
+                                            {bill.transfer_bill_number}
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600">
+                                            {fmtDate(bill.transfer_bill_generated_at)}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
                                                 {getTransferBillTypeShortLabel(bill.transfer_bill_type)}
@@ -251,25 +358,25 @@ export default function StockInwardBillsTab() {
                     </table>
                 </div>
 
-                {meta.totalPages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                        <p className="text-xs text-gray-500">
-                            Page {meta.page} of {meta.totalPages} ({meta.total} bills)
+                {rangeOk && meta.totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm">
+                        <p className="text-gray-500">
+                            Page {meta.page} of {meta.totalPages} · {meta.total} bills
                         </p>
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                disabled={meta.page <= 1}
-                                onClick={() => dispatch(setCurrentPage(meta.page - 1))}
-                                className="px-3 py-1 text-sm border rounded disabled:opacity-40"
+                                disabled={currentPage <= 1 || isFetching}
+                                onClick={() => dispatch(setCurrentPage(currentPage - 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40"
                             >
                                 Previous
                             </button>
                             <button
                                 type="button"
-                                disabled={meta.page >= meta.totalPages}
-                                onClick={() => dispatch(setCurrentPage(meta.page + 1))}
-                                className="px-3 py-1 text-sm border rounded disabled:opacity-40"
+                                disabled={currentPage >= meta.totalPages || isFetching}
+                                onClick={() => dispatch(setCurrentPage(currentPage + 1))}
+                                className="px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40"
                             >
                                 Next
                             </button>
@@ -278,63 +385,8 @@ export default function StockInwardBillsTab() {
                 )}
             </div>
 
-            {!shopView && summary.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-3">Summary by Shop</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-xs text-gray-500 border-b">
-                                    <th className="py-2">Shop</th>
-                                    <th className="py-2 text-right">Bills</th>
-                                    <th className="py-2 text-right">Total Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {summary.map((row) => (
-                                    <tr key={row.shop_id} className="border-b border-gray-50">
-                                        <td className="py-2">{row.shop_name}</td>
-                                        <td className="py-2 text-right">{row.total_bills}</td>
-                                        <td className="py-2 text-right font-medium">{fmtMoney(row.total_amount)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {shopView && summary.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-3">Summary by Warehouse</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="text-left text-xs text-gray-500 border-b">
-                                    <th className="py-2">Warehouse</th>
-                                    <th className="py-2 text-right">Bills</th>
-                                    <th className="py-2 text-right">Total Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {summary.map((row) => (
-                                    <tr key={row.warehouse_id} className="border-b border-gray-50">
-                                        <td className="py-2">{row.warehouse_name}</td>
-                                        <td className="py-2 text-right">{row.total_bills}</td>
-                                        <td className="py-2 text-right font-medium">{fmtMoney(row.total_amount)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
             {showDetailModal && selectedBill && (
-                <TransferBillDetailModal
-                    bill={selectedBill}
-                    onClose={() => dispatch(closeDetailModal())}
-                />
+                <TransferBillDetailModal bill={selectedBill} onClose={() => dispatch(closeDetailModal())} />
             )}
         </div>
     );
