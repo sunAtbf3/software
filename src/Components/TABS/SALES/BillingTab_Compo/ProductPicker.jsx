@@ -15,6 +15,7 @@ import { mapLocalStockToBarcodeProduct } from "../../../../offline/utils/offline
 import { addToCart, updateCartQty } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useLazyGetProductByBarcodeQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productApi";
 import { toast } from "../../../shared/ToastConfig";
+import ProductCode from "../../../shared/ProductCode";
 import {
     buildBillingCartItem,
     canIncreaseCartQuantity,
@@ -102,6 +103,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             variant_id: variantId,
             product_name: productName,
             system_barcode: result.system_barcode || barcode,
+            product_code: result.product_code,
             special_price: result.special_price,
             wholesale_price: result.wholesale_price,
             mrp: result.mrp,
@@ -171,7 +173,8 @@ export default function ProductPicker({ shop_id, cart = [] }) {
         const productName = stock.variant?.product?.name?.toLowerCase() || "";
         const barcode = stock.variant?.system_barcode?.toLowerCase() || "";
         const sku = stock.variant?.sku?.toLowerCase() || "";
-        return productName.includes(term) || barcode.includes(term) || sku.includes(term);
+        const productCode = (stock.variant?.product_code || stock.variant?.product?.product_code || "").toLowerCase();
+        return productName.includes(term) || barcode.includes(term) || sku.includes(term) || productCode.includes(term);
     });
 
     const handleProductClick = (stock) => {
@@ -201,6 +204,7 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 variant_id: variant.variant_id,
                 product_name: product?.name || "Unknown",
                 system_barcode: variant.system_barcode,
+                product_code: variant.product_code || product?.product_code,
                 special_price: variant.special_price,
                 wholesale_price: variant.wholesale_price,
                 mrp: variant.mrp,
@@ -228,16 +232,6 @@ export default function ProductPicker({ shop_id, cart = [] }) {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Barcode Scanner */}
-            <BarcodeScanner
-                products={[]}
-                onProductFound={handleBarcodeScan}
-                showScanner={showScanner}
-                setShowScanner={setShowScanner}
-                disabled={false}
-            />
-
-            {/* Search Input */}
             {usingOfflineCache && (
                 <div className="mb-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
                     <CloudOff size={12} />
@@ -248,15 +242,32 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                     </span>
                 </div>
             )}
-            <div className="relative mb-3">
+            <div className="relative mb-2">
                 <input
                     type="text"
-                    placeholder="🔍 Search by product name, barcode, or SKU..."
+                    placeholder="Search by product name, barcode, or SKU..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        const term = searchTerm.trim();
+                        if (!term || !isValidBarcode(term)) return;
+                        e.preventDefault();
+                        handleBarcodeScan(term);
+                        setSearchTerm("");
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500"
                 />
             </div>
+
+            <BarcodeScanner
+                products={[]}
+                onProductFound={handleBarcodeScan}
+                showScanner={showScanner}
+                setShowScanner={setShowScanner}
+                disabled={false}
+                showManualInput={false}
+            />
 
             {/* Refresh button for stock */}
             <button
@@ -306,10 +317,12 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                                     <p className="text-xs font-semibold text-gray-800 truncate leading-tight">
                                         {product?.name || "Unknown"}
                                     </p>
-                                    {variant?.product_code && (
-                                        <p className="text-[10px] font-mono text-gray-400 truncate leading-tight mt-0.5">
-                                            {variant.product_code}
-                                        </p>
+                                    {(variant?.product_code || product?.product_code) && (
+                                        <ProductCode
+                                            as="p"
+                                            className="text-[11px] truncate leading-tight mt-0.5"
+                                            code={variant?.product_code || product?.product_code}
+                                        />
                                     )}
                                     {attrLabel && (
                                         <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">

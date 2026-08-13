@@ -15,6 +15,7 @@ import {
     toBillingNumber,
 } from "../../../../utils/billingCart.utils";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
+import ProductCode from "../../../shared/ProductCode";
 
 export default function VariantPickerModal() {
     const dispatch = useDispatch();
@@ -29,6 +30,7 @@ export default function VariantPickerModal() {
             variant_id: variant.variant_id,
             product_name,
             system_barcode: variant.system_barcode,
+            product_code: variant.product_code,
             special_price: variant.special_price,
             wholesale_price: variant.wholesale_price,
             mrp: variant.mrp,
@@ -70,7 +72,12 @@ export default function VariantPickerModal() {
                             onClick={() => handleSelectVariant(variant)}
                             className="w-full text-left p-3 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
                         >
-                            <p className="font-medium text-gray-800">{variant.sku || "No SKU"}</p>
+                            <ProductCode
+                                as="p"
+                                className="text-sm"
+                                code={variant.product_code}
+                                fallback={variant.sku || "No SKU"}
+                            />
                             {formatAttributesDisplay(variant.attributes) && (
                                 <p className="text-xs text-gray-600 mt-0.5">
                                     {formatAttributesDisplay(variant.attributes)}

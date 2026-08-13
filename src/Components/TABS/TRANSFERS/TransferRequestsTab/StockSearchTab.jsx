@@ -226,7 +226,7 @@ export default function StockSearchTab() {
                             <div>
                                 <h3 className="font-semibold text-gray-800">{product?.name}</h3>
                                 <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                                    <span className="font-mono">Code: {product?.product_code}</span>
+                                    <span className="font-semibold text-blue-600">Code: {product?.product_code}</span>
                                     <span className="font-mono">SKU: {variant?.sku}</span>
                                     {variant?.system_barcode && <span className="font-mono">Barcode: {variant?.system_barcode}</span>}
                                 </div>

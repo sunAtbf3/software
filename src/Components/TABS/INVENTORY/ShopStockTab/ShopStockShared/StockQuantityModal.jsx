@@ -40,11 +40,15 @@ export default function StockQuantityModal({ onSuccess }) {
 
     const validate = () => {
         const errors = {};
-        if (!quantityForm.new_quantity || quantityForm.new_quantity <= 0) {
+        if (quantityForm.new_quantity === "" || Number.isNaN(newQty) || newQty < 0) {
             errors.new_quantity = "Valid quantity is required";
-        }
-        if (operation === "decrement" && newQty > currentQty) {
-            errors.new_quantity = `Cannot decrement more than current stock (${currentQty})`;
+        } else if (operation === "increment" || (operation === "set" && newQty > currentQty)) {
+            errors.new_quantity = `Cannot set above current stock (${currentQty}). Shop stock can only be reduced.`;
+        } else if (operation === "decrement") {
+            if (newQty <= 0) errors.new_quantity = "Quantity to remove must be at least 1";
+            else if (newQty > currentQty) {
+                errors.new_quantity = `Cannot remove more than current stock (${currentQty})`;
+            }
         }
         if (!quantityForm.reason?.trim()) {
             errors.reason = "Reason is required for stock adjustment";
@@ -125,13 +129,24 @@ export default function StockQuantityModal({ onSuccess }) {
                         <label className="block text-xs font-medium text-gray-700 mb-1">Operation <span className="text-red-500">*</span></label>
                         <select value={operation} onChange={(e) => dispatch(updateQuantityForm({ operation: e.target.value, new_quantity: "" }))} className={inputCls("operation")}>
                             <option value="set">Set to exact quantity</option>
-                            <option value="increment">Add (Increment)</option>
                             <option value="decrement">Remove (Decrement)</option>
                         </select>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                            Shop stock can only be reduced here. To add stock, request from the warehouse.
+                        </p>
                     </div>
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">{operation === "set" ? "New Quantity" : operation === "increment" ? "Quantity to Add" : "Quantity to Remove"} <span className="text-red-500">*</span></label>
-                        <input type="number" min="1" value={quantityForm.new_quantity} onChange={(e) => dispatch(updateQuantityForm({ new_quantity: e.target.value }))} placeholder="Enter quantity" className={inputCls("new_quantity")} autoFocus />
+                        <input
+                            type="number"
+                            min="0"
+                            max={operation === "set" ? currentQty : undefined}
+                            value={quantityForm.new_quantity}
+                            onChange={(e) => dispatch(updateQuantityForm({ new_quantity: e.target.value }))}
+                            placeholder="Enter quantity"
+                            className={inputCls("new_quantity")}
+                            autoFocus
+                        />
                         {errorMsg("new_quantity")}
                         {quantityForm.new_quantity && operation !== "set" && (
                             <div className={`mt-1 text-xs ${isIncrease ? "text-green-600" : "text-red-600"}`}>

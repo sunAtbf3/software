@@ -149,7 +149,7 @@ export default function CreditNoteViewModal({ creditNote, onClose }) {
                                                 <tr key={idx}>
                                                     <td className="px-3 py-2">
                                                         <p className="font-medium text-gray-800">{item.variant?.product?.name || item.product_name}</p>
-                                                        <p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p>
+                                                        <p className="text-xs font-semibold text-blue-600">{item.variant?.product_code || item.variant?.sku || "—"}</p>
                                                     </td>
                                                     <td className="px-3 py-2 text-right">{item.quantity}</td>
                                                     <td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td>

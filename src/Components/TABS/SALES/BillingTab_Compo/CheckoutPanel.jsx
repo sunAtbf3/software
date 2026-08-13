@@ -10,11 +10,11 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Printer, Download, PlusCircle, Eye, X, Receipt, CheckCircle, Search } from "lucide-react";
+import { Printer, Download, PlusCircle, Eye, X, Receipt, CheckCircle } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import { useCreateBillMutation, useLazyGetBillPdfQuery, useGetBillByIdQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingApi";
 import { useBillDocumentActions } from "../../../../offline/hooks/useBillDocumentActions";
-import { useGetCreditNotesQuery, useLazyLookupCreditNoteQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
+import { useGetCreditNotesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
 import {
     createOfflineBill,
     resolveCustomerForBill,
@@ -125,7 +125,7 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                                         <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">Product</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Qty</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Price</th><th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">Total</th></tr></thead>
                                         <tbody className="divide-y divide-gray-100">
                                             {bill.items?.map((item, idx) => (
-                                                <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name || item.manual_item_name}</p><p className="text-xs text-gray-400">{item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
+                                                <tr key={idx}><td className="px-3 py-2"><p className="font-medium text-gray-800">{item.variant?.product?.name || item.product?.name || item.manual_item_name}</p><p className="text-xs font-semibold text-app-accent">{item.variant?.product_code || item.product_code || item.variant?.sku || "—"}</p></td><td className="px-3 py-2 text-right">{item.quantity}</td><td className="px-3 py-2 text-right">₹{toNumber(item.unit_price).toFixed(2)}</td><td className="px-3 py-2 text-right font-semibold">₹{toNumber(item.line_total).toFixed(2)}</td></tr>
                                             ))}
                                         </tbody>
                                         <tfoot className="bg-gray-50">
@@ -188,7 +188,11 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
     );
 };
 
-export default function CheckoutPanel({ shop_id }) {
+export default function CheckoutPanel({
+    shop_id,
+    searchedCreditNotes = [],
+    onSearchedCreditNotesChange,
+}) {
     const dispatch = useDispatch();
     const isOnline = useSelector((state) => state.offline.isOnline);
     const isSyncing = useSelector((state) => state.offline.isSyncing);
@@ -282,8 +286,6 @@ export default function CheckoutPanel({ shop_id }) {
 
     // Credit Note States
     const [selectedCreditNoteIds, setSelectedCreditNoteIds] = useState([]);
-    const [searchedCreditNotes, setSearchedCreditNotes] = useState([]);
-    const [creditNoteSearchInput, setCreditNoteSearchInput] = useState("");
     const [showCreditAlert, setShowCreditAlert] = useState(false);
     const [dismissedCredit, setDismissedCredit] = useState(false);
     const [selectedBankAccountId, setSelectedBankAccountId] = useState("");
@@ -294,8 +296,6 @@ export default function CheckoutPanel({ shop_id }) {
     const [whatsAppManualPhone, setWhatsAppManualPhone] = useState("");
 
 
-
-    const [lookupCreditNote, { isFetching: isLookingUpCn }] = useLazyLookupCreditNoteQuery();
 
     const { staffCodes, bankAccounts } = useOfflineShopConfig(shop_id);
 
@@ -359,48 +359,32 @@ export default function CheckoutPanel({ shop_id }) {
         }
     }, [selectedCustomer, totalCreditAvailable, dismissedCredit]);
 
-    // Reset credit selection when customer changes
+    // Reset customer-linked credit UI when customer changes.
+    // Keep walk-in CN search results so they stay applied after selecting a customer.
     useEffect(() => {
-        setSelectedCreditNoteIds([]);
-        setSearchedCreditNotes([]);
-        setCreditNoteSearchInput("");
+        setSelectedCreditNoteIds(
+            searchedCreditNotes.map((n) => n.credit_note_id).filter(Boolean)
+        );
         setShowCreditAlert(false);
         setDismissedCredit(false);
+        // Only re-run on customer change; searched notes are merged in the effect below.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCustomer]);
 
-    const handleSearchCreditNote = async () => {
-        if (!isOnline) {
-            toast.error("Credit note lookup requires an internet connection");
-            return;
-        }
-        const number = creditNoteSearchInput.trim();
-        if (!number) {
-            toast.error("Enter a credit note number");
-            return;
-        }
-        try {
-            const cn = await lookupCreditNote({
-                credit_note_number: number,
-                redeeming_shop_id: shop_id,
-            }).unwrap();
-            if (!cn.redeemable) {
-                toast.error(`Credit note not usable (status: ${cn.status}, balance: ₹${toNumber(cn.balance).toFixed(2)})`);
-                return;
+    useEffect(() => {
+        if (!searchedCreditNotes.length) return;
+        setSelectedCreditNoteIds((prev) => {
+            let changed = false;
+            const next = [...prev];
+            for (const row of searchedCreditNotes) {
+                if (row?.credit_note_id && !next.includes(row.credit_note_id)) {
+                    next.push(row.credit_note_id);
+                    changed = true;
+                }
             }
-            setSearchedCreditNotes((prev) => {
-                if (prev.some((p) => p.credit_note_id === cn.credit_note_id)) return prev;
-                return [...prev, cn];
-            });
-            setSelectedCreditNoteIds((prev) =>
-                prev.includes(cn.credit_note_id) ? prev : [...prev, cn.credit_note_id]
-            );
-            toast.success(
-                `Credit note found — ₹${toNumber(cn.balance).toFixed(2)} from ${cn.origin_shop?.shop_name || cn.shop?.shop_name || "origin shop"}`
-            );
-        } catch (err) {
-            toast.error(err?.data?.message || "Credit note not found");
-        }
-    };
+            return changed ? next : prev;
+        });
+    }, [searchedCreditNotes, selectedCustomer]);
 
     // Fetch bill details for viewing
     const { data: billDetails, refetch: refetchBill } = useGetBillByIdQuery(viewBillId, { skip: !viewBillId });
@@ -518,8 +502,7 @@ export default function CheckoutPanel({ shop_id }) {
                 dispatch(clearManualCart());
                 dispatch(clearSelectedCustomer());
                 setSelectedCreditNoteIds([]);
-                setSearchedCreditNotes([]);
-                setCreditNoteSearchInput("");
+                onSearchedCreditNotesChange?.([]);
                 setShowUpiModal(false);
                 setSelectedStaffCodeId("");
                 return;
@@ -558,8 +541,7 @@ export default function CheckoutPanel({ shop_id }) {
             }
             dispatch(clearSelectedCustomer());
             setSelectedCreditNoteIds([]);
-            setSearchedCreditNotes([]);
-            setCreditNoteSearchInput("");
+            onSearchedCreditNotesChange?.([]);
             setShowUpiModal(false);
             setSelectedStaffCodeId("");
         } catch (err) {
@@ -746,8 +728,7 @@ export default function CheckoutPanel({ shop_id }) {
         dispatch(clearLastCreatedBill());
         dispatch(clearSelectedCustomer());
         setSelectedCreditNoteIds([]);
-        setSearchedCreditNotes([]);
-        setCreditNoteSearchInput("");
+        onSearchedCreditNotesChange?.([]);
         setShowCreditAlert(false);
         setDismissedCredit(false);
         setShowWhatsAppInput(false);
@@ -887,46 +868,7 @@ export default function CheckoutPanel({ shop_id }) {
     }
 
     return (
-        <div className="mt-4 pt-3 border-t border-gray-200">
-            {/* <div className="mb-3 border border-gray-200 rounded-lg p-3">
-                <p className="text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
-                    <Search size={14} /> Search credit note (any shop)
-                </p>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={creditNoteSearchInput}
-                        onChange={(e) => setCreditNoteSearchInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSearchCreditNote()}
-                        placeholder="e.g. CN-20260603-0001"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
-                    />
-                    <button
-                        type="button"
-                        onClick={handleSearchCreditNote}
-                        disabled={isLookingUpCn}
-                        className="px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-60"
-                    >
-                        {isLookingUpCn ? "..." : "Find"}
-                    </button>
-                </div>
-                {searchedCreditNotes.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                        {searchedCreditNotes.map((cn) => (
-                            <div
-                                key={cn.credit_note_id}
-                                className="flex justify-between items-center text-xs bg-purple-50 border border-purple-100 rounded px-2 py-1.5"
-                            >
-                                <span className="font-mono text-purple-800">{cn.credit_note_number}</span>
-                                <span className="text-purple-600">
-                                    ₹{toNumber(cn.balance).toFixed(2)} · {cn.origin_shop?.shop_name || cn.shop?.shop_name}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div> */}
-
+        <div className="mt-3 pt-3 border-t border-gray-200 shrink-0">
             {showCreditAlert && totalCreditAvailable > 0 && (
                 <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center justify-between">
                     <div className="flex items-center gap-2">

@@ -13,6 +13,7 @@ import {
     useLazyDownloadWarehouseProductsCatalogPdfQuery,
 } from "../../../REDUX_FEATURES/REDUX_SLICES/ShopWarehouseCatalog_api/shopWarehouseCatalogApi";
 import { downloadBlobFile } from "../../../utils/downloadBlob";
+import { formatFranchiseRupee } from "../../../utils/comboPricing.utils";
 
 const fmtMoney = (n) => {
     if (n == null || n === "" || !Number.isFinite(Number(n))) return "—";
@@ -371,7 +372,7 @@ export default function WarehouseProductsCatalogTab() {
                                             }
                                             if (col.key === "code") {
                                                 return (
-                                                    <td key={col.key} className={`${base} font-mono text-slate-700 whitespace-nowrap`}>
+                                                    <td key={col.key} className={`${base} font-semibold text-blue-600 whitespace-nowrap`}>
                                                         {row.product_code || "—"}
                                                     </td>
                                                 );
@@ -411,7 +412,7 @@ export default function WarehouseProductsCatalogTab() {
                                             if (col.key === "fprice") {
                                                 return (
                                                     <td key={col.key} className={`${base} tabular-nums text-indigo-700 font-medium whitespace-nowrap`}>
-                                                        {fmtMoney(row.franchise_unit_price)}
+                                                        {formatFranchiseRupee(row.franchise_unit_price)}
                                                     </td>
                                                 );
                                             }

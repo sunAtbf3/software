@@ -530,7 +530,7 @@ export default function ShopStockTab() {
                                         
                                         {/* Variant SKU */}
                                         <td className="px-4 py-3">
-                                            <p className="text-xs text-gray-700 font-mono">
+                                            <p className="text-xs font-semibold text-blue-600">
                                                 {firstVariant?.product_code || firstVariant?.sku || "—"}
                                             </p>
                                         </td>
@@ -701,7 +701,7 @@ export default function ShopStockTab() {
                                                                             </td>
                                                                             
                                                                             <td className="px-4 py-2">
-                                                                                <span className="font-mono text-xs text-gray-600">
+                                                                                <span className="text-xs font-semibold text-blue-600">
                                                                                     {variant.product_code || variant.sku || "—"}
                                                                                 </span>
                                                                             </td>

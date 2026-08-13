@@ -14,6 +14,7 @@ import {
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferRequest_api/transferRequestApi";
 import { downloadBlobFile, CHALLAN_READY_STATUSES } from "../../../../utils/downloadBlob";
 import { ROLES } from "../../../roles";
+import { formatFranchiseRupee } from "../../../../utils/comboPricing.utils";
 
 const STATUS_BADGE = {
     REQUESTED: "bg-yellow-100 text-yellow-700",
@@ -230,11 +231,33 @@ export default function ViewRequestModal({ onSuccess }) {
                                 {request.quantity} = ₹
                                 {Number(franchisePricing.special_line_value || 0).toFixed(2)}
                             </p>
-                            <p>
-                                F.Price ({franchisePricing.markup_percent}%): ₹
-                                {Number(franchisePricing.franchise_unit_price || 0).toFixed(2)} × {request.quantity} = ₹
-                                {Number(franchisePricing.franchise_line_value || 0).toFixed(2)}
-                            </p>
+                            {Array.isArray(franchisePricing.bill_segments) &&
+                            franchisePricing.bill_segments.length > 1 ? (
+                                <>
+                                    {franchisePricing.bill_segments.map((seg, i) => (
+                                        <p key={i}>
+                                            {seg.kind === "combo" ? "Combo F" : "F.Price"} (
+                                            {franchisePricing.markup_percent}%):{" "}
+                                            {formatFranchiseRupee(seg.unit_price)} × {seg.quantity} ={" "}
+                                            {formatFranchiseRupee(seg.line_value)}
+                                        </p>
+                                    ))}
+                                    <p className="font-medium">
+                                        Total F: {formatFranchiseRupee(franchisePricing.franchise_line_value)}
+                                    </p>
+                                </>
+                            ) : (
+                                <p>
+                                    F.Price ({franchisePricing.markup_percent}%):{" "}
+                                    {formatFranchiseRupee(
+                                        franchisePricing.display_unit_price ??
+                                            franchisePricing.franchise_unit_price ??
+                                            0
+                                    )}{" "}
+                                    × {request.quantity} ={" "}
+                                    {formatFranchiseRupee(franchisePricing.franchise_line_value || 0)}
+                                </p>
+                            )}
                             {isWarehouseUser && request.variant && (
                                 <p className="text-xs text-gray-600 pt-1 border-t border-indigo-100">
                                     Purchase: ₹{Number(request.variant.purchase_price || 0).toFixed(2)}

@@ -134,6 +134,11 @@ export const shopStockMutationService = {
           `Stock cannot go negative (current: ${before}, requested: ${operation} ${qty})`
         );
       }
+      if (after > before) {
+        throw new Error(
+          `Shop stock cannot be increased (current: ${before}). Request stock from the warehouse instead.`
+        );
+      }
 
       await store.put({
         ...row,

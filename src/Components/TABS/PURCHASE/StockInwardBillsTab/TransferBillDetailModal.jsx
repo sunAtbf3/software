@@ -4,6 +4,7 @@ import { toast } from "../../../shared/ToastConfig";
 import { useLazyDownloadTransferBillPdfQuery, useGetTransferBillByIdQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/TransferBill_api/transferBillApi";
 import { getTransferBillTypeLabel } from "../../../../constants/transferBillTypes";
 import { downloadBlobFile } from "../../../../utils/downloadBlob";
+import { formatFranchiseRupee } from "../../../../utils/comboPricing.utils";
 
 const fmtDate = (iso) => {
     if (!iso) return "—";
@@ -70,10 +71,7 @@ export default function TransferBillDetailModal({ bill, onClose }) {
                                             <th className="px-3 py-2 text-right">MRP</th>
                                             <th className="px-3 py-2 text-right">Spl/Sale Price</th>
                                             <th className="px-3 py-2 text-right">F. Price</th>
-                                            <th className="px-3 py-2 text-right leading-tight">
-                                                Combo<br />Price
-                                            </th>
-                                            <th className="px-3 py-2 text-right">Total F. Price</th>
+                                            <th className="px-3 py-2 text-right">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -83,13 +81,16 @@ export default function TransferBillDetailModal({ bill, onClose }) {
                                                 <td className="px-3 py-2 text-right">{line.quantity}</td>
                                                 <td className="px-3 py-2 text-right">{fmtMoney(line.unit_mrp)}</td>
                                                 <td className="px-3 py-2 text-right">{fmtMoney(line.unit_special_price)}</td>
-                                                <td className="px-3 py-2 text-right">{fmtMoney(line.unit_franchise_price)}</td>
                                                 <td className="px-3 py-2 text-right">
-                                                    {line.combo_applied && line.unit_combo_price != null
-                                                        ? fmtMoney(line.unit_combo_price)
-                                                        : "—"}
+                                                    {formatFranchiseRupee(
+                                                        line.unit_charged_price != null
+                                                            ? line.unit_charged_price
+                                                            : line.unit_franchise_price
+                                                    )}
                                                 </td>
-                                                <td className="px-3 py-2 text-right font-medium">{fmtMoney(line.line_franchise_total)}</td>
+                                                <td className="px-3 py-2 text-right font-medium">
+                                                    {formatFranchiseRupee(line.line_franchise_total)}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

@@ -273,7 +273,7 @@ export default function ArchiveTab() {
                 <td className="px-4 py-3">
                   <div>
                     <p className="font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-500">{p.product_code}</p>
+                    <p className="text-xs font-semibold text-blue-600">{p.product_code}</p>
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500">

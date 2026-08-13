@@ -8,10 +8,13 @@
  * - Responsive design
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Download, Printer, Loader2, ChevronLeft, ChevronRight, Grid, LayoutGrid, FileDown } from "lucide-react";
 import { generateBarcodeLabel, generateBatchLabels, downloadCanvasAsPNG, printCanvas } from "../../../../../utils/barcodeLabelGenerator";
 import { toast } from "../../../../shared/ToastConfig";
+
+const LABEL_TYPE_WITH_PRICE = "with_price";
+const LABEL_TYPE_WITHOUT_PRICE = "without_price";
 
 const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const [loading, setLoading] = useState(false);
@@ -21,11 +24,21 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const [totalPages, setTotalPages] = useState(1);
     const [labelsPerPage, setLabelsPerPage] = useState(8); // 1 = Solo View, 8 = Grid View
     const [batchCanvases, setBatchCanvases] = useState([]);
+    const [labelType, setLabelType] = useState(LABEL_TYPE_WITH_PRICE);
+    const previewGenRef = useRef(0);
 
     // Track unique raw generated image strings for the individual layout renderer
     const [individualImages, setIndividualImages] = useState([]);
 
-    // Generate preview when modal opens or when layout view preference changes
+    const showPrices = labelType !== LABEL_TYPE_WITHOUT_PRICE;
+
+    useEffect(() => {
+        if (!isOpen) {
+            setLabelType(LABEL_TYPE_WITH_PRICE);
+        }
+    }, [isOpen]);
+
+    // Generate preview when modal opens or when layout / label type changes
     useEffect(() => {
         if (isOpen && variantsWithProducts?.length > 0) {
             generatePreview();
@@ -34,27 +47,32 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
             if (previewCanvas) previewCanvas.remove();
             batchCanvases.forEach(canvas => canvas?.remove());
         };
-    }, [isOpen, variantsWithProducts, labelsPerPage]);
+    }, [isOpen, variantsWithProducts, labelsPerPage, labelType]);
 
     const generatePreview = async () => {
+        const genId = ++previewGenRef.current;
         setLoading(true);
         try {
+            const drawOptions = { showPrices };
             // Generate individual high-res image buffers for every single variant asset up front
             const individualBuffers = await Promise.all(
                 variantsWithProducts.map(async (item) => {
-                    const canvas = await generateBarcodeLabel(item.variant, item.product);
+                    const canvas = await generateBarcodeLabel(item.variant, item.product, drawOptions);
                     const dataUrl = canvas.toDataURL();
                     canvas.remove();
                     return { ...item, dataUrl };
                 })
             );
+            if (genId !== previewGenRef.current) return;
             setIndividualImages(individualBuffers);
 
             if (variantsWithProducts.length === 1) {
                 const canvas = await generateBarcodeLabel(
                     variantsWithProducts[0].variant,
-                    variantsWithProducts[0].product
+                    variantsWithProducts[0].product,
+                    drawOptions
                 );
+                if (genId !== previewGenRef.current) return;
                 setPreviewCanvas(canvas);
                 setBatchCanvases([]);
                 setTotalPages(1);
@@ -65,8 +83,8 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
 
                 // Keep print/export architecture aligned to the grid specs
                 const layoutOptions = labelsPerPage === 1
-                    ? { labelsPerRow: 1, labelsPerColumn: 1 }
-                    : { labelsPerRow: 2, labelsPerColumn: 4 };
+                    ? { labelsPerRow: 1, labelsPerColumn: 1, showPrices }
+                    : { labelsPerRow: 2, labelsPerColumn: 4, showPrices };
 
                 for (let i = 0; i < pages; i++) {
                     const pageItems = variantsWithProducts.slice(
@@ -77,16 +95,18 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
                     canvases.push(pageCanvas);
                 }
 
+                if (genId !== previewGenRef.current) return;
                 setBatchCanvases(canvases);
                 setPreviewCanvas(null);
                 setTotalPages(pages);
                 setCurrentPage(prev => Math.min(prev, pages - 1));
             }
         } catch (error) {
+            if (genId !== previewGenRef.current) return;
             console.error("Preview generation failed:", error);
             toast.error(`Failed to generate preview: ${error.message}`);
         } finally {
-            setLoading(false);
+            if (genId === previewGenRef.current) setLoading(false);
         }
     };
 
@@ -98,7 +118,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
             if (!currentItem) return;
 
             // Re-generate a fresh canvas for this single variant to download
-            const canvas = await generateBarcodeLabel(currentItem.variant, currentItem.product);
+            const canvas = await generateBarcodeLabel(currentItem.variant, currentItem.product, { showPrices });
             const productName = currentItem.product?.name || "barcode";
             const variantCode = currentItem.variant?.product_code || currentItem.variant?.sku || currentPage + 1;
             await downloadCanvasAsPNG(
@@ -168,7 +188,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     // ── Generate Print-Optimized Canvases (Always 1 Row per Page) ─────────
     const getPrintOptimizedCanvases = async (items) => {
         // Enforce 2-up thermal standard: exactly 2 labels per row (page)
-        const layoutOptions = { labelsPerRow: 2, labelsPerColumn: 1 };
+        const layoutOptions = { labelsPerRow: 2, labelsPerColumn: 1, showPrices };
         const pages = Math.ceil(items.length / 2);
         const canvases = [];
         
@@ -249,8 +269,8 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
                 <div className="relative bg-white rounded-xl shadow-2xl border border-gray-100 max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col">
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-150">
-                        <div>
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-150 gap-3">
+                        <div className="min-w-0">
                             <h3 className="text-base font-bold text-gray-900 tracking-tight">
                                 Barcode Asset Preview
                             </h3>
@@ -258,12 +278,26 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
                                 {totalVariants} unique operational variant{totalVariants !== 1 ? "s" : ""} initialized
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-1.5 hover:bg-gray-100 border border-transparent hover:border-gray-200 rounded-lg transition-all text-gray-400 hover:text-gray-600"
-                        >
-                            <X size={18} />
-                        </button>
+                        <div className="flex items-center gap-3 shrink-0">
+                            <label className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">Label type</span>
+                                <select
+                                    value={labelType}
+                                    onChange={(e) => setLabelType(e.target.value)}
+                                    disabled={loading || generating}
+                                    className="text-xs font-semibold border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50"
+                                >
+                                    <option value={LABEL_TYPE_WITH_PRICE}>Label with price</option>
+                                    <option value={LABEL_TYPE_WITHOUT_PRICE}>Label without price</option>
+                                </select>
+                            </label>
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 hover:bg-gray-100 border border-transparent hover:border-gray-200 rounded-lg transition-all text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Asset Control Sub-header */}

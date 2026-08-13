@@ -249,7 +249,7 @@ export default function StockManualAddModal({ onSuccess }) {
                                             className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
                                         >
                                             <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                                            <p className="text-xs text-gray-400">{product.product_code}</p>
+                                            <p className="text-xs font-semibold text-blue-600">{product.product_code}</p>
                                             <p className="text-xs text-gray-500 mt-0.5">
                                                 {product.variant_count} variant(s)
                                             </p>

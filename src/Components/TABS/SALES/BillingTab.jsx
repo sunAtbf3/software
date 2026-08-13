@@ -3,7 +3,7 @@
 // Main Billing Tab - Thin orchestrator
 // Composes ProductPicker, CustomerSearch, CartPanel, CheckoutPanel
 
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetMyShopQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopApi";
 import { getUserShopId } from "../../../offline";
@@ -33,6 +33,20 @@ export default function BillingTab() {
     const { data: activeComboRules } = useGetActiveComboRulesQuery(undefined, {
         skip: billType === BILL_TYPES.NON_LISTED,
     });
+
+    const [searchedCreditNotes, setSearchedCreditNotes] = useState([]);
+
+    const handleFoundCreditNotes = useCallback((usable) => {
+        setSearchedCreditNotes((prev) => {
+            const next = [...prev];
+            for (const row of usable || []) {
+                if (row?.credit_note_id && !next.some((p) => p.credit_note_id === row.credit_note_id)) {
+                    next.push(row);
+                }
+            }
+            return next;
+        });
+    }, []);
 
     const comboCartFingerprint = useMemo(
         () =>
@@ -71,9 +85,17 @@ export default function BillingTab() {
             </div>
 
             <div className="col-span-1 lg:col-span-6 bg-white border border-gray-300 rounded flex flex-col min-h-[320px] lg:h-full p-3">
-                <CustomerSearch />
+                <CustomerSearch
+                    shop_id={shop_id}
+                    foundNotes={searchedCreditNotes}
+                    onFound={handleFoundCreditNotes}
+                />
                 <CartPanel />
-                <CheckoutPanel shop_id={shop_id} />
+                <CheckoutPanel
+                    shop_id={shop_id}
+                    searchedCreditNotes={searchedCreditNotes}
+                    onSearchedCreditNotesChange={setSearchedCreditNotes}
+                />
             </div>
 
             {/* Modals */}

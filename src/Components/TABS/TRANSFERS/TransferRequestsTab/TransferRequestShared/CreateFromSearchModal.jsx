@@ -195,7 +195,7 @@ export default function CreateFromSearchModal({ onSuccess, initialIsEmergency = 
                         <p className="text-xs font-medium text-gray-700 mb-2">📦 Product Details</p>
                         <p className="text-sm font-semibold text-gray-800">{prefilledRequestData.product_name}</p>
                         <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                            <span>Code: {prefilledRequestData.product_code}</span>
+                            <span className="font-semibold text-blue-600">Code: {prefilledRequestData.product_code}</span>
                             <span>SKU: {prefilledRequestData.sku}</span>
                         </div>
                     </div>

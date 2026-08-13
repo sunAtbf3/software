@@ -79,13 +79,38 @@ export const creditNoteApi = createApi({
             }),
         }),
 
-        // GET /credit-notes/lookup — search by number (cross-shop)
+        // GET /credit-notes/lookup — search by CN number or original bill number (cross-shop)
         lookupCreditNote: builder.query({
-            query: ({ credit_note_number, redeeming_shop_id }) => ({
-                url: "/credit-notes/lookup",
-                method: "GET",
-                params: { credit_note_number, redeeming_shop_id },
-            }),
+            query: ({ credit_note_number, original_bill_number, q, redeeming_shop_id }) => {
+                const params = {};
+                if (credit_note_number) params.credit_note_number = credit_note_number;
+                if (original_bill_number) params.original_bill_number = original_bill_number;
+                if (q) params.q = q;
+                if (redeeming_shop_id) params.redeeming_shop_id = redeeming_shop_id;
+                return {
+                    url: "/credit-notes/lookup",
+                    method: "GET",
+                    params,
+                };
+            },
+            transformResponse: (response) => response.data,
+        }),
+
+        // GET /credit-notes/original-bills — exact bill / customer bills for return (cross-shop, scoped)
+        getOriginalBillsForReturn: builder.query({
+            query: ({ q = "", bill_number = "", customer_id = "", customer_mobile = "", shop_id = "" }) => {
+                const params = {};
+                if (q) params.q = q;
+                if (bill_number) params.bill_number = bill_number;
+                if (customer_id) params.customer_id = customer_id;
+                if (customer_mobile) params.customer_mobile = customer_mobile;
+                if (shop_id) params.shop_id = shop_id;
+                return {
+                    url: "/credit-notes/original-bills",
+                    method: "GET",
+                    params,
+                };
+            },
             transformResponse: (response) => response.data,
         }),
 
@@ -186,5 +211,6 @@ export const {
     useCancelCreditNoteMutation,
     useGetBillsForCreditNoteQuery,
     useLazyGetBillsForCreditNoteQuery,
+    useLazyGetOriginalBillsForReturnQuery,
     useLazySearchCustomersQuery
 } = creditNoteApi;

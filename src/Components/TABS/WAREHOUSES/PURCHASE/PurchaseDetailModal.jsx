@@ -195,7 +195,7 @@ export default function PurchaseDetailModal({ purchase, onClose }) {
                                                     <tr key={item.purchase_item_id || item.variant_id || idx} className="hover:bg-gray-50">
                                                         <td className="px-4 py-2.5">
                                                             <p className="font-medium text-gray-800 text-sm">{productName}</p>
-                                                            <p className="text-xs text-gray-400 font-mono mt-0.5">{productCode}</p>
+                                                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{productCode}</p>
                                                         </td>
                                                         <td className="px-4 py-2.5">
                                                             <p className="text-xs font-mono text-gray-600">{variantSku}</p>

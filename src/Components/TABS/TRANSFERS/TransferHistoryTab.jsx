@@ -366,7 +366,7 @@ export default function TransferHistoryTab() {
                                                             <tr key={item.bulk_item_id || item.variant_id}>
                                                                 <td className="px-3 py-2">
                                                                     <p className="font-medium">{item.variant?.product?.name || "—"}</p>
-                                                                    <p className="text-xs text-gray-400">
+                                                                    <p className="text-xs font-semibold text-blue-600">
                                                                         {item.variant?.product_code || item.variant?.sku || ""}
                                                                     </p>
                                                                 </td>
@@ -394,7 +394,7 @@ export default function TransferHistoryTab() {
                                                         <tr>
                                                             <td className="px-3 py-2">
                                                                 <p className="font-medium">{detailRecord._detail.variant?.product?.name || "—"}</p>
-                                                                <p className="text-xs text-gray-400">
+                                                                <p className="text-xs font-semibold text-blue-600">
                                                                     {detailRecord._detail.variant?.product_code || detailRecord._detail.variant?.sku || ""}
                                                                 </p>
                                                             </td>

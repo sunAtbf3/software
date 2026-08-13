@@ -34,6 +34,7 @@ import {
 import { getApiErrorMessage } from "../../../../utils/apiErrorMessage";
 import { TRANSFER_BILL_TYPES, getTransferBillTypeShortLabel } from "../../../../constants/transferBillTypes";
 import { ROLES } from "../../../roles";
+import { formatFranchiseRupee } from "../../../../utils/comboPricing.utils";
 import {
     closeApproveModal,
     closeRejectModal,
@@ -681,7 +682,7 @@ export default function BulkActionModals({ onSuccess }) {
                                             <tr key={item.variant_id}>
                                                 <td className="px-3 py-2">
                                                     <p className="font-medium text-gray-800">{item.variant?.product?.name || "Unknown"}</p>
-                                                    <p className="text-xs text-gray-400">{code}</p>
+                                                    <p className="text-xs font-semibold text-blue-600">{code}</p>
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-gray-600">{getBulkRequestedQty(item)}</td>
                                                 <td className="px-3 py-2 text-right font-semibold text-gray-800">{dispatched}</td>
@@ -918,7 +919,7 @@ export default function BulkActionModals({ onSuccess }) {
                                                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">MRP</th>
                                                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">F.Price</th>
                                                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 leading-tight">
-                                                        Combo<br />Price
+                                                        Combo F
                                                     </th>
                                                 </>
                                             )}
@@ -963,7 +964,7 @@ export default function BulkActionModals({ onSuccess }) {
                                                         <p className="font-medium text-gray-800 leading-5 break-words">
                                                             {item.variant?.product?.name || "Unknown"}
                                                         </p>
-                                                        <p className="text-xs text-gray-400 break-all">{code}</p>
+                                                        <p className="text-xs font-semibold text-blue-600 break-all">{code}</p>
                                                     </td>
                                                     <td className="px-3 py-2 text-right font-semibold">{getBulkRequestedQty(item)}</td>
                                                     <td className="px-3 py-2 text-right font-semibold text-gray-500">{sentDisplay}</td>
@@ -974,14 +975,51 @@ export default function BulkActionModals({ onSuccess }) {
                                                                 {fp?.mrp != null ? `₹${Number(fp.mrp).toFixed(2)}` : "—"}
                                                             </td>
                                                             <td className="px-3 py-2 text-right text-indigo-700 font-medium">
-                                                                {fp?.franchise_unit_price != null
-                                                                    ? `₹${Number(fp.franchise_unit_price).toFixed(2)}`
-                                                                    : "—"}
+                                                                {Array.isArray(fp?.bill_segments) && fp.bill_segments.length > 1 ? (
+                                                                    <div className="leading-tight">
+                                                                        {fp.bill_segments.map((seg, si) => (
+                                                                            <p
+                                                                                key={si}
+                                                                                className={
+                                                                                    seg.kind === "combo"
+                                                                                        ? "text-teal-700"
+                                                                                        : "text-indigo-700"
+                                                                                }
+                                                                            >
+                                                                                {seg.quantity} @ {formatFranchiseRupee(seg.unit_price)}
+                                                                            </p>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : fp?.display_unit_price != null || fp?.franchise_unit_price != null ? (
+                                                                    <div className="leading-tight">
+                                                                        <p>
+                                                                            {formatFranchiseRupee(
+                                                                                fp.display_unit_price ?? fp.franchise_unit_price
+                                                                            )}
+                                                                        </p>
+                                                                        {fp?.combo_applied ? (
+                                                                            <p className="text-[10px] text-teal-700 font-medium">
+                                                                                combo · {fp.combo_units} pcs
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                ) : (
+                                                                    "—"
+                                                                )}
                                                             </td>
                                                             <td className="px-3 py-2 text-right text-blue-700 font-medium">
-                                                                {fp?.combo_applied && fp?.combo_unit_price != null
-                                                                    ? `₹${Number(fp.combo_unit_price).toFixed(2)}`
-                                                                    : "—"}
+                                                                {fp?.combo_unit_price != null ? (
+                                                                    <div className="leading-tight">
+                                                                        <p>
+                                                                            {formatFranchiseRupee(fp.combo_unit_price)}
+                                                                            {fp.combo_units != null
+                                                                                ? ` / ${fp.combo_units} pcs`
+                                                                                : ""}
+                                                                        </p>
+                                                                    </div>
+                                                                ) : (
+                                                                    "—"
+                                                                )}
                                                             </td>
                                                         </>
                                                     )}

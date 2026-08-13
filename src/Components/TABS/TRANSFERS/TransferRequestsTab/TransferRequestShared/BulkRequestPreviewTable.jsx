@@ -1,9 +1,15 @@
 import React, { useMemo } from "react";
 import { Trash2 } from "lucide-react";
 import {
-    findComboRuleForSpecialPrice,
-    comboUnitFromRule,
+    describeComboQtyProgress,
+    describeFranchiseComboBlend,
+    resolveTransferComboOffer,
 } from "../../../../../utils/comboPricing.utils";
+import {
+    ComboOfferDisplay,
+    ComboQtyHint,
+    FranchisePriceDisplay,
+} from "./ComboOfferDisplay";
 
 const fmtMoney = (value) => {
     if (value == null || value === "") return "—";
@@ -12,28 +18,13 @@ const fmtMoney = (value) => {
     return `₹${n.toFixed(2)}`;
 };
 
-const resolveComboDisplay = (item, activeComboRules = []) => {
-    if (item?.combo_eligible !== true) {
-        return { eligible: false, rule: null, unit: null, label: null };
-    }
-    const rule = findComboRuleForSpecialPrice(item.special_price, activeComboRules);
-    const unit = comboUnitFromRule(rule);
-    return {
-        eligible: true,
-        rule,
-        unit,
-        label: rule
-            ? `${rule.trigger_qty} for ₹${Number(rule.combo_price).toFixed(0)}`
-            : "Combo eligible",
-    };
-};
-
 export default function BulkRequestPreviewTable({
     items = [],
     onQuantityChange,
     onRemove,
     showFranchisePricing = false,
     activeComboRules = [],
+    franchiseMarkupPercent = null,
 }) {
     const totalQty = useMemo(
         () =>
@@ -65,7 +56,7 @@ export default function BulkRequestPreviewTable({
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto max-h-[min(55vh,28rem)] overflow-y-auto">
-                    <table className={`w-full text-sm ${showFranchisePricing ? "min-w-[920px]" : "min-w-[640px]"}`}>
+                    <table className={`w-full text-sm ${showFranchisePricing ? "min-w-[920px]" : "min-w-[760px]"}`}>
                         <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                             <tr>
                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
@@ -85,14 +76,14 @@ export default function BulkRequestPreviewTable({
                                         <th className="px-3 py-2 text-right text-xs font-semibold text-indigo-600">
                                             F. Price
                                         </th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-blue-700 leading-tight">
-                                            Combo<br />Price
-                                        </th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">
-                                            Spl/Sale Price
-                                        </th>
                                     </>
                                 )}
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-blue-700">
+                                    {showFranchisePricing ? "Shop offer" : "Combo / Offer"}
+                                </th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-emerald-700">
+                                    Spl/Sale Price
+                                </th>
                                 <th className="px-3 py-2 text-center text-xs font-semibold text-gray-500">
                                     Qty
                                 </th>
@@ -110,22 +101,34 @@ export default function BulkRequestPreviewTable({
                                     !Number.isFinite(qtyNum) ||
                                     qtyNum <= 0 ||
                                     qtyNum > maxQty;
-                                const combo = showFranchisePricing
-                                    ? resolveComboDisplay(item, activeComboRules)
+                                const combo = resolveTransferComboOffer(item, activeComboRules);
+                                const comboProgress = describeComboQtyProgress({
+                                    qty: qtyNum,
+                                    triggerQty: combo.trigger,
+                                    comboEligible: combo.eligible,
+                                });
+                                const fBlend = showFranchisePricing
+                                    ? describeFranchiseComboBlend({
+                                          qty: qtyNum,
+                                          franchiseUnitPrice: item.franchise_unit_price,
+                                          franchiseComboUnitPrice: item.franchise_combo_unit_price,
+                                          comboTriggerQty:
+                                              item.combo_trigger_qty || combo.trigger,
+                                          comboEligible: item.combo_eligible === true,
+                                          specialPrice: item.special_price,
+                                          comboSellingUnit: item.combo_unit_price || combo.unit,
+                                          purchasePrice: item.purchase_price,
+                                          markupPercent: franchiseMarkupPercent,
+                                      })
                                     : null;
 
                                 return (
                                     <tr key={item.variant_id} className="hover:bg-gray-50/80">
                                         <td className="px-3 py-2.5 text-sm text-gray-800 align-middle">
                                             <span className="line-clamp-2">{item.product_name || "—"}</span>
-                                            {combo?.eligible && (
-                                                <span className="mt-1 inline-block text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                                                    {combo.label}
-                                                </span>
-                                            )}
                                         </td>
                                         <td className="px-3 py-2.5 align-middle">
-                                            <span className="text-xs font-mono text-gray-500">
+                                            <span className="text-xs font-semibold text-blue-600">
                                                 {item.product_code || "—"}
                                                 {item.sku && item.sku !== item.product_code
                                                     ? ` / ${item.sku}`
@@ -140,28 +143,22 @@ export default function BulkRequestPreviewTable({
                                                 <td className="px-3 py-2.5 text-right tabular-nums text-gray-700 align-middle text-xs">
                                                     {fmtMoney(item.mrp)}
                                                 </td>
-                                                <td className="px-3 py-2.5 text-right tabular-nums text-indigo-700 font-medium align-middle text-xs">
-                                                    {fmtMoney(item.franchise_unit_price)}
-                                                </td>
                                                 <td className="px-3 py-2.5 text-right align-middle text-xs">
-                                                    {combo?.eligible ? (
-                                                        <div className="leading-tight">
-                                                            <p className="font-semibold text-blue-700 tabular-nums">
-                                                                {combo.unit != null ? fmtMoney(combo.unit) : "—"}
-                                                            </p>
-                                                            <p className="text-[10px] text-blue-600 font-medium">
-                                                                {combo.label}
-                                                            </p>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-gray-300">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 font-medium align-middle text-xs">
-                                                    {fmtMoney(item.special_price)}
+                                                    <FranchisePriceDisplay compact blend={fBlend} />
                                                 </td>
                                             </>
                                         )}
+                                        <td className="px-3 py-2.5 text-right align-middle text-xs">
+                                            <ComboOfferDisplay
+                                                offer={combo}
+                                                compact
+                                                transferIncentive={showFranchisePricing}
+                                                cheaper={fBlend?.cheaper === true}
+                                            />
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 font-medium align-middle text-xs">
+                                            {fmtMoney(item.special_price)}
+                                        </td>
                                         <td className="px-3 py-2.5 text-center align-middle">
                                             <input
                                                 type="number"
@@ -176,6 +173,11 @@ export default function BulkRequestPreviewTable({
                                                         ? "border-red-400 bg-red-50"
                                                         : "border-gray-300 bg-white"
                                                 }`}
+                                            />
+                                            <ComboQtyHint
+                                                progress={comboProgress}
+                                                selected
+                                                cheaper={fBlend?.cheaper === true}
                                             />
                                         </td>
                                         <td className="px-2 py-2.5 text-center align-middle">

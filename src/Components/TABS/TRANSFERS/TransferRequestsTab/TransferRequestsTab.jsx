@@ -476,8 +476,8 @@ export default function TransferRequestsTab() {
                 <div className="space-y-4">
                     <div className="bg-white rounded-xl border border-gray-200 p-4">
                         <h3 className="font-semibold text-gray-800 text-sm">{product?.name || "Product"}</h3>
-                        <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-400 font-mono">
-                            <span>Code: {product?.product_code || "—"}</span>
+                        <div className="flex flex-wrap gap-4 mt-1.5 text-xs text-gray-400">
+                            <span className="font-semibold text-blue-600">Code: {product?.product_code || "—"}</span>
                             <span>
                                 {variantRows.length} variant{variantRows.length === 1 ? "" : "s"} found
                             </span>
@@ -498,7 +498,7 @@ export default function TransferRequestsTab() {
                             >
                                 <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-100 pb-3">
                                     <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-gray-800 font-mono">
+                                        <p className="text-sm font-semibold text-blue-600">
                                             {variant.product_code || variant.sku || "Variant"}
                                         </p>
                                         <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-400">

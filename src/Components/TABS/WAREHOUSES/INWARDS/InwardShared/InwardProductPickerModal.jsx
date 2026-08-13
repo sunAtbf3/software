@@ -231,9 +231,11 @@ export default function InwardProductPickerModal({ item, inward, onClose, onSucc
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="font-mono font-semibold text-gray-800">{variant.sku}</p>
-                                                <p className="text-xs text-gray-500 font-mono">
-                                                    Code: {variant.product_code}
-                                                    {variant.system_barcode && ` · Barcode: ${variant.system_barcode}`}
+                                                <p className="text-xs font-semibold text-blue-600">
+                                                    {variant.product_code}
+                                                    {variant.system_barcode && (
+                                                        <span className="font-medium text-gray-500"> · Barcode: {variant.system_barcode}</span>
+                                                    )}
                                                 </p>
                                                 {attrs && <p className="text-xs text-gray-600 mt-1">{attrs}</p>}
                                                 {variant.is_default && (

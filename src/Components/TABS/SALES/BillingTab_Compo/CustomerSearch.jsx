@@ -3,9 +3,9 @@
 // Customer search component for billing - finds customer by mobile
 // UPDATED: Explicit "Select Customer" button; uses is_gst_registered boolean
 
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { User, ShoppingBag, Building2, UserCheck } from "lucide-react";
+import { User, ShoppingBag, Building2, UserCheck, Search } from "lucide-react";
 import {
     setCustomerMobileInput,
     setSelectedCustomer,
@@ -13,6 +13,8 @@ import {
     openEditCustomer,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useCustomerSearch } from "../../../../hooks/useCustomerSearch";
+import { toast } from "../../../shared/ToastConfig";
+import { useLazyLookupCreditNoteQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/CreditNote_api/creditNoteApi";
 
 const getLoyaltyBadge = (tier) => {
     switch (tier) {
@@ -27,16 +29,82 @@ const getLoyaltyBadge = (tier) => {
     }
 };
 
-export default function CustomerSearch() {
+const toNumber = (value, defaultValue = 0) => {
+    const num = Number(value);
+    return Number.isNaN(num) ? defaultValue : num;
+};
+
+const isTenDigitMobile = (value) => /^\d{10}$/.test(value);
+const isMobileTyping = (value) => /^\d{0,10}$/.test(value);
+
+export default function CustomerSearch({ shop_id, foundNotes = [], onFound }) {
     const dispatch = useDispatch();
+    const isOnline = useSelector((state) => state.offline.isOnline);
     const { customerMobileInput, selectedCustomer } = useSelector((state) => state.billing);
     const { foundCustomer, isSearching, clearSearch } = useCustomerSearch(customerMobileInput);
+    const [query, setQuery] = useState("");
+    const [lookupCreditNote, { isFetching: isLookingUpCn }] = useLazyLookupCreditNoteQuery();
 
-    const handleMobileChange = (e) => {
+    const handleQueryChange = (e) => {
         const value = e.target.value;
-        if (/^\d{0,10}$/.test(value)) {
-            dispatch(setCustomerMobileInput(value));
+        setQuery(value);
+        const trimmed = value.trim();
+        if (isMobileTyping(trimmed)) {
+            dispatch(setCustomerMobileInput(trimmed));
+        } else if (!selectedCustomer) {
+            dispatch(setCustomerMobileInput(""));
         }
+    };
+
+    const handleLookupCreditNote = async (number, { silent = false } = {}) => {
+        if (!isOnline) {
+            if (!silent) toast.error("Credit note lookup requires an internet connection");
+            return;
+        }
+        try {
+            const cn = await lookupCreditNote({
+                q: number,
+                redeeming_shop_id: shop_id,
+            }).unwrap();
+            const found = [
+                cn,
+                ...(Array.isArray(cn?.related_credit_notes) ? cn.related_credit_notes : []),
+            ].filter(
+                (row, idx, arr) =>
+                    row?.credit_note_id &&
+                    arr.findIndex((r) => r.credit_note_id === row.credit_note_id) === idx
+            );
+
+            const usable = found.filter((row) => row.redeemable);
+            if (!usable.length) {
+                if (!silent) {
+                    toast.error(
+                        `Credit note not usable (status: ${cn.status}, balance: ₹${toNumber(cn.balance).toFixed(2)})`
+                    );
+                }
+                return;
+            }
+            onFound?.(usable);
+            toast.success(
+                `Credit note found — ₹${usable.reduce((s, row) => s + toNumber(row.balance), 0).toFixed(2)}`
+            );
+        } catch (err) {
+            if (!silent) toast.error(err?.data?.message || "Credit note not found");
+        }
+    };
+
+    const handleFind = async () => {
+        const number = query.trim();
+        if (!number) {
+            toast.error("Enter a mobile, credit note, or bill number");
+            return;
+        }
+        if (isTenDigitMobile(number)) {
+            dispatch(setCustomerMobileInput(number));
+            await handleLookupCreditNote(number, { silent: true });
+            return;
+        }
+        await handleLookupCreditNote(number);
     };
 
     const handleSelectCustomer = () => {
@@ -45,32 +113,77 @@ export default function CustomerSearch() {
         }
     };
 
+    const handleClearQuery = () => {
+        setQuery("");
+        if (!selectedCustomer) {
+            dispatch(setCustomerMobileInput(""));
+            clearSearch();
+        }
+    };
+
     const handleClearCustomer = () => {
         clearSearch();
         dispatch(setSelectedCustomer(null));
         dispatch(setCustomerMobileInput(""));
+        setQuery("");
     };
 
     return (
-        <div className="mb-4">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Customer Mobile</label>
-            <div className="relative text-gray-700">
-                <input
-                    type="tel"
-                    placeholder="Enter 10-digit mobile number"
-                    value={customerMobileInput}
-                    onChange={handleMobileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                />
-                {customerMobileInput && (
-                    <button
-                        onClick={handleClearCustomer}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                        ✕
-                    </button>
-                )}
+        <div className="mb-2 shrink-0">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+                Customer / credit note
+            </label>
+            <div className="flex gap-2">
+                <div className="relative flex-1 min-w-0 text-gray-700">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Mobile, credit note, or bill number"
+                        value={query}
+                        onChange={handleQueryChange}
+                        onKeyDown={(e) => e.key === "Enter" && handleFind()}
+                        className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {query && (
+                        <button
+                            type="button"
+                            onClick={handleClearQuery}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={handleFind}
+                    disabled={isLookingUpCn}
+                    className="shrink-0 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-900 disabled:opacity-60"
+                >
+                    {isLookingUpCn ? "..." : "Find"}
+                </button>
             </div>
+            {!query && !selectedCustomer && foundNotes.length === 0 && (
+                <div className="mt-1 text-xs text-gray-400 flex items-center gap-1">
+                    <ShoppingBag size={12} />
+                    <span>10-digit mobile for customer · CN or bill number + Find for credit</span>
+                </div>
+            )}
+            {foundNotes.length > 0 && (
+                <div className="mt-1 max-h-14 overflow-y-auto space-y-0.5">
+                    {foundNotes.map((cn) => (
+                        <div
+                            key={cn.credit_note_id}
+                            className="flex justify-between items-center gap-2 text-[11px] bg-purple-50 border border-purple-100 rounded px-2 py-1"
+                        >
+                            <span className="font-mono text-purple-800 truncate">{cn.credit_note_number}</span>
+                            <span className="shrink-0 text-purple-600">
+                                ₹{toNumber(cn.balance).toFixed(2)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {(isSearching) && customerMobileInput.length === 10 && (
                 <div className="mt-2 text-center">
@@ -184,7 +297,7 @@ export default function CustomerSearch() {
                 </div>
             )}
 
-            {customerMobileInput.length === 10 && !foundCustomer && !isSearching && (
+            {isTenDigitMobile(customerMobileInput) && !foundCustomer && !isSearching && (
                 <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
                         <p className="text-sm text-yellow-800 font-medium">New Customer</p>
@@ -199,12 +312,6 @@ export default function CustomerSearch() {
                 </div>
             )}
 
-            {!customerMobileInput && !selectedCustomer && (
-                <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
-                    <ShoppingBag size={12} />
-                    <span>Enter mobile to search or create a customer</span>
-                </div>
-            )}
         </div>
     );
 }

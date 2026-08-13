@@ -16,6 +16,7 @@ import {
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
 import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
+import ProductCode from "../../../shared/ProductCode";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
 import { useShopPricingVisibility, isSpecialPriceOnlyShopType } from "../../../../utils/shopPricingVisibility";
@@ -75,8 +76,8 @@ export default function CartPanel() {
 
     if (items.length === 0) {
         return (
-            <div className="flex-1 flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
-                <div className="text-center py-12">
+            <div className="flex-1 min-h-[180px] flex items-center justify-center border border-gray-200 rounded-lg bg-gray-50">
+                <div className="text-center py-8">
                     <p className="text-gray-400 font-semibold">🛒 Cart is empty</p>
                     <p className="text-xs text-gray-400 mt-1">
                         {billType === BILL_TYPES.NON_LISTED
@@ -142,6 +143,9 @@ export default function CartPanel() {
                             <tr key={itemId} className="bg-white">
                                 <td className="px-3 py-3">
                                     <p className="font-semibold text-gray-800 text-xs">{itemName}</p>
+                                    {billType !== BILL_TYPES.NON_LISTED && item.product_code && (
+                                        <ProductCode as="p" className="text-[11px] mt-0.5" code={item.product_code} />
+                                    )}
                                     {billType !== BILL_TYPES.NON_LISTED && formatAttributesDisplay(item.variant_attributes) && (
                                         <p className="text-[10px] text-gray-500 mt-0.5 leading-snug break-words">
                                             {formatAttributesDisplay(item.variant_attributes)}

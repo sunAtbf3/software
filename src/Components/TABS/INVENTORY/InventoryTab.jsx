@@ -751,7 +751,7 @@ export default function InventoryTab() {
                                     </button>
                                   </td>
                                   <td className="px-4 py-2">
-                                    <span className="font-mono text-xs text-gray-600">
+                                    <span className="text-xs font-semibold text-blue-600">
                                       {variant.product_code || variant.sku || "—"}
                                     </span>
                                   </td>

@@ -339,9 +339,9 @@ export default function ComboRulesTab() {
                         <span className="block truncate text-xs font-medium">
                           {variant.product_name || variant.product_code}
                         </span>
-                        <span className="block truncate text-[11px] opacity-75">
+                        <span className="block truncate text-[11px] font-semibold text-blue-600">
                           {variant.product_code}
-                          {variant.brand_name ? ` • ${variant.brand_name}` : ""}
+                          {variant.brand_name ? <span className="font-medium text-gray-500"> • {variant.brand_name}</span> : ""}
                         </span>
                       </span>
                       <span

@@ -49,6 +49,7 @@ export const mapLocalStockToBarcodeProduct = (row) => {
   return {
     variant_id: row.variant_id,
     name: row.product_name,
+    product_code: row.product_code,
     system_barcode: row.system_barcode,
     special_price: row.special_price,
     wholesale_price: null,

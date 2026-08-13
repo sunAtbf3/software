@@ -1,27 +1,17 @@
 import React, { useMemo } from "react";
 import {
-    findComboRuleForSpecialPrice,
-    comboUnitFromRule,
-    buildComboCartHints,
+    buildSameProductComboHints,
+    describeComboQtyProgress,
+    describeFranchiseComboBlend,
+    resolveTransferComboOffer,
 } from "../../../../../utils/comboPricing.utils";
+import {
+    ComboOfferDisplay,
+    ComboQtyHint,
+    FranchisePriceDisplay,
+} from "./ComboOfferDisplay";
 
 const fmtMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
-
-const resolveComboDisplay = (variant, activeComboRules = []) => {
-    if (variant?.combo_eligible !== true) {
-        return { eligible: false, rule: null, unit: null, label: null };
-    }
-    const rule = findComboRuleForSpecialPrice(variant.special_price, activeComboRules);
-    const unit = comboUnitFromRule(rule);
-    return {
-        eligible: true,
-        rule,
-        unit,
-        label: rule
-            ? `${rule.trigger_qty} for ₹${Number(rule.combo_price).toFixed(0)}`
-            : "Combo eligible",
-    };
-};
 
 const buildSelectionPatch = (product, variant, checked, existingQty) => {
     const maxQty = variant.warehouse_available ?? 0;
@@ -38,9 +28,32 @@ const buildSelectionPatch = (product, variant, checked, existingQty) => {
         mrp: variant.mrp ?? null,
         special_price: variant.special_price ?? null,
         franchise_unit_price: variant.franchise_unit_price ?? null,
+        franchise_combo_unit_price: variant.franchise_combo_unit_price ?? null,
+        combo_trigger_qty: variant.combo_trigger_qty ?? null,
+        combo_price: variant.combo_price ?? null,
+        combo_unit_price: variant.combo_unit_price ?? null,
         purchase_price: variant.purchase_price ?? null,
         combo_eligible: variant.combo_eligible === true,
     };
+};
+
+const resolveFranchiseBlend = (variant, sel, combo, markupPercent) => {
+    const qty = sel?.selected ? sel.quantity : 0;
+    return describeFranchiseComboBlend({
+        qty,
+        franchiseUnitPrice: variant.franchise_unit_price ?? sel?.franchise_unit_price,
+        franchiseComboUnitPrice:
+            variant.franchise_combo_unit_price ?? sel?.franchise_combo_unit_price,
+        comboTriggerQty:
+            variant.combo_trigger_qty ||
+            sel?.combo_trigger_qty ||
+            combo?.trigger,
+        comboEligible: variant.combo_eligible === true || sel?.combo_eligible === true,
+        specialPrice: variant.special_price ?? sel?.special_price,
+        comboSellingUnit: variant.combo_unit_price ?? combo?.unit,
+        purchasePrice: variant.purchase_price ?? sel?.purchase_price,
+        markupPercent,
+    });
 };
 
 function VariantCard({
@@ -55,11 +68,20 @@ function VariantCard({
     showFranchisePrice,
     showCombo = false,
     activeComboRules = [],
+    franchiseMarkupPercent = null,
 }) {
     const sel = selection[variant.variant_id] || { selected: false, quantity: "" };
     const maxQty = variant.warehouse_available ?? 0;
     const isSelected = !!sel.selected;
-    const combo = showCombo ? resolveComboDisplay(variant, activeComboRules) : null;
+    const combo = resolveTransferComboOffer(variant, activeComboRules);
+    const comboProgress = describeComboQtyProgress({
+        qty: isSelected ? sel.quantity : 0,
+        triggerQty: combo.trigger,
+        comboEligible: combo.eligible,
+    });
+    const fBlend = showFranchisePrice
+        ? resolveFranchiseBlend(variant, sel, combo, franchiseMarkupPercent)
+        : null;
 
     return (
         <div
@@ -84,31 +106,34 @@ function VariantCard({
                     <p className="text-sm font-medium text-gray-800 leading-snug">
                         {isMulti ? `↳ ${product.name}` : product.name}
                     </p>
-                    <p className="text-xs font-mono text-gray-500 mt-0.5">
+                    <p className="text-xs font-semibold text-blue-600 mt-0.5">
                         {variant.product_code}
-                        {variant.sku && variant.sku !== variant.product_code ? ` · ${variant.sku}` : ""}
+                        {variant.sku && variant.sku !== variant.product_code ? (
+                            <span className="font-medium text-gray-400"> · {variant.sku}</span>
+                        ) : null}
                     </p>
-                    {combo?.eligible && (
-                        <span className="mt-1 inline-block text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                            {combo.label}
-                            {combo.unit != null ? ` · ${fmtMoney(combo.unit)}/pc` : ""}
-                        </span>
-                    )}
                 </div>
-                <input
-                    type="number"
-                    min={1}
-                    max={maxQty}
-                    value={sel.quantity}
-                    disabled={!isSelected || !variant.selectable}
-                    onChange={(e) =>
-                        onSelectionChange(variant.variant_id, { quantity: e.target.value })
-                    }
-                    className={`w-16 px-2 py-1 text-sm border rounded-lg text-center tabular-nums shrink-0 ${
-                        isSelected ? "border-gray-300 bg-white" : "border-gray-100 bg-gray-50 text-gray-300"
-                    }`}
-                    placeholder="Qty"
-                />
+                <div className="shrink-0 text-right">
+                    <input
+                        type="number"
+                        min={1}
+                        max={maxQty}
+                        value={sel.quantity}
+                        disabled={!isSelected || !variant.selectable}
+                        onChange={(e) =>
+                            onSelectionChange(variant.variant_id, { quantity: e.target.value })
+                        }
+                        className={`w-16 px-2 py-1 text-sm border rounded-lg text-center tabular-nums ${
+                            isSelected ? "border-gray-300 bg-white" : "border-gray-100 bg-gray-50 text-gray-300"
+                        }`}
+                        placeholder="Qty"
+                    />
+                    <ComboQtyHint
+                        progress={comboProgress}
+                        selected={isSelected}
+                        cheaper={fBlend?.cheaper === true}
+                    />
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs pl-7">
                 <div className="flex justify-between gap-2">
@@ -132,19 +157,21 @@ function VariantCard({
                     </div>
                 )}
                 {showFranchisePrice && (
-                    <div className="flex justify-between gap-2">
+                    <div className="flex justify-between gap-2 items-start">
                         <span className="text-indigo-500">F. Price</span>
-                        <span className="font-medium text-indigo-700 tabular-nums">
-                            {fmtMoney(variant.franchise_unit_price)}
-                        </span>
+                        <FranchisePriceDisplay blend={fBlend} />
                     </div>
                 )}
-                {combo?.eligible && (
-                    <div className="flex justify-between gap-2 col-span-2">
-                        <span className="text-blue-600">Combo Price</span>
-                        <span className="font-semibold text-blue-700 tabular-nums">
-                            {combo.unit != null ? `${fmtMoney(combo.unit)} · ${combo.label}` : combo.label}
+                {combo.eligible && (
+                    <div className="flex justify-between gap-2 col-span-2 items-start">
+                        <span className="text-blue-700 font-medium">
+                            {showFranchisePrice ? "Shop offer" : "Combo / Offer"}
                         </span>
+                        <ComboOfferDisplay
+                            offer={combo}
+                            transferIncentive={showFranchisePrice}
+                            cheaper={fBlend?.cheaper === true}
+                        />
                     </div>
                 )}
                 {showSpecial && (
@@ -173,6 +200,7 @@ export default function VariantCatalogPicker({
     franchisePricing = false,
     warehouseFranchiseView = false,
     activeComboRules = [],
+    franchiseMarkupPercent = null,
 }) {
     const totalSelected = useMemo(
         () => Object.values(selection).filter((s) => s.selected).length,
@@ -201,12 +229,16 @@ export default function VariantCatalogPicker({
             .filter(([, s]) => s?.selected)
             .map(([variantId, s]) => ({
                 variant_id: variantId,
+                product_name: s.product_name,
+                product_code: s.product_code,
                 quantity: s.quantity,
                 special_price: s.special_price,
                 combo_eligible: s.combo_eligible === true,
-                price_type: "SPECIAL",
+                combo_trigger_qty: s.combo_trigger_qty ?? null,
+                combo_price: s.combo_price ?? null,
+                combo_unit_price: s.combo_unit_price ?? null,
             }));
-        return buildComboCartHints(selected, activeComboRules);
+        return buildSameProductComboHints(selected, activeComboRules);
     }, [selection, activeComboRules]);
 
     if (isLoading) {
@@ -230,7 +262,8 @@ export default function VariantCatalogPicker({
     const showSpecial = true;
     const showMrp = franchisePricing || warehouseFranchiseView;
     const showFranchisePrice = franchisePricing || warehouseFranchiseView;
-    const showCombo = franchisePricing || warehouseFranchiseView;
+    // Combo is a selling offer for every shop — not franchise-only.
+    const showCombo = true;
 
     const colCount =
         5 +
@@ -249,34 +282,48 @@ export default function VariantCatalogPicker({
         showFranchisePrice,
         showCombo,
         activeComboRules,
+        franchiseMarkupPercent,
     };
 
     return (
         <div className="space-y-2 w-full min-w-0">
             <p className="text-xs text-gray-500">
                 {totalSelected} variant(s) selected — tick rows and enter quantity
+                {showFranchisePrice
+                    ? " · Same product: combo qty can lower F.Price"
+                    : showCombo
+                      ? " · Shop offer is on the same product only"
+                      : ""}
             </p>
 
-            {showCombo && comboHints.groups.length > 0 && (
+            {comboHints.groups.length > 0 && (
                 <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 space-y-1">
                     {comboHints.groups.map((group) => (
-                        <p key={group.price_key} className="text-[11px] text-blue-800 leading-snug">
+                        <p key={group.variant_id} className="text-[11px] text-blue-800 leading-snug">
                             {group.sets_applied > 0 ? (
                                 <>
-                                    <span className="font-semibold">Combo ready</span>
+                                    <span className="font-semibold">{group.product_name}</span>
                                     {" — "}
+                                    {group.sets_applied} set{group.sets_applied > 1 ? "s" : ""} of{" "}
                                     {group.trigger_qty} for ₹{Number(group.combo_price).toFixed(0)}
                                     {group.needed_for_next > 0
-                                        ? ` · Add ${group.needed_for_next} more @ ₹${Number(group.special_price).toFixed(0)} for next set`
-                                        : " · great for selling more!"}
+                                        ? ` · add ${group.needed_for_next} more of this product for next set${
+                                              showFranchisePrice ? " (cheaper F)" : ""
+                                          }`
+                                        : showFranchisePrice
+                                          ? " · cheaper F.Price on this qty"
+                                          : ""}
                                 </>
                             ) : (
                                 <>
-                                    <span className="font-semibold">Combo offer</span>
+                                    <span className="font-semibold">{group.product_name}</span>
                                     {" — "}
                                     {group.trigger_qty} for ₹{Number(group.combo_price).toFixed(0)}
-                                    {" · Add "}
-                                    {group.needed_for_next} more @ ₹{Number(group.special_price).toFixed(0)} to unlock
+                                    {" · add "}
+                                    {group.needed_for_next} more of this product
+                                    {showFranchisePrice
+                                        ? " for cheaper F.Price"
+                                        : " to unlock"}
                                 </>
                             )}
                         </p>
@@ -384,7 +431,7 @@ export default function VariantCatalogPicker({
                                 )}
                                 {showCombo && (
                                     <th className="px-1 lg:px-2 py-2 text-right text-[10px] lg:text-xs font-semibold text-blue-700 leading-tight">
-                                        Combo<br />Price
+                                        {showFranchisePrice ? "Shop offer" : "Combo / Offer"}
                                     </th>
                                 )}
                                 {showSpecial && (
@@ -415,7 +462,7 @@ export default function VariantCatalogPicker({
                                                         <span className="text-xs font-semibold text-gray-700">
                                                             {product.name}
                                                         </span>
-                                                        <span className="text-xs text-gray-400 font-mono ml-2">
+                                                        <span className="text-xs font-semibold text-blue-600 ml-2">
                                                             {product.product_code}
                                                         </span>
                                                         <span className="text-xs text-gray-400 ml-1 hidden lg:inline">
@@ -447,14 +494,31 @@ export default function VariantCatalogPicker({
                                 const maxQty = variant.warehouse_available ?? 0;
                                 const shopStock = variant.shop_available ?? 0;
                                 const isSelected = !!sel.selected;
-                                const combo = showCombo
-                                    ? resolveComboDisplay(variant, activeComboRules)
+                                const combo = resolveTransferComboOffer(variant, activeComboRules);
+                                const comboProgress = describeComboQtyProgress({
+                                    qty: isSelected ? sel.quantity : 0,
+                                    triggerQty: combo.trigger,
+                                    comboEligible: combo.eligible,
+                                });
+                                const fBlend = showFranchisePrice
+                                    ? resolveFranchiseBlend(
+                                          variant,
+                                          sel,
+                                          combo,
+                                          franchiseMarkupPercent
+                                      )
                                     : null;
 
                                 return (
                                     <tr
                                         key={variant.variant_id}
-                                        className={`hover:bg-gray-50/80 ${isSelected ? "bg-blue-50/40" : ""}`}
+                                        className={`hover:bg-gray-50/80 ${
+                                            isSelected
+                                                ? "bg-blue-50/40"
+                                                : combo.hasOffer
+                                                  ? "bg-sky-50/50"
+                                                  : ""
+                                        }`}
                                     >
                                         <td className="px-1 lg:px-2 py-2 text-center align-middle">
                                             <input
@@ -490,15 +554,10 @@ export default function VariantCatalogPicker({
                                                     product.name
                                                 )}
                                             </span>
-                                            {combo?.eligible && (
-                                                <span className="mt-0.5 inline-block text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                                                    {combo.label}
-                                                </span>
-                                            )}
                                         </td>
                                         <td className="px-2 lg:px-3 py-2 align-middle min-w-0">
                                             <p
-                                                className="text-[10px] lg:text-xs font-mono text-gray-600 truncate"
+                                                className="text-[10px] lg:text-xs font-semibold text-blue-600 truncate"
                                                 title={variant.product_code}
                                             >
                                                 {variant.product_code}
@@ -529,24 +588,18 @@ export default function VariantCatalogPicker({
                                             </td>
                                         )}
                                         {showFranchisePrice && (
-                                            <td className="px-1 lg:px-2 py-2 text-right align-middle tabular-nums text-indigo-700 font-medium text-[10px] lg:text-xs">
-                                                {fmtMoney(variant.franchise_unit_price)}
+                                            <td className="px-1 lg:px-2 py-2 text-right align-middle text-[10px] lg:text-xs">
+                                                <FranchisePriceDisplay compact blend={fBlend} />
                                             </td>
                                         )}
                                         {showCombo && (
                                             <td className="px-1 lg:px-2 py-2 text-right align-middle text-[10px] lg:text-xs">
-                                                {combo?.eligible ? (
-                                                    <div className="leading-tight">
-                                                        <p className="font-semibold text-blue-700 tabular-nums">
-                                                            {combo.unit != null ? fmtMoney(combo.unit) : "—"}
-                                                        </p>
-                                                        <p className="text-[9px] lg:text-[10px] text-blue-600 font-medium">
-                                                            {combo.label}
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-300">—</span>
-                                                )}
+                                                <ComboOfferDisplay
+                                                    offer={combo}
+                                                    compact
+                                                    transferIncentive={showFranchisePrice}
+                                                    cheaper={fBlend?.cheaper === true}
+                                                />
                                             </td>
                                         )}
                                         {showSpecial && (
@@ -574,6 +627,11 @@ export default function VariantCatalogPicker({
                                                         : "border-gray-100 bg-gray-50 text-gray-300"
                                                 }`}
                                                 placeholder="—"
+                                            />
+                                            <ComboQtyHint
+                                                progress={comboProgress}
+                                                selected={isSelected}
+                                                cheaper={fBlend?.cheaper === true}
                                             />
                                         </td>
                                     </tr>

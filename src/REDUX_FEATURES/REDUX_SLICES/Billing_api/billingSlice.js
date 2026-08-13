@@ -128,6 +128,7 @@ const billingSlice = createSlice({
             if (existing) {
                 existing.quantity += 1;
                 if (variant.combo_eligible === true) existing.combo_eligible = true;
+                if (variant.product_code && !existing.product_code) existing.product_code = variant.product_code;
                 existing.line_total = calculateLineTotal(existing.unit_price, existing.quantity);
                 applyLineGst(existing, state.billType);
             } else {
@@ -135,6 +136,7 @@ const billingSlice = createSlice({
                     variant_id: variant.variant_id,
                     product_name: variant.product_name,
                     system_barcode: variant.system_barcode,
+                    product_code: variant.product_code || "",
                     variant_attributes: variant.variant_attributes,
                     quantity: 1,
                     price_type: variant.price_type || "SPECIAL",

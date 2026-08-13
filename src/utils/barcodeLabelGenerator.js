@@ -44,7 +44,9 @@ export const LABEL_CONFIG = {
  * Label Order: Purchase Code (top) → Barcode → Product Code → Product Name → Sale Price
  * @param {Object} variant - Variant data
  * @param {Object} product - Product data
- * @param {Object} options - Optional config overrides
+ * @param {Object} options - Optional config overrides.
+ *   showPrices defaults to true (existing label). false skips MRP/Spl.Price only —
+ *   dimensions, barcode, and text placement stay identical.
  * @returns {Promise<HTMLCanvasElement>}
  */
 export async function generateBarcodeLabel(variant, product, options = {}) {
@@ -57,8 +59,10 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             // Create label canvas
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
-            
-            const config = { ...LABEL_CONFIG, ...options };
+
+            const { showPrices: showPricesOption, format, ...sizeOverrides } = options;
+            const showPrices = showPricesOption !== false;
+            const config = { ...LABEL_CONFIG, ...sizeOverrides };
             canvas.width = config.width;
             canvas.height = config.height;
 
@@ -75,7 +79,7 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const barcodeCanvas = document.createElement("canvas");
             
             JsBarcode(barcodeCanvas, variant.system_barcode, {
-                format: options.format || "CODE128",
+                format: format || "CODE128",
                 width: config.barcode.width,
                 height: config.barcode.height,
                 displayValue: false, // DISABLED: Human-readable number not needed for scanning
@@ -144,7 +148,9 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
 
             // ============================================
             // 5. SALE & MRP PRICES (Left: MRP, Right: Special Price)
+            // Skipped when showPrices === false; layout above this line is unchanged.
             // ============================================
+            if (showPrices) {
             ctx.font = `bold ${config.text.fontSize.medium}px ${config.text.fontFamily}`; // Using medium (24px) to prevent side-by-side overflow
             
             const mrp = variant.mrp || product?.mrp || 0;
@@ -159,7 +165,8 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             ctx.textAlign = "right";
             ctx.fillStyle = "#000000";
             ctx.fillText(`Spl.Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - 20, currentY);
-            
+            }
+
             // Draw separator line at bottom (optional)
             ctx.strokeStyle = "#EEEEEE";
             ctx.lineWidth = 1;
@@ -223,7 +230,11 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
                     const labelCanvas = await generateBarcodeLabel(
                         item.variant, 
                         item.product, 
-                        { width: labelWidth, height: labelHeight }
+                        {
+                            width: labelWidth,
+                            height: labelHeight,
+                            showPrices: options.showPrices,
+                        }
                     );
                     ctx.drawImage(labelCanvas, x, y, labelWidth, labelHeight);
                     labelCanvas.remove();

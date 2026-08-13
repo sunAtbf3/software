@@ -310,8 +310,9 @@ export default function ProductEditForm({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-gray-800">Edit Product</h3>
-              <p className="text-xs text-gray-400 mt-0.5 font-mono">
-                {selectedProduct?.product_code} — {selectedProduct?.name}
+              <p className="text-xs mt-0.5">
+                <span className="font-semibold text-blue-600">{selectedProduct?.product_code}</span>
+                <span className="text-gray-400"> — {selectedProduct?.name}</span>
               </p>
             </div>
             <button

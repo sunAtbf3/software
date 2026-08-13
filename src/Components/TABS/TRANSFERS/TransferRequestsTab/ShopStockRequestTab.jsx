@@ -9,6 +9,8 @@ import {
     generateBulkIdempotencyKey,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/BulkTransfer_api/bulkTransferApi";
 import VariantCatalogPicker from "./TransferRequestShared/VariantCatalogPicker";
+import { ComboOfferBadge } from "./TransferRequestShared/ComboOfferDisplay";
+import { resolveTransferComboOffer } from "../../../../utils/comboPricing.utils";
 import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
 
 const MODE_OPTIONS = [
@@ -70,7 +72,12 @@ export default function ShopStockRequestTab() {
                         mrp: v.mrp ?? null,
                         special_price: v.special_price ?? null,
                         franchise_unit_price: v.franchise_unit_price ?? null,
+                        franchise_combo_unit_price: v.franchise_combo_unit_price ?? null,
+                        combo_trigger_qty: v.combo_trigger_qty ?? null,
+                        combo_price: v.combo_price ?? null,
+                        combo_unit_price: v.combo_unit_price ?? null,
                         purchase_price: v.purchase_price ?? null,
+                        combo_eligible: v.combo_eligible === true,
                     };
                 } else {
                     next[v.variant_id] = { ...next[v.variant_id], selected: false };
@@ -90,6 +97,11 @@ export default function ShopStockRequestTab() {
                 product_code: s.product_code,
                 quantity: s.quantity,
                 available_stock: s.available_stock,
+                special_price: s.special_price ?? null,
+                combo_eligible: s.combo_eligible === true,
+                combo_trigger_qty: s.combo_trigger_qty ?? null,
+                combo_price: s.combo_price ?? null,
+                combo_unit_price: s.combo_unit_price ?? null,
             }));
     }, [selection]);
 
@@ -232,6 +244,11 @@ export default function ShopStockRequestTab() {
                         isLoading={catalogLoading}
                         franchisePricing={!!catalogData?.franchise_shop_pricing_view}
                         activeComboRules={activeComboRules || []}
+                        franchiseMarkupPercent={catalogData?.franchise_markup_percent}
+                        warehouseFranchiseView={
+                            !!catalogData?.is_franchise_shop &&
+                            !catalogData?.franchise_shop_pricing_view
+                        }
                         emptyMessage={
                             catalogMode === "new"
                                 ? "No new products with stock at this warehouse."
@@ -252,11 +269,16 @@ export default function ShopStockRequestTab() {
                                 key={item.variant_id}
                                 className="flex justify-between text-sm border-b border-gray-50 pb-1"
                             >
-                                <span>
-                                    {item.product_name}{" "}
-                                    <span className="text-gray-400 font-mono text-xs">
-                                        {item.product_code}
+                                <span className="min-w-0">
+                                    <span className="block">
+                                        {item.product_name}{" "}
+                                        <span className="font-semibold text-blue-600 text-xs">
+                                            {item.product_code}
+                                        </span>
                                     </span>
+                                    <ComboOfferBadge
+                                        offer={resolveTransferComboOffer(item, activeComboRules || [])}
+                                    />
                                 </span>
                                 <span className="font-medium">× {item.quantity}</span>
                             </div>
