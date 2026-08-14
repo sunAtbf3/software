@@ -23,6 +23,10 @@ import {
   getUnitOfMeasureSelectOptions,
   normalizeUnitOfMeasure,
 } from "../../../../constants/unitOfMeasure.constants";
+import {
+  capSpecialPriceInput,
+  specialExceedsMrpMessage,
+} from "../../../../utils/productCatalogValidation";
 
 const GST_TYPES     = ["CGST_SGST", "IGST", "EXEMPT"];
 const GST_PERCENTS  = ["0", "5", "12", "18", "28"];
@@ -38,6 +42,7 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
   const replaceFileInputRef = useRef(null);
   const [pendingReplaceIndex, setPendingReplaceIndex] = React.useState(null);
   const [pendingReplaceIsExisting, setPendingReplaceIsExisting] = React.useState(null);
+  const [specialCapError, setSpecialCapError] = React.useState("");
 
   const { data: vendorData, isLoading: vendorsLoading } = useGetVendorsQuery({ page: 1, limit: 100 });
   const vendors = vendorData?.vendors || [];
@@ -60,6 +65,30 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
     value: formData[name] ?? "",
     onChange: (e) => onChange({ [name]: e.target.value }),
   });
+
+  const mrpCap = Number(formData.mrp);
+  const hasMrpCap = Number.isFinite(mrpCap) && mrpCap > 0;
+
+  const applySpecialPrice = (raw) => {
+    const capped = capSpecialPriceInput(raw, formData.mrp);
+    if (capped.exceeded) {
+      setSpecialCapError(specialExceedsMrpMessage(capped.mrp));
+      onChange({ special_price: capped.value });
+      return;
+    }
+    setSpecialCapError("");
+    onChange({ special_price: raw });
+  };
+
+  const applyMrp = (raw) => {
+    const capped = capSpecialPriceInput(formData.special_price, raw);
+    const updates = { mrp: raw };
+    if (capped.exceeded) {
+      updates.special_price = capped.value;
+      setSpecialCapError(specialExceedsMrpMessage(capped.mrp));
+    }
+    onChange(updates);
+  };
 
   // ── Image handling with Delete + Replace ────────────────────────────────────
   const getImageSrc = (img, isExisting, isNew) => {
@@ -248,7 +277,15 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               MRP <span className="text-red-500">*</span>
             </label>
-            <input type="number" step="0.01" {...field("mrp")} placeholder="MRP" className={inputCls("mrp")} />
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.mrp ?? ""}
+              onChange={(e) => applyMrp(e.target.value)}
+              placeholder="MRP"
+              className={inputCls("mrp")}
+            />
             {errorMsg("mrp")}
           </div>
 
@@ -256,8 +293,23 @@ export default function ProductFormBody({ formData, onChange, formErrors }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Special Price (Retail) <span className="text-red-500">*</span>
             </label>
-            <input type="number" step="0.01" {...field("special_price")} placeholder="Selling Price" className={inputCls("special_price")} />
-            {errorMsg("special_price")}
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max={hasMrpCap ? mrpCap : undefined}
+              value={formData.special_price ?? ""}
+              onChange={(e) => applySpecialPrice(e.target.value)}
+              onBlur={(e) => applySpecialPrice(e.target.value)}
+              placeholder="Selling Price"
+              title={hasMrpCap ? `Cannot exceed MRP ₹${mrpCap}` : undefined}
+              className={specialCapError ? `${inputCls("special_price")} border-red-400` : inputCls("special_price")}
+            />
+            {specialCapError ? (
+              <p className="text-xs text-red-500 mt-1">{specialCapError}</p>
+            ) : (
+              errorMsg("special_price")
+            )}
           </div>
 
           <div>

@@ -5,6 +5,7 @@ import { lazy } from "react";
 const TransferHistoryTab = lazy(() => import("./TransferHistoryTab"));
 const TransferRequestsTab = lazy(() => import("./TransferRequestsTab/TransferRequestsTab"));
 const BulkTransferRequestsTab = lazy(() => import("./TransferRequestsTab/BulkTransferRequestsTab"));
+const ShopWarehouseReturnTab = lazy(() => import("./ShopWarehouseReturnTab"));
 const StockInwardBillsTab = lazy(() => import("../PURCHASE/StockInwardBillsTab/StockInwardBillsTab"));
 const WarehouseProductsCatalogTab = lazy(() => import("./WarehouseProductsCatalogTab"));
 
@@ -20,6 +21,20 @@ export const TRANSFERS_TAB_REGISTRY = [
         label: "Bulk Requests",
         icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
         component: BulkTransferRequestsTab,
+    },
+    {
+        id: "shop-warehouse-returns",
+        /** Shop-facing default; WH sees "Return Stock" via TransfersDashboard. */
+        label: "Return to Warehouse",
+        labelByRole: {
+            WH_MANAGER: "Return Stock",
+            WH_STOCK_LISTER: "Return Stock",
+            SUPER_ADMIN: "Return Stock",
+            SHOP_OWNER: "Return to Warehouse",
+            SHOP_MANAGER: "Return to Warehouse",
+        },
+        icon: "M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6",
+        component: ShopWarehouseReturnTab,
     },
     {
         id: "warehouse-products",

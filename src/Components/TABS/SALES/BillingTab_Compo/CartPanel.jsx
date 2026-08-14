@@ -4,12 +4,13 @@
 // Pure Redux - no API calls
 // UPDATED: Price type options to match backend (SPECIAL, RETAIL, WHOLESALE, MRP, ONLINE)
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Trash2, Plus, Minus } from "lucide-react";
 import {
     updateCartQty,
     updatePriceType,
+    updateCartUnitPrice,
     removeFromCart,
     removeManualItem,
     updateManualItem,
@@ -26,6 +27,111 @@ const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
     return isNaN(num) ? defaultValue : num;
 };
+
+const formatPriceInput = (value) => {
+    const n = toNumber(value);
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
+};
+
+/**
+ * Slightly larger editable Special Price under the product name.
+ * Catalog listing special_price is not mutated — only this cart line's unit_price.
+ * Cannot exceed this item's MRP — message shows while filling.
+ */
+function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridden, mrp }) {
+    const dispatch = useDispatch();
+    const [draft, setDraft] = useState(() => formatPriceInput(unitPrice));
+    const [focused, setFocused] = useState(false);
+    const [error, setError] = useState("");
+
+    const mrpCap = Number(mrp);
+    const hasMrpCap = Number.isFinite(mrpCap) && mrpCap > 0;
+
+    useEffect(() => {
+        if (!focused) {
+            setDraft(formatPriceInput(unitPrice));
+        }
+    }, [unitPrice, focused]);
+
+    const applyPrice = (raw, { clampDraft } = {}) => {
+        const trimmed = String(raw ?? "").trim();
+        if (trimmed === "") {
+            setError("");
+            if (clampDraft) setDraft(formatPriceInput(unitPrice));
+            return;
+        }
+        const n = Number(trimmed);
+        if (!Number.isFinite(n) || n < 0) {
+            setError("Enter a valid amount");
+            if (clampDraft) setDraft(formatPriceInput(unitPrice));
+            return;
+        }
+        if (hasMrpCap && n > mrpCap + 0.005) {
+            setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}`);
+            dispatch(updateCartUnitPrice({ variant_id: variantId, unit_price: mrpCap }));
+            if (clampDraft) setDraft(formatPriceInput(mrpCap));
+            return;
+        }
+        setError("");
+        dispatch(updateCartUnitPrice({ variant_id: variantId, unit_price: n }));
+        if (clampDraft) setDraft(formatPriceInput(n));
+    };
+
+    return (
+        <div className="inline-flex flex-col gap-0.5 min-w-0">
+            <label className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-md pl-1.5 pr-1 py-0.5">
+                <span className="text-[10px] text-gray-600 font-medium whitespace-nowrap">Special ₹</span>
+                <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max={hasMrpCap ? mrpCap : undefined}
+                    step="0.01"
+                    value={draft}
+                    onFocus={(e) => {
+                        setFocused(true);
+                        e.target.select();
+                    }}
+                    onChange={(e) => {
+                        const next = e.target.value;
+                        setDraft(next);
+                        if (next === "") {
+                            setError("");
+                            return;
+                        }
+                        applyPrice(next);
+                    }}
+                    onBlur={() => {
+                        setFocused(false);
+                        applyPrice(draft, { clampDraft: true });
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                    className={`w-[4.75rem] h-7 text-sm font-semibold tabular-nums bg-white border rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 ${
+                        error
+                            ? "border-red-400 text-red-700 focus:ring-red-300"
+                            : "border-gray-300 text-gray-800 focus:ring-blue-400"
+                    }`}
+                    title={
+                        hasMrpCap
+                            ? `Max MRP ₹${formatPriceInput(mrpCap)}. Listing special remains ₹${formatPriceInput(catalogSpecial)}`
+                            : overridden
+                            ? `Edited for this bill. Listing special remains ₹${formatPriceInput(catalogSpecial)}`
+                            : "Edit sell price for this bill only"
+                    }
+                    aria-label="Special price for this bill"
+                    aria-invalid={Boolean(error)}
+                />
+            </label>
+            {error ? (
+                <span className="text-[10px] text-red-600 font-medium leading-tight max-w-[11rem]">
+                    {error}
+                </span>
+            ) : null}
+        </div>
+    );
+}
 
 export default function CartPanel() {
     const dispatch = useDispatch();
@@ -133,7 +239,9 @@ export default function CartPanel() {
                         const itemName = billType === BILL_TYPES.NON_LISTED ? item.item_name : item.product_name;
                         const itemTotal = billType === BILL_TYPES.NON_LISTED ? item.unit_price * item.quantity : item.line_total;
                         const isComboEligible =
-                            billType !== BILL_TYPES.NON_LISTED && item.combo_eligible === true;
+                            billType !== BILL_TYPES.NON_LISTED &&
+                            item.combo_eligible === true &&
+                            item.price_overridden !== true;
                         const itemPriceKey = priceKey(item.special_price ?? item.retail_price);
                         const groupHint = isComboEligible
                             ? comboHints.byPriceKey.get(itemPriceKey)
@@ -158,9 +266,17 @@ export default function CartPanel() {
                                             </span>
                                         ) : specialPriceOnlyBilling ? (
                                             <>
-                                                <span className="text-[10px] text-gray-600 font-medium bg-gray-100 px-1.5 py-0.5 rounded">
-                                                    Special (₹{toNumber(item.special_price ?? item.retail_price).toFixed(2)})
-                                                </span>
+                                                <CartSpecialPriceInput
+                                                    variantId={item.variant_id}
+                                                    unitPrice={
+                                                        item.price_overridden === true
+                                                            ? item.unit_price
+                                                            : (item.special_price ?? item.retail_price)
+                                                    }
+                                                    catalogSpecial={item.special_price ?? item.retail_price}
+                                                    overridden={item.price_overridden === true}
+                                                    mrp={item.mrp}
+                                                />
                                                 {item.combo_applied ? (
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                                         Combo @ ₹{toNumber(item.combo_unit_price ?? item.unit_price).toFixed(2)}
@@ -188,9 +304,22 @@ export default function CartPanel() {
                                                     onChange={(e) => handlePriceTypeChange(item.variant_id, e.target.value)}
                                                     className="text-[10px] py-0.5 px-1 border border-gray-300 rounded bg-gray-50"
                                                 >
-                                                    <option value="SPECIAL">Special (₹{toNumber(item.special_price ?? item.retail_price).toFixed(2)})</option>
+                                                    <option value="SPECIAL">Special</option>
                                                     <option value="MRP">MRP (₹{toNumber(item.mrp).toFixed(2)})</option>
                                                 </select>
+                                                {(item.price_type === "SPECIAL" || item.price_type === "RETAIL") && (
+                                                    <CartSpecialPriceInput
+                                                        variantId={item.variant_id}
+                                                        unitPrice={
+                                                            item.price_overridden === true
+                                                                ? item.unit_price
+                                                                : (item.special_price ?? item.retail_price)
+                                                        }
+                                                        catalogSpecial={item.special_price ?? item.retail_price}
+                                                        overridden={item.price_overridden === true}
+                                                        mrp={item.mrp}
+                                                    />
+                                                )}
                                                 {item.combo_applied ? (
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                                         Combo @ ₹{toNumber(item.combo_unit_price ?? item.unit_price).toFixed(2)}

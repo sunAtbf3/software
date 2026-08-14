@@ -40,6 +40,32 @@ export const LABEL_CONFIG = {
 
 
 /**
+ * Two-digit 00–99 for encoded special-price labels. Not persisted — new pair every generate.
+ */
+const twoRandomDigits = () => {
+    try {
+        if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+            const buf = new Uint8Array(1);
+            crypto.getRandomValues(buf);
+            return String(buf[0] % 100).padStart(2, "0");
+        }
+    } catch {
+        // Fall through to Math.random
+    }
+    return String(Math.floor(Math.random() * 100)).padStart(2, "0");
+};
+
+/**
+ * Print-only obfuscation: # + 2 random + special-price digits + 2 random.
+ * Example: 40 → #124089, 148 → #9814801. Does not write to DB / catalog.
+ */
+export const encodeSpecialPriceForLabel = (specialPrice) => {
+    const n = Number(specialPrice);
+    const priceDigits = Number.isFinite(n) && n >= 0 ? String(Math.round(n)) : "0";
+    return `#${twoRandomDigits()}${priceDigits}${twoRandomDigits()}`;
+};
+
+/**
  * Generate a single barcode label as Canvas
  * Label Order: Purchase Code (top) → Barcode → Product Code → Product Name → Sale Price
  * @param {Object} variant - Variant data
@@ -47,6 +73,8 @@ export const LABEL_CONFIG = {
  * @param {Object} options - Optional config overrides.
  *   showPrices defaults to true (existing label). false skips MRP/Spl.Price only —
  *   dimensions, barcode, and text placement stay identical.
+ *   encodeSpecialPrice: when true with showPrices, right side prints #RRpriceRR
+ *   instead of "Spl.Price: ₹…". Layout/fonts unchanged.
  * @returns {Promise<HTMLCanvasElement>}
  */
 export async function generateBarcodeLabel(variant, product, options = {}) {
@@ -60,7 +88,12 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
 
-            const { showPrices: showPricesOption, format, ...sizeOverrides } = options;
+            const {
+                showPrices: showPricesOption,
+                encodeSpecialPrice = false,
+                format,
+                ...sizeOverrides
+            } = options;
             const showPrices = showPricesOption !== false;
             const config = { ...LABEL_CONFIG, ...sizeOverrides };
             canvas.width = config.width;
@@ -99,20 +132,45 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             // Set baseline to top for predictable programmatic spacing
             ctx.textBaseline = "top";
 
-            // ============================================
-            // 1. PURCHASE CODE (TOP - Most Important)
-            // ============================================
-            // const purchaseCode = calculatePurchaseCode();
-            // const purchaseCode = variant.purchase_code
-           // In barcodeLabelGenerator.js
-           // const purchaseCode = variant.purchase_code || (variant.purchase_price + variant.expenses + 1986);     // NOT GOOD 
-           const purchaseCode = variant.purchase_code ;     // NOT GOOD 
+            const padX = 48;
+            const purchaseCode = variant.purchase_code;
+            const pcPrefix = "P.C- ";
+            const pcValue = String(variant.product_code || variant.sku || "—");
+            const productCodeText = `${pcPrefix}${pcValue}`;
 
-            ctx.font = `bold ${config.text.fontSize.xlarge}px ${config.text.fontFamily}`;
+            // ============================================
+            // 1. TOP ROW — left: full product code (shrink font to fit), right: #purchase
+            // Canvas / LABEL_CONFIG dimensions unchanged.
+            // ============================================
+            const topRowH = config.text.fontSize.xlarge;
+            const halfMaxW = canvas.width / 2 - padX - 8;
+
             ctx.fillStyle = "#000000";
-            ctx.textAlign = "center";
-            ctx.fillText(`#${purchaseCode}`, canvas.width / 2, currentY);
-            currentY += config.text.fontSize.xlarge + 8;
+            ctx.textAlign = "left";
+            let pcFontSize = config.text.fontSize.large; // 30 — full P.C. must print
+            ctx.font = `bold ${pcFontSize}px ${config.text.fontFamily}`;
+            while (pcFontSize > 16 && ctx.measureText(productCodeText).width > halfMaxW) {
+                pcFontSize -= 1;
+                ctx.font = `bold ${pcFontSize}px ${config.text.fontFamily}`;
+            }
+            const pcY = currentY + Math.max(0, (topRowH - pcFontSize) / 2);
+            ctx.fillText(pcPrefix, padX, pcY);
+            const pcValueX = padX + ctx.measureText(pcPrefix).width;
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 0.45;
+            ctx.lineJoin = "round";
+            ctx.strokeText(pcValue, pcValueX, pcY);
+            ctx.fillText(pcValue, pcValueX, pcY);
+
+            ctx.font = `bold ${config.text.fontSize.large}px ${config.text.fontFamily}`;
+            ctx.textAlign = "right";
+            const purchaseY = currentY + Math.max(0, (topRowH - config.text.fontSize.large) / 2);
+            ctx.fillText(
+                `#${purchaseCode != null && purchaseCode !== "" ? purchaseCode : "—"}`,
+                canvas.width - padX,
+                purchaseY
+            );
+            currentY += topRowH + 8;
 
             // ============================================
             // 2. BARCODE IMAGE
@@ -121,16 +179,8 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             currentY += barcodeHeight + 10;
 
             // ============================================
-            // 3. PRODUCT CODE
-            // ============================================
-            ctx.font = `bold ${config.text.fontSize.large}px ${config.text.fontFamily}`;
-            ctx.fillStyle = "#000000";
-            ctx.textAlign = "center";
-            ctx.fillText(`P.C- ${variant.product_code || variant.sku || "—"}`, canvas.width / 2, currentY);
-            currentY += config.text.fontSize.large + 6;
-
-            // ============================================
-            // 4. PRODUCT NAME (using 'name' field, not 'title')
+            // 3. PRODUCT NAME (using 'name' field, not 'title')
+            // Product code moved to top row — this extra line is gone so name/prices sit higher.
             // ============================================
             const productName = product?.name || "Unknown Product";
             ctx.font = `bold ${config.text.fontSize.medium}px ${config.text.fontFamily}`;
@@ -145,26 +195,53 @@ export async function generateBarcodeLabel(variant, product, options = {}) {
             }
             ctx.fillText(displayName, canvas.width / 2, currentY);
             currentY += config.text.fontSize.medium + 6;
+            if (showPrices) {
+                currentY += 8;
+            }
 
             // ============================================
             // 5. SALE & MRP PRICES (Left: MRP, Right: Special Price)
             // Skipped when showPrices === false; layout above this line is unchanged.
             // ============================================
             if (showPrices) {
-            ctx.font = `bold ${config.text.fontSize.medium}px ${config.text.fontFamily}`; // Using medium (24px) to prevent side-by-side overflow
+            // Minor bump 24 → 26; corners / canvas unchanged
+            const priceFontSize = config.text.fontSize.medium + 4;
+            ctx.font = `bold ${priceFontSize}px ${config.text.fontFamily}`;
             
             const mrp = variant.mrp || product?.mrp || 0;
             const salePrice = variant.special_price || product?.special_price || 0;
+            const fmtAmt = (n) =>
+                `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
-            // Draw MRP on the left corner
-            ctx.textAlign = "left";
-            ctx.fillStyle = "#000000";
-            ctx.fillText(`MRP: ₹${Number(mrp).toLocaleString()}`, 20, currentY);
+            const paintPrice = (text, x, align) => {
+                ctx.textAlign = align;
+                ctx.strokeStyle = "#000000";
+                ctx.lineWidth = 0.22;
+                ctx.lineJoin = "round";
+                ctx.strokeText(text, x, currentY);
+                ctx.fillStyle = "#000000";
+                ctx.fillText(text, x, currentY);
+            };
 
-            // Draw Special Price on the right corner
-            ctx.textAlign = "right";
-            ctx.fillStyle = "#000000";
-            ctx.fillText(`Spl.Price: ₹${Number(salePrice).toLocaleString()}`, canvas.width - 20, currentY);
+            // Draw label + amount separately so "MRP:" / "Spl.Price:" sit tight to ₹ (Courier ₹ is wide)
+            const labelAmtGap = 3;
+            const mrpLabel = "MRP:";
+            const mrpAmt = fmtAmt(mrp);
+            paintPrice(mrpLabel, padX, "left");
+            paintPrice(mrpAmt, padX + ctx.measureText(mrpLabel).width + labelAmtGap, "left");
+
+            if (encodeSpecialPrice) {
+                paintPrice(encodeSpecialPriceForLabel(salePrice), canvas.width - padX, "right");
+            } else {
+                const splAmt = fmtAmt(salePrice);
+                const splLabel = "Spl.Price:";
+                paintPrice(splAmt, canvas.width - padX, "right");
+                paintPrice(
+                    splLabel,
+                    canvas.width - padX - ctx.measureText(splAmt).width - labelAmtGap,
+                    "right"
+                );
+            }
             }
 
             // Draw separator line at bottom (optional)
@@ -234,6 +311,7 @@ export async function generateBatchLabels(variantsWithProducts, options = {}) {
                             width: labelWidth,
                             height: labelHeight,
                             showPrices: options.showPrices,
+                            encodeSpecialPrice: options.encodeSpecialPrice,
                         }
                     );
                     ctx.drawImage(labelCanvas, x, y, labelWidth, labelHeight);

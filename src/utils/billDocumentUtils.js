@@ -78,8 +78,12 @@ export const lineMrp = (item) => {
   return Number(item.unit_price) || 0;
 };
 
-/** Catalog special price for invoice Special Price column. */
+/** Charged special for this bill (cashier may override). Catalog stays on the variant. */
 export const lineSpecialPrice = (item) => {
+  if (!item?.combo_applied) {
+    const charged = Number(item.unit_price);
+    if (Number.isFinite(charged) && charged >= 0) return charged;
+  }
   const snap = item.special_unit_price;
   if (snap != null && Number.isFinite(Number(snap)) && Number(snap) >= 0) {
     return Number(snap);
@@ -88,8 +92,6 @@ export const lineSpecialPrice = (item) => {
   if (fromVariant != null && Number.isFinite(Number(fromVariant)) && Number(fromVariant) >= 0) {
     return Number(fromVariant);
   }
-  // Legacy bills / non-combo: charged unit_price was shown as special.
-  if (!item.combo_applied) return Number(item.unit_price) || 0;
   return Number(item.unit_price) || 0;
 };
 

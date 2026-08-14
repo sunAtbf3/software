@@ -28,7 +28,7 @@ const axiosBaseQuery = () => async ({ url, method, data, params }) => {
 export const shopStockApi = createApi({
     reducerPath: "shopStockApi",
     baseQuery: axiosBaseQuery(),
-    tagTypes: ["ShopStock", "LowStockAlerts", "ReorderSuggestions", "ProductLevels"],
+    tagTypes: ["ShopStock", "LowStockAlerts", "ReorderSuggestions", "ProductLevels", "DeadStock"],
 
     endpoints: (builder) => ({
 
@@ -205,6 +205,7 @@ export const shopStockApi = createApi({
                 { type: "ShopStock", id: variantId },
                 { type: "ShopStock", id: "LIST" },
                 "LowStockAlerts",
+                { type: "DeadStock", id: "LIST" },
             ],
             transformResponse: (response) => response.data,
         }),
@@ -216,8 +217,29 @@ export const shopStockApi = createApi({
                 method: "PATCH",
                 data: { shop_id, items },
             }),
-            invalidatesTags: [{ type: "ShopStock", id: "LIST" }, "LowStockAlerts"],
+            invalidatesTags: [
+                { type: "ShopStock", id: "LIST" },
+                "LowStockAlerts",
+                { type: "DeadStock", id: "LIST" },
+            ],
             transformResponse: (response) => response.data,
+        }),
+
+        // GET /shop-dead-stock — Adjust Stock write-off history
+        getDeadStockHistory: builder.query({
+            query: ({ page = 1, limit = 20, shop_id = "", search = "", from_date = "", to_date = "" }) => {
+                const params = { page, limit };
+                if (shop_id) params.shop_id = shop_id;
+                if (search) params.search = search;
+                if (from_date) params.from_date = from_date;
+                if (to_date) params.to_date = to_date;
+                return { url: "/shop-dead-stock", method: "GET", params };
+            },
+            providesTags: [{ type: "DeadStock", id: "LIST" }],
+            transformResponse: (response) => ({
+                entries: response.data || [],
+                meta: response.meta || { total: 0, page: 1, limit: 20, totalPages: 1 },
+            }),
         }),
 
     }),
@@ -230,8 +252,9 @@ export const {
     useGetLowStockAlertsQuery,
     useGetShopStockByVariantQuery,
     useGetReorderSuggestionsQuery,
+    useGetDeadStockHistoryQuery,
     // Mutations
     useUpdateShopStockMutation,
     useBulkUpdateShopStocksMutation,
-    useSetProductLevelsMutation, 
+    useSetProductLevelsMutation,
 } = shopStockApi;

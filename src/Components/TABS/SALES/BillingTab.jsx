@@ -53,7 +53,7 @@ export default function BillingTab() {
             cart
                 .map(
                     (item) =>
-                        `${item.variant_id}:${item.quantity}:${item.price_type}:${item.combo_eligible === true ? 1 : 0}:${item.special_price}`
+                        `${item.variant_id}:${item.quantity}:${item.price_type}:${item.combo_eligible === true ? 1 : 0}:${item.special_price}:${item.price_overridden === true ? 1 : 0}`
                 )
                 .join("|"),
         [cart]

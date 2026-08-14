@@ -191,6 +191,7 @@ export const createOfflineBill = async ({
           quantity: item.quantity,
           unit_price: item.unit_price,
           price_type: item.price_type,
+          price_overridden: item.price_overridden === true,
         })),
     offline_bill_number: billNumber,
     offline_customer_client_id: offlineCustomerClientId || null,

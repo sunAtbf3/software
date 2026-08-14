@@ -113,6 +113,7 @@ export const buildBillingCartItem = ({
     combo_applied: false,
     combo_unit_price: null,
     combo_units: 0,
+    price_overridden: false,
     line_total: unitPrice * quantity,
     gst_amount: 0,
   };

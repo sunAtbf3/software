@@ -29,6 +29,32 @@ const applyLineGst = (item, billType) => {
 const isSpecialLikePriceType = (priceType) =>
     !priceType || priceType === "SPECIAL" || priceType === "RETAIL";
 
+const catalogSpecialOf = (item) => Number(item.special_price ?? item.retail_price) || 0;
+
+const pricesMatch = (a, b) => Math.abs(Number(a) - Number(b)) < 0.005;
+
+/** Counter-only sell price. Never mutates catalog special_price. */
+const parseCartUnitPrice = (raw) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return null;
+    const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+    if (rounded > 9999999.99) return 9999999.99;
+    return rounded;
+};
+
+const applyChargedPrice = (item, unitPrice, billType) => {
+    item.unit_price = unitPrice;
+    item.line_total = calculateLineTotal(unitPrice, item.quantity);
+    applyLineGst(item, billType);
+};
+
+const clearComboOnItem = (item) => {
+    item.combo_applied = false;
+    item.combo_unit_price = null;
+    item.combo_units = 0;
+    item.normal_units = item.quantity;
+};
+
 const recalculateCartComboPricing = (state, rules = []) => {
     try {
         if (!Array.isArray(state.cart) || state.cart.length === 0) return;
@@ -37,9 +63,11 @@ const recalculateCartComboPricing = (state, rules = []) => {
             line_key: String(item.variant_id),
             variant_id: item.variant_id,
             quantity: item.quantity,
-            special_price: Number(item.special_price ?? item.retail_price) || 0,
+            special_price: catalogSpecialOf(item),
             combo_eligible:
-                item.combo_eligible === true && isSpecialLikePriceType(item.price_type),
+                item.combo_eligible === true &&
+                isSpecialLikePriceType(item.price_type) &&
+                item.price_overridden !== true,
         }));
 
         const priced = applyComboPricingToLines(lines, Array.isArray(rules) ? rules : []);
@@ -47,17 +75,21 @@ const recalculateCartComboPricing = (state, rules = []) => {
 
         state.cart.forEach((item) => {
             if (!isSpecialLikePriceType(item.price_type)) {
-                item.combo_applied = false;
-                item.combo_unit_price = null;
-                item.combo_units = 0;
-                item.normal_units = item.quantity;
+                clearComboOnItem(item);
                 item.line_total = calculateLineTotal(item.unit_price, item.quantity);
                 applyLineGst(item, state.billType);
                 return;
             }
 
+            // Cashier override: keep typed unit_price; do not restore catalog / combo.
+            if (item.price_overridden === true) {
+                clearComboOnItem(item);
+                applyChargedPrice(item, Number(item.unit_price) || 0, state.billType);
+                return;
+            }
+
             const row = byKey.get(String(item.variant_id));
-            const base = Number(item.special_price ?? item.retail_price) || 0;
+            const base = catalogSpecialOf(item);
 
             if (row && row.combo_applied) {
                 item.unit_price = Number(row.unit_price);
@@ -67,12 +99,8 @@ const recalculateCartComboPricing = (state, rules = []) => {
                 item.combo_units = row.combo_units;
                 item.normal_units = row.normal_units;
             } else {
-                item.unit_price = base;
-                item.line_total = calculateLineTotal(base, item.quantity);
-                item.combo_applied = false;
-                item.combo_unit_price = null;
-                item.combo_units = 0;
-                item.normal_units = item.quantity;
+                applyChargedPrice(item, base, state.billType);
+                clearComboOnItem(item);
             }
             applyLineGst(item, state.billType);
         });
@@ -154,6 +182,7 @@ const billingSlice = createSlice({
                     combo_applied: false,
                     combo_unit_price: null,
                     combo_units: 0,
+                    price_overridden: false,
                     line_total: variant.unit_price,
                     gst_amount: 0,
                 };
@@ -213,9 +242,35 @@ const billingSlice = createSlice({
                 }
                 item.price_type = price_type;
                 item.unit_price = newPrice;
+                item.price_overridden = false;
                 item.line_total = calculateLineTotal(item.unit_price, item.quantity);
                 applyLineGst(item, state.billType);
             }
+        },
+
+        /**
+         * Edit charged unit price on this cart line only.
+         * Catalog special_price on the item (and product master) is never changed.
+         */
+        updateCartUnitPrice: (state, action) => {
+            const { variant_id, unit_price } = action.payload || {};
+            const item = state.cart.find((i) => i.variant_id === variant_id);
+            if (!item) return;
+            const parsed = parseCartUnitPrice(unit_price);
+            if (parsed == null) return;
+
+            const mrpCap = Number(item.mrp);
+            const capped =
+                Number.isFinite(mrpCap) && mrpCap > 0 && parsed > mrpCap
+                    ? Math.round((mrpCap + Number.EPSILON) * 100) / 100
+                    : parsed;
+
+            const catalog = catalogSpecialOf(item);
+            item.price_overridden = !pricesMatch(capped, catalog);
+            if (item.price_overridden) {
+                clearComboOnItem(item);
+            }
+            applyChargedPrice(item, capped, state.billType);
         },
 
         clearCart: (state) => {
@@ -400,6 +455,7 @@ export const {
     removeFromCart,
     updateCartQty,
     updatePriceType,
+    updateCartUnitPrice,
     clearCart,
     clearManualCart,
     addManualItem,

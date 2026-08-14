@@ -3,6 +3,32 @@ const toNumber = (val, defaultVal = 0) => {
   return Number.isNaN(num) ? defaultVal : num;
 };
 
+export const formatCatalogPrice = (value) => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return Number.isInteger(n) ? String(n) : String(n);
+};
+
+export const specialExceedsMrpMessage = (mrp) =>
+  `Cannot exceed MRP ₹${formatCatalogPrice(mrp)}`;
+
+/**
+ * Keep typed special_price at or below MRP. Empty / invalid MRP is not capped.
+ */
+export const capSpecialPriceInput = (rawSpecial, rawMrp) => {
+  const value = rawSpecial == null ? "" : String(rawSpecial);
+  const mrp = Number(rawMrp);
+  const hasMrpCap = Number.isFinite(mrp) && mrp > 0;
+  if (value === "" || !hasMrpCap) {
+    return { value, exceeded: false, mrp: hasMrpCap ? mrp : null };
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= mrp + 0.005) {
+    return { value, exceeded: false, mrp };
+  }
+  return { value: String(mrp), exceeded: true, mrp };
+};
+
 /**
  * Validate one variant's price chain in isolation (no cross-variant inheritance).
  * Returns an error message string or null.

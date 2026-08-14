@@ -173,6 +173,7 @@ export const buildComboCartHints = (cartItems = [], rules = []) => {
   const eligibleUnitsByPrice = new Map();
   for (const item of Array.isArray(cartItems) ? cartItems : []) {
     if (item?.combo_eligible !== true) continue;
+    if (item.price_overridden === true) continue;
     const priceType = item.price_type || "SPECIAL";
     if (priceType !== "SPECIAL" && priceType !== "RETAIL") continue;
     const key = priceKey(item.special_price ?? item.retail_price);

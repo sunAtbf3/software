@@ -14,7 +14,11 @@ import {
   addVariantAttributeRow,
   removeVariantAttributeRow,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Product_api/productSlice";
-import { validateCatalogPricing } from "../../../../utils/productCatalogValidation";
+import {
+  validateCatalogPricing,
+  capSpecialPriceInput,
+  specialExceedsMrpMessage,
+} from "../../../../utils/productCatalogValidation";
 import VariantAttributesEditor from "./VariantAttributesEditor";
 
 const toNumber = (val, defaultVal = 0) => {
@@ -40,6 +44,7 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
   const replaceFileInputRef = useRef(null);
   const [pendingReplaceIndex, setPendingReplaceIndex] = React.useState(null);
   const [pendingReplaceIsExisting, setPendingReplaceIsExisting] = React.useState(null);
+  const [specialCapError, setSpecialCapError] = React.useState("");
   const isEditing = editingVariantIndex !== null;
 
   const inputCls = (name) =>
@@ -53,6 +58,30 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
     value: variantForm[name] ?? "",
     onChange: (e) => dispatch(updateVariantForm({ [name]: e.target.value })),
   });
+
+  const mrpCap = Number(variantForm.mrp);
+  const hasMrpCap = Number.isFinite(mrpCap) && mrpCap > 0;
+
+  const applySpecialPrice = (raw) => {
+    const capped = capSpecialPriceInput(raw, variantForm.mrp);
+    if (capped.exceeded) {
+      setSpecialCapError(specialExceedsMrpMessage(capped.mrp));
+      dispatch(updateVariantForm({ special_price: capped.value }));
+      return;
+    }
+    setSpecialCapError("");
+    dispatch(updateVariantForm({ special_price: raw }));
+  };
+
+  const applyMrp = (raw) => {
+    const capped = capSpecialPriceInput(variantForm.special_price, raw);
+    const updates = { mrp: raw };
+    if (capped.exceeded) {
+      updates.special_price = capped.value;
+      setSpecialCapError(specialExceedsMrpMessage(capped.mrp));
+    }
+    dispatch(updateVariantForm(updates));
+  };
 
   // ── Image handling with Delete + Replace ────────────────────────────────────
   const getImageSrc = (img, isExisting, isNew) => {
@@ -248,13 +277,36 @@ export default function VariantModal({ variantForm, variantErrors, editingVarian
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">MRP <span className="text-red-500">*</span></label>
-                <input type="number" step="0.01" {...field("mrp")} placeholder="MRP" className={inputCls("mrp")} />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={variantForm.mrp ?? ""}
+                  onChange={(e) => applyMrp(e.target.value)}
+                  placeholder="MRP"
+                  className={inputCls("mrp")}
+                />
                 {errorMsg("mrp")}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Special Price <span className="text-red-500">*</span></label>
-                <input type="number" step="0.01" {...field("special_price")} placeholder="Selling Price" className={inputCls("special_price")} />
-                {errorMsg("special_price")}
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={hasMrpCap ? mrpCap : undefined}
+                  value={variantForm.special_price ?? ""}
+                  onChange={(e) => applySpecialPrice(e.target.value)}
+                  onBlur={(e) => applySpecialPrice(e.target.value)}
+                  placeholder="Selling Price"
+                  title={hasMrpCap ? `Cannot exceed MRP ₹${mrpCap}` : undefined}
+                  className={specialCapError ? `${inputCls("special_price")} border-red-400` : inputCls("special_price")}
+                />
+                {specialCapError ? (
+                  <p className="text-xs text-red-500 mt-1">{specialCapError}</p>
+                ) : (
+                  errorMsg("special_price")
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Wholesale Price <span className="text-red-500">*</span></label>

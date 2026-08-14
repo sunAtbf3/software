@@ -54,6 +54,7 @@ import { dashboardApi } from "../REDUX_SLICES/Dashboard_api/dashboardApi";
 import { backupApi } from "../REDUX_SLICES/Backup_api/backupApi";
 import { transferBillApi } from "../REDUX_SLICES/TransferBill_api/transferBillApi";
 import transferBillReducer from "../REDUX_SLICES/TransferBill_api/transferBillSlice";
+import { shopWarehouseReturnApi } from "../REDUX_SLICES/ShopWarehouseReturn_api/shopWarehouseReturnApi";
 import offlineReducer from "../REDUX_SLICES/Offline_api/offlineSlice";
 import transferNotificationReducer from "../REDUX_SLICES/TransferNotification_api/transferNotificationSlice";
 
@@ -115,6 +116,7 @@ export const store = configureStore({
     transferNotification: transferNotificationReducer,
     transferBill: transferBillReducer,
     [transferBillApi.reducerPath]: transferBillApi.reducer,
+    [shopWarehouseReturnApi.reducerPath]: shopWarehouseReturnApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -150,5 +152,6 @@ export const store = configureStore({
       dashboardApi.middleware,
       backupApi.middleware,
       transferBillApi.middleware,
+      shopWarehouseReturnApi.middleware,
     ),
 });

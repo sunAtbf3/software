@@ -15,6 +15,7 @@ import { toast } from "../../../../shared/ToastConfig";
 
 const LABEL_TYPE_WITH_PRICE = "with_price";
 const LABEL_TYPE_WITHOUT_PRICE = "without_price";
+const LABEL_TYPE_WITH_CODE = "with_code";
 
 const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const [loading, setLoading] = useState(false);
@@ -31,6 +32,8 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const [individualImages, setIndividualImages] = useState([]);
 
     const showPrices = labelType !== LABEL_TYPE_WITHOUT_PRICE;
+    const encodeSpecialPrice = labelType === LABEL_TYPE_WITH_CODE;
+    const drawOptions = { showPrices, encodeSpecialPrice };
 
     useEffect(() => {
         if (!isOpen) {
@@ -53,7 +56,6 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
         const genId = ++previewGenRef.current;
         setLoading(true);
         try {
-            const drawOptions = { showPrices };
             // Generate individual high-res image buffers for every single variant asset up front
             const individualBuffers = await Promise.all(
                 variantsWithProducts.map(async (item) => {
@@ -83,8 +85,8 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
 
                 // Keep print/export architecture aligned to the grid specs
                 const layoutOptions = labelsPerPage === 1
-                    ? { labelsPerRow: 1, labelsPerColumn: 1, showPrices }
-                    : { labelsPerRow: 2, labelsPerColumn: 4, showPrices };
+                    ? { labelsPerRow: 1, labelsPerColumn: 1, ...drawOptions }
+                    : { labelsPerRow: 2, labelsPerColumn: 4, ...drawOptions };
 
                 for (let i = 0; i < pages; i++) {
                     const pageItems = variantsWithProducts.slice(
@@ -118,7 +120,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
             if (!currentItem) return;
 
             // Re-generate a fresh canvas for this single variant to download
-            const canvas = await generateBarcodeLabel(currentItem.variant, currentItem.product, { showPrices });
+            const canvas = await generateBarcodeLabel(currentItem.variant, currentItem.product, drawOptions);
             const productName = currentItem.product?.name || "barcode";
             const variantCode = currentItem.variant?.product_code || currentItem.variant?.sku || currentPage + 1;
             await downloadCanvasAsPNG(
@@ -188,7 +190,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     // ── Generate Print-Optimized Canvases (Always 1 Row per Page) ─────────
     const getPrintOptimizedCanvases = async (items) => {
         // Enforce 2-up thermal standard: exactly 2 labels per row (page)
-        const layoutOptions = { labelsPerRow: 2, labelsPerColumn: 1, showPrices };
+        const layoutOptions = { labelsPerRow: 2, labelsPerColumn: 1, ...drawOptions };
         const pages = Math.ceil(items.length / 2);
         const canvases = [];
         
@@ -289,6 +291,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
                                 >
                                     <option value={LABEL_TYPE_WITH_PRICE}>Label with price</option>
                                     <option value={LABEL_TYPE_WITHOUT_PRICE}>Label without price</option>
+                                    <option value={LABEL_TYPE_WITH_CODE}>Label with code</option>
                                 </select>
                             </label>
                             <button

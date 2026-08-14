@@ -75,12 +75,14 @@ export const SUB_TAB_PERMISSIONS = {
     "transfers.internal.bulk-requests": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.warehouse-products": ["SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.history": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
+    "transfers.internal.shop-warehouse-returns": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "SHOP_MANAGER"],
     "transfers.internal.shop-transfer-bills": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 
 
     // Inventory internal horizontal tabs (from inventoryTabRegistry.js)
     "inventory.internal.products": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER",],
     "inventory.internal.shopstock": ["SHOP_OWNER", "SHOP_MANAGER"],
+    "inventory.internal.dead-stock": ["SHOP_OWNER", "SHOP_MANAGER"],
     "inventory.internal.inventorystock": ["SUPER_ADMIN", "WH_MANAGER", "WH_STOCK_LISTER"],
 
     // Cash & Bank — shop level (collections / receivables)

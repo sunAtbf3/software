@@ -419,6 +419,7 @@ export default function CheckoutPanel({
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 price_type: item.price_type,
+                price_overridden: item.price_overridden === true,
             }));
 
         const payload = {
