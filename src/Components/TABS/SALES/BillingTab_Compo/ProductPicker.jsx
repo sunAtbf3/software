@@ -115,6 +115,9 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             quantity_available: stockAvailable,
             attributes: result.attributes,
             combo_eligible: result.combo_eligible === true,
+            on_sale: result.on_sale === true,
+            sale_price: result.sale_price,
+            effective_special_price: result.effective_special_price,
         });
         dispatch(addToCart(cartItem));
         // toast.success(`${productName} added to cart`);
@@ -216,6 +219,9 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 quantity_available: stock.quantity_available,
                 attributes: variant?.attributes,
                 combo_eligible: variant?.combo_eligible === true,
+                on_sale: variant?.on_sale === true,
+                sale_price: variant?.sale_price,
+                effective_special_price: variant?.effective_special_price,
             });
             dispatch(addToCart(cartItem));
             // toast.success(`${product?.name} added to cart`);
@@ -332,8 +338,17 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                                     <div className="mt-1 flex items-center justify-between gap-1">
                                         <div className="flex items-center gap-1 min-w-0">
                                             <span className="text-xs font-bold text-blue-600 shrink-0">
-                                                ₹{toBillingNumber(variant.special_price).toFixed(0)}
+                                                ₹{toBillingNumber(
+                                                    variant.on_sale === true
+                                                        ? (variant.effective_special_price ?? variant.sale_price ?? variant.special_price)
+                                                        : variant.special_price
+                                                ).toFixed(0)}
                                             </span>
+                                            {variant.on_sale === true && (
+                                                <span className="text-[9px] font-semibold text-rose-700 bg-rose-50 px-1 py-0.5 rounded shrink-0">
+                                                    Sale
+                                                </span>
+                                            )}
                                             {gstLabel && (
                                                 <span className="text-[10px] text-gray-500 truncate">
                                                     GST {gstLabel}

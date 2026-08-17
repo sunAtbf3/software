@@ -11,17 +11,19 @@ import {
     updateCartQty,
     updatePriceType,
     updateCartUnitPrice,
+    setCartSpecialPriceInvalid,
     removeFromCart,
     removeManualItem,
     updateManualItem,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
-import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
+import { formatGstPercentLabel, resolveBillingDefaultUnitPrice } from "../../../../utils/billingCart.utils";
 import ProductCode from "../../../shared/ProductCode";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
 import { useShopPricingVisibility, isSpecialPriceOnlyShopType } from "../../../../utils/shopPricingVisibility";
 import { buildComboCartHints, priceKey } from "../../../../utils/comboPricing.utils";
+import { sellPriceExceedsMrp } from "../../../../utils/cartMrpGuard";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -48,33 +50,44 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
     const hasMrpCap = Number.isFinite(mrpCap) && mrpCap > 0;
 
     useEffect(() => {
-        if (!focused) {
+        if (!focused && !error) {
             setDraft(formatPriceInput(unitPrice));
         }
-    }, [unitPrice, focused]);
+    }, [unitPrice, focused, error]);
 
-    const applyPrice = (raw, { clampDraft } = {}) => {
+    const applyPrice = (raw, { commitDraft } = {}) => {
         const trimmed = String(raw ?? "").trim();
         if (trimmed === "") {
             setError("");
-            if (clampDraft) setDraft(formatPriceInput(unitPrice));
-            return;
+            dispatch(setCartSpecialPriceInvalid({ variant_id: variantId, invalid: false }));
+            if (commitDraft) setDraft(formatPriceInput(unitPrice));
+            else setDraft("");
+            return false;
+        }
+        // Allow typing "12." without committing yet.
+        if (trimmed === "." || /^\d+\.$/.test(trimmed)) {
+            setDraft(trimmed);
+            setError("");
+            return false;
         }
         const n = Number(trimmed);
         if (!Number.isFinite(n) || n < 0) {
             setError("Enter a valid amount");
-            if (clampDraft) setDraft(formatPriceInput(unitPrice));
-            return;
+            dispatch(setCartSpecialPriceInvalid({ variant_id: variantId, invalid: true }));
+            if (commitDraft) setDraft(formatPriceInput(unitPrice));
+            return false;
         }
-        if (hasMrpCap && n > mrpCap + 0.005) {
-            setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}`);
-            dispatch(updateCartUnitPrice({ variant_id: variantId, unit_price: mrpCap }));
-            if (clampDraft) setDraft(formatPriceInput(mrpCap));
-            return;
+        if (hasMrpCap && sellPriceExceedsMrp(n, mrpCap)) {
+            setDraft(trimmed);
+            setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}. Keep special price at or below MRP.`);
+            dispatch(setCartSpecialPriceInvalid({ variant_id: variantId, invalid: true }));
+            return false;
         }
         setError("");
         dispatch(updateCartUnitPrice({ variant_id: variantId, unit_price: n }));
-        if (clampDraft) setDraft(formatPriceInput(n));
+        if (commitDraft) setDraft(formatPriceInput(n));
+        else setDraft(trimmed);
+        return true;
     };
 
     return (
@@ -85,7 +98,6 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                     type="number"
                     inputMode="decimal"
                     min="0"
-                    max={hasMrpCap ? mrpCap : undefined}
                     step="0.01"
                     value={draft}
                     onFocus={(e) => {
@@ -93,17 +105,11 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                         e.target.select();
                     }}
                     onChange={(e) => {
-                        const next = e.target.value;
-                        setDraft(next);
-                        if (next === "") {
-                            setError("");
-                            return;
-                        }
-                        applyPrice(next);
+                        applyPrice(e.target.value);
                     }}
                     onBlur={() => {
                         setFocused(false);
-                        applyPrice(draft, { clampDraft: true });
+                        applyPrice(draft, { commitDraft: true });
                     }}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
@@ -122,10 +128,15 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                     }
                     aria-label="Special price for this bill"
                     aria-invalid={Boolean(error)}
+                    aria-describedby={error ? `special-price-err-${variantId}` : undefined}
                 />
             </label>
             {error ? (
-                <span className="text-[10px] text-red-600 font-medium leading-tight max-w-[11rem]">
+                <span
+                    id={`special-price-err-${variantId}`}
+                    className="text-[10px] text-red-600 font-medium leading-tight max-w-[11rem]"
+                    role="alert"
+                >
                     {error}
                 </span>
             ) : null}
@@ -241,7 +252,9 @@ export default function CartPanel() {
                         const isComboEligible =
                             billType !== BILL_TYPES.NON_LISTED &&
                             item.combo_eligible === true &&
+                            item.on_sale !== true &&
                             item.price_overridden !== true;
+                        const chargedSpecial = resolveBillingDefaultUnitPrice(item);
                         const itemPriceKey = priceKey(item.special_price ?? item.retail_price);
                         const groupHint = isComboEligible
                             ? comboHints.byPriceKey.get(itemPriceKey)
@@ -271,12 +284,17 @@ export default function CartPanel() {
                                                     unitPrice={
                                                         item.price_overridden === true
                                                             ? item.unit_price
-                                                            : (item.special_price ?? item.retail_price)
+                                                            : chargedSpecial
                                                     }
                                                     catalogSpecial={item.special_price ?? item.retail_price}
                                                     overridden={item.price_overridden === true}
                                                     mrp={item.mrp}
                                                 />
+                                                {item.on_sale === true && (
+                                                    <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
+                                                        Sale
+                                                    </span>
+                                                )}
                                                 {item.combo_applied ? (
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                                         Combo @ ₹{toNumber(item.combo_unit_price ?? item.unit_price).toFixed(2)}
@@ -313,12 +331,17 @@ export default function CartPanel() {
                                                         unitPrice={
                                                             item.price_overridden === true
                                                                 ? item.unit_price
-                                                                : (item.special_price ?? item.retail_price)
+                                                                : chargedSpecial
                                                         }
                                                         catalogSpecial={item.special_price ?? item.retail_price}
                                                         overridden={item.price_overridden === true}
                                                         mrp={item.mrp}
                                                     />
+                                                )}
+                                                {item.on_sale === true && (
+                                                    <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
+                                                        Sale
+                                                    </span>
                                                 )}
                                                 {item.combo_applied ? (
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">

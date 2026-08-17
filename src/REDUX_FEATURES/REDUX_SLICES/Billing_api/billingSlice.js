@@ -8,7 +8,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import { aggregateCartTax } from "../../../utils/billingTax";
 import { BILL_TYPES } from "../../../constants/billingBillTypes";
 import { CUSTOMER_TYPES } from "../../../constants/customerTypes";
-import { calculateGstOnAmount } from "../../../utils/billingCart.utils";
+import { calculateGstOnAmount, resolveBillingDefaultUnitPrice } from "../../../utils/billingCart.utils";
 import { applyComboPricingToLines } from "../../../utils/comboPricing.utils";
 
 // Helper: calculate line total
@@ -66,6 +66,7 @@ const recalculateCartComboPricing = (state, rules = []) => {
             special_price: catalogSpecialOf(item),
             combo_eligible:
                 item.combo_eligible === true &&
+                item.on_sale !== true &&
                 isSpecialLikePriceType(item.price_type) &&
                 item.price_overridden !== true,
         }));
@@ -89,9 +90,12 @@ const recalculateCartComboPricing = (state, rules = []) => {
             }
 
             const row = byKey.get(String(item.variant_id));
-            const base = catalogSpecialOf(item);
+            const base = resolveBillingDefaultUnitPrice(item);
 
-            if (row && row.combo_applied) {
+            if (item.on_sale === true) {
+                applyChargedPrice(item, base, state.billType);
+                clearComboOnItem(item);
+            } else if (row && row.combo_applied) {
                 item.unit_price = Number(row.unit_price);
                 item.line_total = Number(row.line_total);
                 item.combo_applied = true;
@@ -155,7 +159,12 @@ const billingSlice = createSlice({
 
             if (existing) {
                 existing.quantity += 1;
-                if (variant.combo_eligible === true) existing.combo_eligible = true;
+                if (variant.combo_eligible === true && variant.on_sale !== true) existing.combo_eligible = true;
+                if (variant.on_sale === true) {
+                    existing.on_sale = true;
+                    existing.sale_price = variant.sale_price ?? existing.sale_price;
+                    existing.combo_eligible = false;
+                }
                 if (variant.product_code && !existing.product_code) existing.product_code = variant.product_code;
                 existing.line_total = calculateLineTotal(existing.unit_price, existing.quantity);
                 applyLineGst(existing, state.billType);
@@ -178,11 +187,14 @@ const billingSlice = createSlice({
                     gst_type: variant.gst_type || "CGST_SGST",
                     hsn_code: variant.hsn_code ?? variant.product?.hsn_code ?? null,
                     quantity_available: variant.quantity_available,
-                    combo_eligible: variant.combo_eligible === true,
+                    combo_eligible: variant.combo_eligible === true && variant.on_sale !== true,
+                    on_sale: variant.on_sale === true,
+                    sale_price: variant.on_sale === true ? (variant.sale_price ?? null) : null,
                     combo_applied: false,
                     combo_unit_price: null,
                     combo_units: 0,
                     price_overridden: false,
+                    special_price_invalid: false,
                     line_total: variant.unit_price,
                     gst_amount: 0,
                 };
@@ -223,7 +235,7 @@ const billingSlice = createSlice({
                 let newPrice = 0;
                 switch (price_type) {
                     case "SPECIAL":
-                        newPrice = item.special_price ?? item.retail_price;
+                        newPrice = resolveBillingDefaultUnitPrice(item);
                         break;
                     case "RETAIL":
                         newPrice = item.retail_price;
@@ -238,7 +250,7 @@ const billingSlice = createSlice({
                         newPrice = item.online_price;
                         break;
                     default:
-                        newPrice = item.special_price ?? item.retail_price;
+                        newPrice = resolveBillingDefaultUnitPrice(item);
                 }
                 item.price_type = price_type;
                 item.unit_price = newPrice;
@@ -260,17 +272,25 @@ const billingSlice = createSlice({
             if (parsed == null) return;
 
             const mrpCap = Number(item.mrp);
-            const capped =
-                Number.isFinite(mrpCap) && mrpCap > 0 && parsed > mrpCap
-                    ? Math.round((mrpCap + Number.EPSILON) * 100) / 100
-                    : parsed;
+            if (Number.isFinite(mrpCap) && mrpCap > 0 && parsed > mrpCap) {
+                item.special_price_invalid = true;
+                return;
+            }
 
-            const catalog = catalogSpecialOf(item);
-            item.price_overridden = !pricesMatch(capped, catalog);
+            const catalog = resolveBillingDefaultUnitPrice(item);
+            item.special_price_invalid = false;
+            item.price_overridden = !pricesMatch(parsed, catalog);
             if (item.price_overridden) {
                 clearComboOnItem(item);
             }
-            applyChargedPrice(item, capped, state.billType);
+            applyChargedPrice(item, parsed, state.billType);
+        },
+
+        setCartSpecialPriceInvalid: (state, action) => {
+            const { variant_id, invalid } = action.payload || {};
+            const item = state.cart.find((i) => i.variant_id === variant_id);
+            if (!item) return;
+            item.special_price_invalid = invalid === true;
         },
 
         clearCart: (state) => {
@@ -285,6 +305,16 @@ const billingSlice = createSlice({
 
         addManualItem: (state, action) => {
             const { id, item_name, quantity, unit_price, mrp } = action.payload;
+            const nextPrice = Number(unit_price);
+            const mrpCap = Number(mrp);
+            if (
+                Number.isFinite(mrpCap) &&
+                mrpCap > 0 &&
+                Number.isFinite(nextPrice) &&
+                nextPrice > mrpCap
+            ) {
+                return;
+            }
             const existing = state.manualCart.find((i) => i.id === id);
             if (existing) {
                 existing.item_name = item_name;
@@ -303,7 +333,20 @@ const billingSlice = createSlice({
         updateManualItem: (state, action) => {
             const { id, ...fields } = action.payload;
             const item = state.manualCart.find((i) => i.id === id);
-            if (item) Object.assign(item, fields);
+            if (!item) return;
+            if (Object.prototype.hasOwnProperty.call(fields, "unit_price")) {
+                const nextPrice = Number(fields.unit_price);
+                const mrpCap = Number(fields.mrp != null ? fields.mrp : item.mrp);
+                if (
+                    Number.isFinite(mrpCap) &&
+                    mrpCap > 0 &&
+                    Number.isFinite(nextPrice) &&
+                    nextPrice > mrpCap
+                ) {
+                    return;
+                }
+            }
+            Object.assign(item, fields);
         },
 
         /** Re-apply GST math on all lines (e.g. after formula fix or page reload). */
@@ -456,6 +499,7 @@ export const {
     updateCartQty,
     updatePriceType,
     updateCartUnitPrice,
+    setCartSpecialPriceInvalid,
     clearCart,
     clearManualCart,
     addManualItem,

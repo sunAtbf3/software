@@ -45,6 +45,7 @@ export const SUB_TAB_PERMISSIONS = {
     "settings.franchise": ["SUPER_ADMIN"],
     "settings.onlinestock": ["SUPER_ADMIN"],
     "settings.combo": ["SUPER_ADMIN"],
+    "settings.todaysdeal": ["SUPER_ADMIN"],
     "settings.shopprofile": ["SHOP_OWNER"],
     "settings.warehouseprofile": ["WH_MANAGER"],
 
@@ -59,6 +60,7 @@ export const SUB_TAB_PERMISSIONS = {
     "settings.internal.franchise": ["SUPER_ADMIN"],
     "settings.internal.onlinestock": ["SUPER_ADMIN"],
     "settings.internal.combo": ["SUPER_ADMIN"],
+    "settings.internal.todaysdeal": ["SUPER_ADMIN"],
     "settings.internal.shopprofile": ["SHOP_OWNER"],
     "settings.internal.warehouseprofile": ["WH_MANAGER"],
 

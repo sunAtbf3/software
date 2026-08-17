@@ -61,6 +61,17 @@ export const canIncreaseCartQuantity = (currentQty, stockAvailable) => {
   return currentQty + 1 <= stockAvailable;
 };
 
+export const isBillingItemOnSale = (item) =>
+  item?.on_sale === true && Number(item?.sale_price ?? item?.effective_special_price) > 0;
+
+/** Default charged unit while SPECIAL: live sale overlay, else catalog special. */
+export const resolveBillingDefaultUnitPrice = (item = {}) => {
+  if (isBillingItemOnSale(item)) {
+    return toBillingNumber(item.effective_special_price ?? item.sale_price);
+  }
+  return toBillingNumber(item.special_price ?? item.retail_price);
+};
+
 /**
  * Build payload for billingSlice addToCart from shop stock / barcode API row.
  */
@@ -83,8 +94,14 @@ export const buildBillingCartItem = ({
   price_type = "SPECIAL",
   quantity = 1,
   combo_eligible = false,
+  on_sale = false,
+  sale_price = null,
+  effective_special_price = null,
 }) => {
-  const unitPrice = toBillingNumber(special_price ?? retail_price);
+  const onSale = on_sale === true;
+  const sale = onSale ? toBillingNumber(effective_special_price ?? sale_price) : 0;
+  const catalogSpecial = toBillingNumber(special_price ?? retail_price);
+  const unitPrice = onSale && sale > 0 ? sale : catalogSpecial;
   const gst = toBillingNumber(gst_percent);
   const type = String(gst_type || "CGST_SGST").trim().toUpperCase();
   const normalizedType =
@@ -101,7 +118,7 @@ export const buildBillingCartItem = ({
     unit_price: unitPrice,
     retail_price: toBillingNumber(retail_price ?? special_price),
     wholesale_price: toBillingNumber(wholesale_price),
-    special_price: toBillingNumber(special_price),
+    special_price: catalogSpecial,
     mrp: toBillingNumber(mrp),
     online_price: toBillingNumber(online_price),
     gst_percent: gst,
@@ -109,7 +126,9 @@ export const buildBillingCartItem = ({
     hsn_code: hsn_code ? String(hsn_code).trim() : null,
     quantity_available:
       quantity_available != null ? toBillingNumber(quantity_available) : null,
-    combo_eligible: combo_eligible === true,
+    combo_eligible: combo_eligible === true && !onSale,
+    on_sale: onSale,
+    sale_price: onSale && sale > 0 ? sale : null,
     combo_applied: false,
     combo_unit_price: null,
     combo_units: 0,

@@ -17,6 +17,21 @@ export default function ManualItemsPanel() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+
+        if (name === "specialPrice") {
+            const n = Number(value);
+            const mrpCap = Number(formData.mrp);
+            if (
+                value !== "" &&
+                Number.isFinite(n) &&
+                Number.isFinite(mrpCap) &&
+                mrpCap > 0 &&
+                n > mrpCap
+            ) {
+                return;
+            }
+        }
+
         setFormData((prev) => ({
             ...prev,
             [name]: value,
@@ -144,6 +159,8 @@ export default function ManualItemsPanel() {
                             id="specialPrice"
                             type="number"
                             step="0.01"
+                            min="0"
+                            max={formData.mrp !== "" && Number(formData.mrp) > 0 ? formData.mrp : undefined}
                             name="specialPrice"
                             placeholder="Price"
                             value={formData.specialPrice}

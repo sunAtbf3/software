@@ -8,6 +8,7 @@ import {
 import { applyLocalSaleDeductions } from '../sync/shopStockSync.service';
 import { enqueueMutation } from '../sync/pushService';
 import { getUserShopId } from '../constants';
+import { describeMrpViolations } from '../../utils/cartMrpGuard';
 
 const nowIso = () => new Date().toISOString();
 
@@ -126,6 +127,11 @@ export const createOfflineBill = async ({
 
   if (payload.credit_note_ids?.length) {
     throw new Error('Credit notes cannot be applied while offline');
+  }
+
+  const mrpViolation = describeMrpViolations(cart);
+  if (mrpViolation) {
+    throw new Error(mrpViolation);
   }
 
   const config = await shopConfigRepository.getConfigBundle();

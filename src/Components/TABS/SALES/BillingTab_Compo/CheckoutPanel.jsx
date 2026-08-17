@@ -52,6 +52,7 @@ import {
     selectExtraDiscount,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { computeFinalPayable } from "../../../../utils/billingPayable";
+import { describeMrpViolations } from "../../../../utils/cartMrpGuard";
 import { getStateName } from "../../../../constants/indianStateCodes";
 import { BILL_TYPES, getBillTypeLabel, isWithGstBill, isNonListedBill } from "../../../../constants/billingBillTypes";
 
@@ -332,6 +333,11 @@ export default function CheckoutPanel({
         extraDiscountAmount: extraDiscountInput,
         creditAmount: totalSelectedCredit,
     });
+    const mrpViolationMessage = describeMrpViolations(
+        isNonListedBill(billType) ? manualCart : cart
+    );
+    const cartEmpty = isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0;
+    const createBillDisabled = cartEmpty || isCreatingBill || Boolean(mrpViolationMessage);
     const selectedBankAccount =
         bankAccounts.find((a) => a.bank_account_id === selectedBankAccountId) ||
         bankAccounts.find((a) => a.is_default) ||
@@ -466,6 +472,7 @@ export default function CheckoutPanel({
     };
 
     const submitBill = async (extra = {}) => {
+        if (!assertSellPricesWithinMrp()) return;
         try {
             if (shouldUseOfflineBilling(isOnline)) {
                 if (selectedCreditNoteIds.length) {
@@ -562,6 +569,15 @@ export default function CheckoutPanel({
         return true;
     };
 
+    const assertSellPricesWithinMrp = () => {
+        const message = describeMrpViolations(
+            isNonListedBill(billType) ? manualCart : cart
+        );
+        if (!message) return true;
+        toast.error(message);
+        return false;
+    };
+
     const handleCreateBill = async () => {
         const isCartEmpty = billType === BILL_TYPES.NON_LISTED
             ? manualCart.length === 0
@@ -571,6 +587,8 @@ export default function CheckoutPanel({
             toast.error("Cart is empty");
             return;
         }
+
+        if (!assertSellPricesWithinMrp()) return;
 
         if (!assertStaffCodeSelected()) return;
 
@@ -994,6 +1012,11 @@ export default function CheckoutPanel({
                         )}
                     </>
                 )}
+                {mrpViolationMessage && (
+                    <div className="text-xs text-red-600 font-medium bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                        {mrpViolationMessage}
+                    </div>
+                )}
                 <div className="pt-2 border-t border-gray-100">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Extra Discount (₹)</label>
                     <input
@@ -1080,8 +1103,8 @@ export default function CheckoutPanel({
                         /* Column 2 Alternative: Inline Action button for Cash & Card selection types */
                         <button
                             onClick={handleCreateBill}
-                            disabled={(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) || isCreatingBill}
-                            className={`w-full py-2.5 rounded-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700"
+                            disabled={createBillDisabled}
+                            className={`w-full py-2.5 rounded-lg font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${createBillDisabled ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700"
                                 }`}
                         >
                             {isCreatingBill ? (
@@ -1097,8 +1120,8 @@ export default function CheckoutPanel({
                 {paymentMethod === "UPI" && finalPayable > 0 && (
                     <button
                         onClick={handleCreateBill}
-                        disabled={(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) || isCreatingBill}
-                        className={`w-full py-3 rounded-xl font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${(isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0) ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700 hover:shadow-lg"
+                        disabled={createBillDisabled}
+                        className={`w-full py-3 rounded-xl font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${createBillDisabled ? "bg-gray-300 cursor-not-allowed shadow-none" : "bg-green-600 hover:bg-green-700 hover:shadow-lg"
                             }`}
                     >
                         {isCreatingBill ? (

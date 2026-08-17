@@ -27,6 +27,9 @@ export const mapLocalStockToApiRow = (row) => {
     product,
     images: row.image_url ? [{ url: row.image_url }] : [],
     combo_eligible: row.combo_eligible === true,
+    on_sale: row.on_sale === true || row.variant?.on_sale === true,
+    sale_price: row.sale_price ?? row.variant?.sale_price ?? null,
+    effective_special_price: row.variant?.effective_special_price ?? null,
   };
 
   return {
@@ -40,6 +43,9 @@ export const mapLocalStockToApiRow = (row) => {
     variant: {
       ...variant,
       product: variant.product || product,
+      on_sale: row.on_sale === true || variant.on_sale === true,
+      sale_price: row.sale_price ?? variant.sale_price ?? null,
+      effective_special_price: variant.effective_special_price ?? row.sale_price ?? null,
     },
   };
 };
@@ -63,5 +69,8 @@ export const mapLocalStockToBarcodeProduct = (row) => {
     attributes: row.variant?.attributes ?? null,
     stock_available: row.quantity_available ?? 0,
     combo_eligible: row.combo_eligible === true || row.variant?.combo_eligible === true,
+    on_sale: row.on_sale === true || row.variant?.on_sale === true,
+    sale_price: row.sale_price ?? row.variant?.sale_price ?? null,
+    effective_special_price: row.variant?.effective_special_price ?? row.sale_price ?? null,
   };
 };
