@@ -306,7 +306,7 @@ export default function TransferRequestsTab() {
         const isDestWH = userWarehouseId && (request.to_warehouse_id === userWarehouseId);
         const isSourceShop = userShopId && (request.from_shop_id === userShopId);
         const isDestShop = userShopId && (request.to_shop_id === userShopId);
-        const isSuperAdmin = userRole === "SUPER_ADMIN";
+        const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
 
         // View details - ALWAYS available for everyone
         actions.push({ type: "view", label: "View Details", icon: <Eye size={14} />, color: "text-gray-400 hover:text-gray-700" });
@@ -1032,7 +1032,7 @@ export default function TransferRequestsTab() {
 //         const isDestWH = userWarehouseId && (request.to_warehouse_id === userWarehouseId);
 //         const isSourceShop = userShopId && (request.from_shop_id === userShopId);
 //         const isDestShop = userShopId && (request.to_shop_id === userShopId);
-//         const isSuperAdmin = userRole === "SUPER_ADMIN";
+//         const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
 
 //         // View details - ALWAYS available for everyone
 //         actions.push({ type: "view", label: "View Details", icon: <Eye size={14} />, color: "text-gray-500" });

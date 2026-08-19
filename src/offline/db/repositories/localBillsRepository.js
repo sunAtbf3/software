@@ -66,23 +66,33 @@ export const offlineBillNumberService = {
 };
 
 export const shopStockMutationService = {
-  async deductForSale(shopId, lines) {
+  /**
+   * Deduct sold qty from IndexedDB shop-stock cache.
+   * @param {boolean} [options.requireCachedRow=true] Offline billing: missing row is an error.
+   *   After a successful online bill, pass false — cache is best-effort only; server already deducted.
+   */
+  async deductForSale(shopId, lines, { requireCachedRow = true } = {}) {
+    void shopId;
     return withOfflineTransaction([OFFLINE_STORES.SHOP_STOCKS], 'readwrite', async (stores) => {
       const store = stores[OFFLINE_STORES.SHOP_STOCKS];
       for (const line of lines) {
         const row = await store.get(line.variant_id);
         if (!row) {
-          throw new Error(`Stock not found for variant ${line.variant_id}`);
+          if (requireCachedRow) {
+            throw new Error(`Stock not found for variant ${line.variant_id}`);
+          }
+          continue;
         }
-        const available = row.quantity_available ?? 0;
-        if (available < line.quantity) {
+        const available = Number(row.quantity_available) || 0;
+        const qty = Math.max(0, Number(line.quantity) || 0);
+        if (requireCachedRow && available < qty) {
           throw new Error(
-            `Insufficient stock for ${row.product_name || line.variant_id}. Available: ${available}, requested: ${line.quantity}`
+            `Insufficient stock for ${row.product_name || line.variant_id}. Available: ${available}, requested: ${qty}`
           );
         }
         await store.put({
           ...row,
-          quantity_available: available - line.quantity,
+          quantity_available: Math.max(0, available - qty),
           cached_at: nowIso(),
         });
       }

@@ -93,30 +93,176 @@ const buildPrintHtml = (prepared, bodyHtml, printFormat = "A4") => `<!DOCTYPE ht
 <style>${getBillInvoiceStyles(printFormat)}</style>
 </head><body>${bodyHtml}</body></html>`;
 
-const openPrintWindow = (html) =>
+const IFRAME_STYLE =
+  "position:fixed;left:-10000px;top:0;width:800px;height:1100px;border:0;opacity:0;pointer-events:none;";
+
+const once = (fn) => {
+  let done = false;
+  return (...args) => {
+    if (done) return undefined;
+    done = true;
+    return fn(...args);
+  };
+};
+
+const detachOpener = (win) => {
+  try {
+    win.opener = null;
+  } catch {
+    /* ignore */
+  }
+};
+
+const closeWindowQuietly = (win) => {
+  if (!win || win.closed) return;
+  try {
+    win.close();
+  } catch {
+    /* ignore */
+  }
+};
+
+const tryOpenPrintTab = () => {
+  try {
+    const win = window.open("", "_blank");
+    if (!win) return null;
+    detachOpener(win);
+    return win;
+  } catch {
+    return null;
+  }
+};
+
+const revokeObjectUrlLater = (url) => {
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+  }, 60_000);
+};
+
+const removeIframeLater = (iframe) => {
+  setTimeout(() => {
+    try {
+      iframe.remove();
+    } catch {
+      /* ignore */
+    }
+  }, 60_000);
+};
+
+export const reservePrintWindow = () => {
+  const printWindow = tryOpenPrintTab();
+  if (!printWindow) return null;
+  try {
+    printWindow.document.open();
+    printWindow.document.write(
+      '<!DOCTYPE html><html><head><title>Preparing bill...</title></head><body style="font-family:sans-serif;padding:16px;">Preparing bill for print...</body></html>'
+    );
+    printWindow.document.close();
+  } catch {
+    /* ignore */
+  }
+  return printWindow;
+};
+
+const printHtmlViaIframe = (html) =>
   new Promise((resolve, reject) => {
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      reject(new Error("Pop-up blocked — allow pop-ups to print the bill"));
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = IFRAME_STYLE;
+    document.body.appendChild(iframe);
+    const win = iframe.contentWindow;
+    if (!win) {
+      iframe.remove();
+      reject(new Error("Unable to print the bill"));
       return;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    const triggerPrint = once(() => {
+      try {
+        win.focus();
+        win.print();
+        removeIframeLater(iframe);
+        resolve();
+      } catch (err) {
+        iframe.remove();
+        reject(err);
+      }
+    });
 
-    const triggerPrint = () => {
-      printWindow.focus();
-      printWindow.print();
-      resolve(printWindow);
-    };
-
-    if (printWindow.document.readyState === "complete") {
-      requestAnimationFrame(triggerPrint);
-    } else {
-      printWindow.onload = triggerPrint;
-    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    iframe.onload = triggerPrint;
+    setTimeout(triggerPrint, 500);
   });
+
+const printBlobViaIframe = (url) =>
+  new Promise((resolve, reject) => {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = IFRAME_STYLE;
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    const triggerPrint = once(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        removeIframeLater(iframe);
+        resolve();
+      } catch (err) {
+        iframe.remove();
+        reject(err);
+      }
+    });
+
+    iframe.onload = triggerPrint;
+    setTimeout(triggerPrint, 1500);
+  });
+
+const openPrintWindow = async (html, reservedWindow = null) => {
+  const printWindow =
+    reservedWindow && !reservedWindow.closed ? reservedWindow : tryOpenPrintTab();
+
+  if (!printWindow) {
+    await printHtmlViaIframe(html);
+    return null;
+  }
+
+  try {
+    return await new Promise((resolve, reject) => {
+      try {
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+      } catch (err) {
+        reject(err);
+        return;
+      }
+
+      const triggerPrint = once(() => {
+        try {
+          printWindow.focus();
+          printWindow.print();
+          resolve(printWindow);
+        } catch (err) {
+          reject(err);
+        }
+      });
+
+      printWindow.onload = triggerPrint;
+      setTimeout(triggerPrint, 500);
+    });
+  } catch {
+    closeWindowQuietly(printWindow);
+    await printHtmlViaIframe(html);
+    return null;
+  }
+};
 
 const resolveServerPdfBlob = (response) => {
   if (response instanceof Blob) {
@@ -128,51 +274,86 @@ const resolveServerPdfBlob = (response) => {
   return null;
 };
 
-const printPdfBlob = (blob) =>
-  new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open(url, "_blank", "noopener,noreferrer");
-    if (!printWindow) {
-      URL.revokeObjectURL(url);
-      reject(new Error("Pop-up blocked — allow pop-ups to print the bill"));
-      return;
+const invokeServerPdf = async (triggerServerPdf, args) => {
+  const result = triggerServerPdf(args);
+  if (result && typeof result.unwrap === "function") {
+    return result.unwrap();
+  }
+  return result;
+};
+
+const printPdfBlob = async (blob, reservedWindow = null) => {
+  const url = URL.createObjectURL(blob);
+  const printWindow =
+    reservedWindow && !reservedWindow.closed ? reservedWindow : tryOpenPrintTab();
+
+  const printInIframe = async () => {
+    try {
+      await printBlobViaIframe(url);
+    } finally {
+      revokeObjectUrlLater(url);
     }
+    return null;
+  };
 
-    const cleanup = () => URL.revokeObjectURL(url);
+  if (!printWindow) {
+    return printInIframe();
+  }
 
-    const triggerPrint = () => {
-      printWindow.focus();
-      printWindow.print();
-      cleanup();
-      resolve(printWindow);
-    };
+  try {
+    await new Promise((resolve, reject) => {
+      const triggerPrint = once(() => {
+        try {
+          printWindow.focus();
+          printWindow.print();
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
 
-    printWindow.onload = triggerPrint;
-    setTimeout(triggerPrint, 600);
-  });
+      printWindow.onload = triggerPrint;
+      try {
+        printWindow.location.href = url;
+      } catch (err) {
+        reject(err);
+        return;
+      }
+      setTimeout(triggerPrint, 1500);
+    });
+    revokeObjectUrlLater(url);
+    return printWindow;
+  } catch {
+    closeWindowQuietly(printWindow);
+    return printInIframe();
+  }
+};
 
-export const printBillDocument = async (bill, { printFormat = "A4" } = {}) => {
+export const printBillDocument = async (bill, { printFormat = "A4", printWindow = null } = {}) => {
   const prepared = await prepareBillForDocument(bill);
   const mount = mountBillDocument(prepared, printFormat);
 
   try {
-    await openPrintWindow(buildPrintHtml(prepared, mount.content.outerHTML, printFormat));
+    await openPrintWindow(buildPrintHtml(prepared, mount.content.outerHTML, printFormat), printWindow);
   } finally {
     cleanupMount(mount);
   }
 };
 
-export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf, printFormat = "A4" } = {}) => {
+export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf, printFormat = "A4", printWindow = null } = {}) => {
   const awaitingSync = isBillAwaitingSync(bill);
   const serverBillId =
     bill.server_bill_id || (!awaitingSync && !bill.is_offline ? bill.bill_id : null);
 
   if (isOnline && serverBillId && typeof triggerServerPdf === "function") {
     try {
-      const response = await triggerServerPdf({ billId: serverBillId, printFormat }).unwrap();
+      const response = await invokeServerPdf(triggerServerPdf, {
+        billId: serverBillId,
+        printFormat,
+      });
       const blob = resolveServerPdfBlob(response);
       if (blob) {
-        await printPdfBlob(blob);
+        await printPdfBlob(blob, printWindow);
         return { source: "server" };
       }
     } catch (err) {
@@ -180,7 +361,7 @@ export const printBillPdfSmart = async (bill, { isOnline, triggerServerPdf, prin
     }
   }
 
-  await printBillDocument(bill, { printFormat });
+  await printBillDocument(bill, { printFormat, printWindow });
   return { source: "client" };
 };
 
@@ -237,7 +418,10 @@ export const downloadBillPdfSmart = async (bill, { isOnline, triggerServerPdf, p
 
   if (isOnline && serverBillId && typeof triggerServerPdf === "function") {
     try {
-      const response = await triggerServerPdf({ billId: serverBillId, printFormat }).unwrap();
+      const response = await invokeServerPdf(triggerServerPdf, {
+        billId: serverBillId,
+        printFormat,
+      });
       const blob = resolveServerPdfBlob(response);
       if (blob) {
         const url = window.URL.createObjectURL(blob);

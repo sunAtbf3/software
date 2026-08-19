@@ -29,7 +29,7 @@ export const canEditTeamMember = (actorRole, targetUser, currentUserId) => {
 };
 
 export const getTeamRoleFilterOptions = (actorRole, allRoles) => {
-  if (actorRole === ROLES.SUPER_ADMIN) return allRoles;
+  if (actorRole === ROLES.SUPER_ADMIN || actorRole === ROLES.ORG_MANAGER) return allRoles;
   if (actorRole === ROLES.SHOP_OWNER) {
     return allRoles.filter((r) =>
       ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"].includes(r.value)

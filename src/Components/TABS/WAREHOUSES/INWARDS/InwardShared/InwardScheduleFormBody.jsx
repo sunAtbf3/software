@@ -21,7 +21,7 @@ export default function InwardScheduleFormBody({ formData, onChange, formErrors 
     // const userWarehouseId = user?.warehouse_id || "";
 
     const userWarehouseName = user?.warehouse?.warehouse_name || "";
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
+    const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
     const isWHRole = WH_ROLES.includes(userRole);
 
     // ── Vendor list ───────────────────────────────────────────────────────────

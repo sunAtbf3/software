@@ -105,7 +105,7 @@ export default function BulkActionModals({ onSuccess }) {
     const [downloadBulkChallan, { isFetching: isDownloadingChallan }] = useLazyDownloadBulkChallanPdfQuery();
     const [fetchBulkDetail, { data: bulkDetail }] = useLazyGetBulkTransferRequestByIdQuery();
 
-    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
+    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
 
     useEffect(() => {
         if (showViewModal && selectedRequest?.bulk_request_id) {

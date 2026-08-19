@@ -53,7 +53,7 @@ export default function ViewRequestModal({ onSuccess }) {
     if (!showViewRequestModal || !viewRequestData) return null;
 
     const request = requestDetail || viewRequestData;
-    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
+    const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
     const isFranchiseTransfer = request.is_franchise_transfer || request.to_shop?.shop_type === "FRANCHISE";
     const franchisePricing = request.franchise_pricing;
     const isEmergency = request.priority === "HIGH";

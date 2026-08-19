@@ -75,6 +75,10 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
   const shop = bill.shop || {};
   const items = bill.items || [];
   const showComboPriceCol = items.some((item) => item?.combo_applied === true);
+  const isWholesaleBill =
+    bill.sales_channel === "WHOLESALE" || items.some((item) => item?.price_type === "WHOLESALE");
+  const chargedPriceHeader = isWholesaleBill ? "Wholesale Price" : "Spl. Price";
+  const chargedPriceShort = isWholesaleBill ? "Wholesale" : "Spl.";
   const gst = shopGstin(bill);
   const legalName = bill.gst_config?.legal_name?.trim() || shop.shop_name || "";
   const mrpDiscount = calcMrpDiscount(items);
@@ -235,7 +239,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                 className="bi-th-wrap"
                 style={{ textAlign: "right", width: showComboPriceCol ? "18%" : "25%" }}
               >
-                <span>Spl.</span>
+                <span>{chargedPriceShort}</span>
                 <span>Price</span>
               </th>
               {showComboPriceCol && (
@@ -454,7 +458,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   { label: "Warranty", width: "9%" },
                   { label: "Qty", width: "5%" },
                   { label: "MRP", width: "11%" },
-                  { label: "Special Price", width: "12%" },
+                  { label: chargedPriceHeader, width: "12%" },
                   { label: "Combo Price", width: "12%" },
                   { label: "Total", width: "18%" },
                 ]
@@ -465,7 +469,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   { label: "Warranty", width: "10%" },
                   { label: "Qty", width: "6%" },
                   { label: "MRP", width: "14%" },
-                  { label: "Special Price", width: "14%" },
+                  { label: chargedPriceHeader, width: "14%" },
                   { label: "Total", width: "18%" },
                 ]
               : showComboPriceCol
@@ -477,7 +481,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   { label: "HSN Code", width: "7%" },
                   { label: "Qty", width: "5%" },
                   { label: "MRP", width: "10%" },
-                  { label: "Special Price", width: "11%" },
+                  { label: chargedPriceHeader, width: "11%" },
                   { label: "Combo Price", width: "11%" },
                   { label: "Total", width: "19%" },
                 ]
@@ -489,7 +493,7 @@ export default function BillInvoiceDocument({ bill, printFormat: propPrintFormat
                   { label: "HSN Code", width: "8%" },
                   { label: "Qty", width: "5%" },
                   { label: "MRP", width: "12%" },
-                  { label: "Special Price", width: "12%" },
+                  { label: chargedPriceHeader, width: "12%" },
                   { label: "Total", width: "19%" },
                 ]
             ).map((col) => (

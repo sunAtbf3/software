@@ -1,6 +1,13 @@
 // REDUX_SLICES/User_api/userSlice.js
 
 import { createSlice } from "@reduxjs/toolkit";
+import {
+    toOwnerFormRole,
+    isWarehouseFormRole,
+    isShopAssignmentFormRole,
+    getOwnerShopTypeFilter,
+    resolveApiRole,
+} from "../../../Components/TABS/SETTINGS/UserTab/UserShared/userRoles";
 
 const EMPTY_FORM = {
     name: "",
@@ -10,6 +17,7 @@ const EMPTY_FORM = {
     warehouse_id: "",
     shop_id: "",
     remarks: "",
+    role_title: "",
 };
 
 const initialState = {
@@ -61,10 +69,11 @@ const userSlice = createSlice({
                 name: u.name || "",
                 phone: u.phone || "",
                 password: "",             // never pre-fill password
-                role: u.role || "WH_MANAGER",
+                role: toOwnerFormRole(u) || "WH_MANAGER",
                 warehouse_id: u.warehouse_id || "",
-                shop_id: u.shop_id || "",
+                shop_id: u.shop_id || u.owned_shop?.shop_id || u.shop?.shop_id || "",
                 remarks: u.remarks || "",
+                role_title: u.role_title || "",
             };
             state.formErrors = {};
         },
@@ -79,17 +88,24 @@ const userSlice = createSlice({
         updateFormData: (state, action) => {
             const payload = action.payload;
             if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+                const prevRole = state.formData.role;
                 state.formData = { ...state.formData, ...payload };
 
                 // When role changes, clear the assignment fields to avoid invalid combos
                 if (payload.role !== undefined) {
                     const role = payload.role;
-                    const isWH = ["WH_MANAGER", "WH_STOCK_LISTER"].includes(role);
-                    const isShop = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"].includes(role);
-                    const isSuper = role === "SUPER_ADMIN";
-                    if (isWH) { state.formData.shop_id = ""; }
-                    if (isShop) { state.formData.warehouse_id = ""; }
-                    if (isSuper) { state.formData.warehouse_id = ""; state.formData.shop_id = ""; }
+                    const apiRole = resolveApiRole(role);
+                    if (isWarehouseFormRole(role)) { state.formData.shop_id = ""; }
+                    if (isShopAssignmentFormRole(role)) { state.formData.warehouse_id = ""; }
+                    if (apiRole === "SUPER_ADMIN" || apiRole === "ORG_MANAGER") {
+                        state.formData.warehouse_id = "";
+                        state.formData.shop_id = "";
+                    }
+                    if (apiRole !== "ORG_MANAGER") { state.formData.role_title = ""; }
+                    // Mehta vs Franchise owner kinds share SHOP_OWNER but not the same shop list
+                    if (prevRole !== role && getOwnerShopTypeFilter(prevRole) !== getOwnerShopTypeFilter(role)) {
+                        if (payload.shop_id === undefined) state.formData.shop_id = "";
+                    }
                 }
 
                 // Clear error for the edited field

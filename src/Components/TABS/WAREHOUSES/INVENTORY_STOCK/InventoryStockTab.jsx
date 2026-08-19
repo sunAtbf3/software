@@ -109,7 +109,7 @@ export default function InventoryStockTab() {
  
     const [expandedVariants, setExpandedVariants] = useState({});
  
-    const isSuperAdmin = user?.role === "SUPER_ADMIN";
+    const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.role === "ORG_MANAGER";
     const isWHRole = ["WH_MANAGER", "WH_STOCK_LISTER"].includes(user?.role);
     const userWarehouseId = user?.warehouse_id || "";
  
@@ -678,7 +678,7 @@ export default function InventoryStockTab() {
 //         showManualAddModal,
 //     } = useSelector((state) => state.stock);
 
-//     const isSuperAdmin = user?.role === "SUPER_ADMIN";
+//     const isSuperAdmin = user?.role === "SUPER_ADMIN" || user?.role === "ORG_MANAGER";
 //     const isWHRole = ["WH_MANAGER", "WH_STOCK_LISTER"].includes(user?.role);
 //     const userWarehouseId = user?.warehouse_id || "";
 

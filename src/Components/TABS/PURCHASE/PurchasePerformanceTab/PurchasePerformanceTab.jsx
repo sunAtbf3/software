@@ -9,7 +9,7 @@ import { ROLES } from "../../../roles";
 
 export default function PurchasePerformanceTab() {
     const { user } = useSelector((state) => state.auth);
-    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.ORG_MANAGER;
     const warehouseId = user?.warehouse_id || "";
 
     const [warehouseFilter, setWarehouseFilter] = useState("");

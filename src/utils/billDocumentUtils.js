@@ -78,10 +78,13 @@ export const lineMrp = (item) => {
   return Number(item.unit_price) || 0;
 };
 
-/** Charged special for this bill (cashier may override). Catalog stays on the variant. */
+/** Charged unit for this bill (cashier may override). Catalog stays on the variant. */
 export const lineSpecialPrice = (item) => {
+  const charged = Number(item.unit_price);
+  if (item?.price_type === "WHOLESALE" && Number.isFinite(charged) && charged >= 0) {
+    return charged;
+  }
   if (!item?.combo_applied) {
-    const charged = Number(item.unit_price);
     if (Number.isFinite(charged) && charged >= 0) return charged;
   }
   const snap = item.special_unit_price;

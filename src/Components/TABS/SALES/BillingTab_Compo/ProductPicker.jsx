@@ -25,6 +25,8 @@ import {
     resolveProductGstType,
     toBillingNumber,
 } from "../../../../utils/billingCart.utils";
+import { useGetWholesaleSettingsQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
+import { calculateWholesaleUnitPriceFromSelling } from "../../../../utils/wholesalePrice.utils";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import BarcodeScanner from "./BarcodeScanner";
 
@@ -63,12 +65,31 @@ const isValidBarcode = (barcode) => {
 export default function ProductPicker({ shop_id, cart = [] }) {
     const dispatch = useDispatch();
     const isOnline = useSelector((state) => state.offline.isOnline);
+    const pricingMode = useSelector((state) => state.billing.pricingMode);
+    const authUser = useSelector((state) => state.auth?.user);
     const [searchTerm, setSearchTerm] = useState("");
     const [showScanner, setShowScanner] = useState(false);
     const [triggerBarcodeSearch] = useLazyGetProductByBarcodeQuery();
     const lastScanTimeRef = useRef(0);
 
     const { stocks, isLoading, isFetching, usingOfflineCache, refetch } = useShopStocksForBilling(shop_id);
+    const canWholesaleBill = authUser?.shop?.shop_type === "OWNER" || authUser?.shop_type === "OWNER";
+    const { data: wholesaleSettings } = useGetWholesaleSettingsQuery(undefined, {
+        skip: !canWholesaleBill,
+    });
+
+    const resolvePickerDisplayPrice = (variant) => {
+        const selling = toBillingNumber(variant?.special_price);
+        if (pricingMode !== "WHOLESALE") return selling;
+        return calculateWholesaleUnitPriceFromSelling(
+            variant,
+            wholesaleSettings?.wholesale_markup_percent,
+            selling
+        );
+    };
+
+    const resolveSaleTagPrice = (variant) =>
+        toBillingNumber(variant?.effective_special_price ?? variant?.sale_price ?? variant?.special_price);
 
     const addProductToCart = (result, barcode) => {
         const productName = result.name || result.product_name || "Product";
@@ -118,6 +139,9 @@ export default function ProductPicker({ shop_id, cart = [] }) {
             on_sale: result.on_sale === true,
             sale_price: result.sale_price,
             effective_special_price: result.effective_special_price,
+            purchase_price: result.purchase_price ?? result.variant?.purchase_price,
+            expenses: result.expenses ?? result.variant?.expenses,
+            price_type: pricingMode === "WHOLESALE" ? "WHOLESALE" : "SPECIAL",
         });
         dispatch(addToCart(cartItem));
         // toast.success(`${productName} added to cart`);
@@ -222,6 +246,9 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                 on_sale: variant?.on_sale === true,
                 sale_price: variant?.sale_price,
                 effective_special_price: variant?.effective_special_price,
+                purchase_price: variant?.purchase_price,
+                expenses: variant?.expenses,
+                price_type: pricingMode === "WHOLESALE" ? "WHOLESALE" : "SPECIAL",
             });
             dispatch(addToCart(cartItem));
             // toast.success(`${product?.name} added to cart`);
@@ -338,15 +365,11 @@ export default function ProductPicker({ shop_id, cart = [] }) {
                                     <div className="mt-1 flex items-center justify-between gap-1">
                                         <div className="flex items-center gap-1 min-w-0">
                                             <span className="text-xs font-bold text-blue-600 shrink-0">
-                                                ₹{toBillingNumber(
-                                                    variant.on_sale === true
-                                                        ? (variant.effective_special_price ?? variant.sale_price ?? variant.special_price)
-                                                        : variant.special_price
-                                                ).toFixed(0)}
+                                                ₹{resolvePickerDisplayPrice(variant).toFixed(0)}
                                             </span>
                                             {variant.on_sale === true && (
                                                 <span className="text-[9px] font-semibold text-rose-700 bg-rose-50 px-1 py-0.5 rounded shrink-0">
-                                                    Sale
+                                                    Sale ₹{resolveSaleTagPrice(variant).toFixed(0)}
                                                 </span>
                                             )}
                                             {gstLabel && (

@@ -10,6 +10,10 @@ import { BILL_TYPES } from "../../../constants/billingBillTypes";
 import { CUSTOMER_TYPES } from "../../../constants/customerTypes";
 import { calculateGstOnAmount, resolveBillingDefaultUnitPrice } from "../../../utils/billingCart.utils";
 import { applyComboPricingToLines } from "../../../utils/comboPricing.utils";
+import {
+    DEFAULT_WHOLESALE_MARKUP_PERCENT,
+    calculateWholesaleUnitPriceFromSelling,
+} from "../../../utils/wholesalePrice.utils";
 
 // Helper: calculate line total
 const calculateLineTotal = (unit_price, quantity) => unit_price * quantity;
@@ -26,8 +30,15 @@ const applyLineGst = (item, billType) => {
     item.gst_amount = calculateGstOnAmount(item.line_total, item.gst_percent);
 };
 
-const isSpecialLikePriceType = (priceType) =>
-    !priceType || priceType === "SPECIAL" || priceType === "RETAIL";
+const isComboEligiblePriceType = (priceType) =>
+    !priceType || priceType === "SPECIAL" || priceType === "RETAIL" || priceType === "WHOLESALE";
+
+const wholesaleOf = (item, selling, percent) =>
+    calculateWholesaleUnitPriceFromSelling(
+        { purchase_price: item.purchase_price, expenses: item.expenses, mrp: item.mrp },
+        percent,
+        selling
+    );
 
 const catalogSpecialOf = (item) => Number(item.special_price ?? item.retail_price) || 0;
 
@@ -67,7 +78,7 @@ const recalculateCartComboPricing = (state, rules = []) => {
             combo_eligible:
                 item.combo_eligible === true &&
                 item.on_sale !== true &&
-                isSpecialLikePriceType(item.price_type) &&
+                isComboEligiblePriceType(item.price_type) &&
                 item.price_overridden !== true,
         }));
 
@@ -75,10 +86,21 @@ const recalculateCartComboPricing = (state, rules = []) => {
         const byKey = new Map(priced.map((row) => [row.line_key, row]));
 
         state.cart.forEach((item) => {
-            if (!isSpecialLikePriceType(item.price_type)) {
+            const wholesalePercent = state.wholesaleMarkupPercent ?? DEFAULT_WHOLESALE_MARKUP_PERCENT;
+            if (!isComboEligiblePriceType(item.price_type)) {
                 clearComboOnItem(item);
                 item.line_total = calculateLineTotal(item.unit_price, item.quantity);
                 applyLineGst(item, state.billType);
+                return;
+            }
+
+            if (item.price_type === "WHOLESALE") {
+                clearComboOnItem(item);
+                applyChargedPrice(
+                    item,
+                    wholesaleOf(item, catalogSpecialOf(item), wholesalePercent),
+                    state.billType
+                );
                 return;
             }
 
@@ -91,19 +113,29 @@ const recalculateCartComboPricing = (state, rules = []) => {
 
             const row = byKey.get(String(item.variant_id));
             const base = resolveBillingDefaultUnitPrice(item);
+            const toCharged = (selling, comboUnit = null) => {
+                if (item.price_type !== "WHOLESALE") return selling;
+                if (comboUnit != null) {
+                    item.combo_unit_price = wholesaleOf(item, comboUnit, wholesalePercent);
+                }
+                return wholesaleOf(item, selling, wholesalePercent);
+            };
 
             if (item.on_sale === true) {
-                applyChargedPrice(item, base, state.billType);
+                applyChargedPrice(item, toCharged(base), state.billType);
                 clearComboOnItem(item);
             } else if (row && row.combo_applied) {
-                item.unit_price = Number(row.unit_price);
-                item.line_total = Number(row.line_total);
+                const charged = toCharged(Number(row.unit_price), row.combo_unit_price);
+                item.unit_price = charged;
+                item.line_total = calculateLineTotal(charged, item.quantity);
                 item.combo_applied = true;
-                item.combo_unit_price = row.combo_unit_price;
                 item.combo_units = row.combo_units;
                 item.normal_units = row.normal_units;
+                if (item.price_type !== "WHOLESALE") {
+                    item.combo_unit_price = row.combo_unit_price;
+                }
             } else {
-                applyChargedPrice(item, base, state.billType);
+                applyChargedPrice(item, toCharged(base), state.billType);
                 clearComboOnItem(item);
             }
             applyLineGst(item, state.billType);
@@ -127,6 +159,8 @@ const initialState = {
     billType: BILL_TYPES.WITHOUT_GST,
     paymentMethod: "CASH",
     salesChannel: "WALK_IN",
+    pricingMode: "RETAIL",
+    wholesaleMarkupPercent: DEFAULT_WHOLESALE_MARKUP_PERCENT,
 
     shopName: "",
 
@@ -166,6 +200,8 @@ const billingSlice = createSlice({
                     existing.combo_eligible = false;
                 }
                 if (variant.product_code && !existing.product_code) existing.product_code = variant.product_code;
+                if (variant.purchase_price != null) existing.purchase_price = variant.purchase_price;
+                if (variant.expenses != null) existing.expenses = variant.expenses;
                 existing.line_total = calculateLineTotal(existing.unit_price, existing.quantity);
                 applyLineGst(existing, state.billType);
             } else {
@@ -176,13 +212,15 @@ const billingSlice = createSlice({
                     product_code: variant.product_code || "",
                     variant_attributes: variant.variant_attributes,
                     quantity: 1,
-                    price_type: variant.price_type || "SPECIAL",
+                    price_type: variant.price_type || (state.pricingMode === "WHOLESALE" ? "WHOLESALE" : "SPECIAL"),
                     unit_price: variant.unit_price,
                     retail_price: variant.retail_price,
                     wholesale_price: variant.wholesale_price,
                     special_price: variant.special_price,
                     mrp: variant.mrp,
                     online_price: variant.online_price,
+                    purchase_price: variant.purchase_price,
+                    expenses: variant.expenses,
                     gst_percent: variant.gst_percent,
                     gst_type: variant.gst_type || "CGST_SGST",
                     hsn_code: variant.hsn_code ?? variant.product?.hsn_code ?? null,
@@ -198,6 +236,14 @@ const billingSlice = createSlice({
                     line_total: variant.unit_price,
                     gst_amount: 0,
                 };
+                if (newItem.price_type === "WHOLESALE") {
+                    newItem.unit_price = wholesaleOf(
+                        newItem,
+                        catalogSpecialOf(newItem),
+                        state.wholesaleMarkupPercent
+                    );
+                    newItem.line_total = calculateLineTotal(newItem.unit_price, newItem.quantity);
+                }
                 applyLineGst(newItem, state.billType);
                 state.cart.push(newItem);
             }
@@ -241,7 +287,11 @@ const billingSlice = createSlice({
                         newPrice = item.retail_price;
                         break;
                     case "WHOLESALE":
-                        newPrice = item.wholesale_price;
+                        newPrice = wholesaleOf(
+                            item,
+                            catalogSpecialOf(item),
+                            state.wholesaleMarkupPercent
+                        );
                         break;
                     case "MRP":
                         newPrice = item.mrp;
@@ -277,7 +327,9 @@ const billingSlice = createSlice({
                 return;
             }
 
-            const catalog = resolveBillingDefaultUnitPrice(item);
+            const catalog = item.price_type === "WHOLESALE"
+                ? wholesaleOf(item, catalogSpecialOf(item), state.wholesaleMarkupPercent)
+                : resolveBillingDefaultUnitPrice(item);
             item.special_price_invalid = false;
             item.price_overridden = !pricesMatch(parsed, catalog);
             if (item.price_overridden) {
@@ -388,6 +440,29 @@ const billingSlice = createSlice({
         setBillType: (state, action) => {
             state.billType = action.payload;
             state.cart.forEach((item) => applyLineGst(item, state.billType));
+        },
+
+        setPricingMode: (state, action) => {
+            const mode = action.payload === "WHOLESALE" ? "WHOLESALE" : "RETAIL";
+            state.pricingMode = mode;
+            state.salesChannel = mode === "WHOLESALE" ? "WHOLESALE" : "WALK_IN";
+            state.cart.forEach((item) => {
+                item.price_type = mode === "WHOLESALE" ? "WHOLESALE" : "SPECIAL";
+                item.price_overridden = false;
+                item.special_price_invalid = false;
+            });
+        },
+
+        setWholesaleMarkupPercent: (state, action) => {
+            const n = Number(action.payload);
+            if (!Number.isFinite(n)) return;
+            state.wholesaleMarkupPercent = n;
+            state.cart.forEach((item) => {
+                if (item.price_type === "WHOLESALE") {
+                    item.price_overridden = false;
+                    item.special_price_invalid = false;
+                }
+            });
         },
 
         setBillingShopContext: (state, action) => {
@@ -511,6 +586,8 @@ export const {
     clearSelectedCustomer,
     setCustomerMobileInput,
     setBillType,
+    setPricingMode,
+    setWholesaleMarkupPercent,
     setBillingShopContext,
     setPaymentMethod,
     setExtraDiscount,

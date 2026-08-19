@@ -34,7 +34,7 @@ export default function RestoreBackupTab() {
     const { data: restoreHistoryData, refetch: refetchRestoreHistory } = useGetRestoreHistoryQuery({ page: 1, limit: 10 });
     const [restoreFromDrive] = useRestoreFromDriveMutation();
 
-    const isSuperAdmin = CURRENT_USER.role === "SUPER_ADMIN";
+    const isSuperAdmin = CURRENT_USER.role === "SUPER_ADMIN" || CURRENT_USER.role === "ORG_MANAGER";
     const driveItems = (driveBackups?.items || []).filter((b) => b.status === "SUCCESS");
     const restoreHistory = restoreHistoryData?.items || [];
 

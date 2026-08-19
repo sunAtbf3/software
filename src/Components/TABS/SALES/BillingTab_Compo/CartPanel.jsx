@@ -17,7 +17,7 @@ import {
     updateManualItem,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useGetActiveComboRulesQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
-import { formatGstPercentLabel, resolveBillingDefaultUnitPrice } from "../../../../utils/billingCart.utils";
+import { formatGstPercentLabel } from "../../../../utils/billingCart.utils";
 import ProductCode from "../../../shared/ProductCode";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
@@ -40,7 +40,7 @@ const formatPriceInput = (value) => {
  * Catalog listing special_price is not mutated — only this cart line's unit_price.
  * Cannot exceed this item's MRP — message shows while filling.
  */
-function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridden, mrp }) {
+function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridden, mrp, fieldLabel = "Special" }) {
     const dispatch = useDispatch();
     const [draft, setDraft] = useState(() => formatPriceInput(unitPrice));
     const [focused, setFocused] = useState(false);
@@ -79,7 +79,7 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
         }
         if (hasMrpCap && sellPriceExceedsMrp(n, mrpCap)) {
             setDraft(trimmed);
-            setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}. Keep special price at or below MRP.`);
+            setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}. Keep ${fieldLabel.toLowerCase()} price at or below MRP.`);
             dispatch(setCartSpecialPriceInvalid({ variant_id: variantId, invalid: true }));
             return false;
         }
@@ -93,7 +93,7 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
     return (
         <div className="inline-flex flex-col gap-0.5 min-w-0">
             <label className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-md pl-1.5 pr-1 py-0.5">
-                <span className="text-[10px] text-gray-600 font-medium whitespace-nowrap">Special ₹</span>
+                <span className="text-[10px] text-gray-600 font-medium whitespace-nowrap">{fieldLabel} ₹</span>
                 <input
                     type="number"
                     inputMode="decimal"
@@ -126,7 +126,7 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                             ? `Edited for this bill. Listing special remains ₹${formatPriceInput(catalogSpecial)}`
                             : "Edit sell price for this bill only"
                     }
-                    aria-label="Special price for this bill"
+                    aria-label={`${fieldLabel} price for this bill`}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? `special-price-err-${variantId}` : undefined}
                 />
@@ -146,11 +146,13 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
 
 export default function CartPanel() {
     const dispatch = useDispatch();
-    const { cart, manualCart, billType } = useSelector((state) => state.billing);
+    const { cart, manualCart, billType, pricingMode } = useSelector((state) => state.billing);
     const { shopType, isShopScoped } = useShopPricingVisibility();
-    // OWNER + FRANCHISE (and shop staff while type loads): Special price only — no MRP dropdown.
+    // OWNER + FRANCHISE (and shop staff while type loads): no MRP dropdown.
     const specialPriceOnlyBilling =
         isShopScoped || isSpecialPriceOnlyShopType(shopType);
+    const wholesaleBilling = pricingMode === "WHOLESALE" && shopType === "OWNER";
+    const priceFieldLabel = wholesaleBilling ? "Wholesale" : "Special";
     const withGst = isWithGstBill(billType);
 
     const { data: activeComboRules } = useGetActiveComboRulesQuery(undefined, {
@@ -252,13 +254,14 @@ export default function CartPanel() {
                         const isComboEligible =
                             billType !== BILL_TYPES.NON_LISTED &&
                             item.combo_eligible === true &&
-                            item.on_sale !== true &&
                             item.price_overridden !== true;
-                        const chargedSpecial = resolveBillingDefaultUnitPrice(item);
                         const itemPriceKey = priceKey(item.special_price ?? item.retail_price);
                         const groupHint = isComboEligible
                             ? comboHints.byPriceKey.get(itemPriceKey)
                             : null;
+                        const comboOfferVisible = wholesaleBilling
+                            ? item.combo_eligible === true
+                            : Boolean(groupHint && groupHint.needed_for_next > 0);
 
                         return (
                             <tr key={itemId} className="bg-white">
@@ -281,14 +284,11 @@ export default function CartPanel() {
                                             <>
                                                 <CartSpecialPriceInput
                                                     variantId={item.variant_id}
-                                                    unitPrice={
-                                                        item.price_overridden === true
-                                                            ? item.unit_price
-                                                            : chargedSpecial
-                                                    }
+                                                    unitPrice={item.unit_price}
                                                     catalogSpecial={item.special_price ?? item.retail_price}
                                                     overridden={item.price_overridden === true}
                                                     mrp={item.mrp}
+                                                    fieldLabel={priceFieldLabel}
                                                 />
                                                 {item.on_sale === true && (
                                                     <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
@@ -299,9 +299,11 @@ export default function CartPanel() {
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                                         Combo @ ₹{toNumber(item.combo_unit_price ?? item.unit_price).toFixed(2)}
                                                     </span>
-                                                ) : groupHint && groupHint.needed_for_next > 0 ? (
+                                                ) : comboOfferVisible ? (
                                                     <span className="text-[10px] font-medium text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded">
-                                                        Add {groupHint.needed_for_next} more → {groupHint.trigger_qty} for ₹{toNumber(groupHint.combo_price).toFixed(0)}
+                                                        {wholesaleBilling
+                                                            ? "Combo offer available"
+                                                            : `Add ${groupHint.needed_for_next} more → ${groupHint.trigger_qty} for ₹${toNumber(groupHint.combo_price).toFixed(0)}`}
                                                     </span>
                                                 ) : null}
                                                 {formatGstPercentLabel(item.gst_percent) ? (
@@ -328,14 +330,11 @@ export default function CartPanel() {
                                                 {(item.price_type === "SPECIAL" || item.price_type === "RETAIL") && (
                                                     <CartSpecialPriceInput
                                                         variantId={item.variant_id}
-                                                        unitPrice={
-                                                            item.price_overridden === true
-                                                                ? item.unit_price
-                                                                : chargedSpecial
-                                                        }
+                                                        unitPrice={item.unit_price}
                                                         catalogSpecial={item.special_price ?? item.retail_price}
                                                         overridden={item.price_overridden === true}
                                                         mrp={item.mrp}
+                                                        fieldLabel={priceFieldLabel}
                                                     />
                                                 )}
                                                 {item.on_sale === true && (
@@ -347,9 +346,11 @@ export default function CartPanel() {
                                                     <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                                                         Combo @ ₹{toNumber(item.combo_unit_price ?? item.unit_price).toFixed(2)}
                                                     </span>
-                                                ) : groupHint && groupHint.needed_for_next > 0 ? (
+                                                ) : comboOfferVisible ? (
                                                     <span className="text-[10px] font-medium text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded">
-                                                        Add {groupHint.needed_for_next} more → {groupHint.trigger_qty} for ₹{toNumber(groupHint.combo_price).toFixed(0)}
+                                                        {wholesaleBilling
+                                                            ? "Combo offer available"
+                                                            : `Add ${groupHint.needed_for_next} more → ${groupHint.trigger_qty} for ₹${toNumber(groupHint.combo_price).toFixed(0)}`}
                                                     </span>
                                                 ) : null}
                                                 {formatGstPercentLabel(item.gst_percent) ? (

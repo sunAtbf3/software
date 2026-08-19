@@ -12,6 +12,8 @@ import {
     normalizeShopCode,
 } from "../../../../../constants/shop.constants";
 import IndianStatePicker from "../../../../shared/IndianStatePicker";
+import { useSelector } from "react-redux";
+import { displayShopTypeLabel, isSuperAdminRole } from "../../../../roles";
 
 const CHANNEL_LABELS = {
     WALK_IN: "Walk-in Store",
@@ -23,6 +25,8 @@ const CHANNEL_LABELS = {
 };
 
 export default function ShopFormBody({ formData, onChange, formErrors, isEdit = false }) {
+    const actorRole = useSelector((state) => state.auth?.user?.role);
+    const canSetFranchise = isSuperAdminRole(actorRole);
     const { data: ownersData, isLoading: ownersLoading } = useGetUsersQuery({
         page: 1,
         limit: 100,
@@ -220,8 +224,10 @@ export default function ShopFormBody({ formData, onChange, formErrors, isEdit = 
                     onChange={(e) => onChange({ shop_type: e.target.value })}
                     className={inputCls("shop_type")}
                 >
-                    <option value="OWNER">Owner Shop</option>
-                    <option value="FRANCHISE">Franchise Shop</option>
+                    <option value="OWNER">{displayShopTypeLabel("OWNER")}</option>
+                    {canSetFranchise && (
+                        <option value="FRANCHISE">{displayShopTypeLabel("FRANCHISE")}</option>
+                    )}
                 </select>
                 {errorMsg("shop_type")}
                 <p className="text-xs text-gray-400 mt-1">

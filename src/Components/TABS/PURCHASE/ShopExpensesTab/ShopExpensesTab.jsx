@@ -29,9 +29,9 @@ export default function ShopExpensesTab({
 }) {
     const { user } = useSelector((state) => state.auth);
     const isOnline = useSelector((state) => state.offline.isOnline);
-    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.ORG_MANAGER;
     const shopId = user?.shop_id || "";
-    const canWrite = [ROLES.SUPER_ADMIN, ROLES.SHOP_OWNER].includes(user?.role);
+    const canWrite = [ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER, ROLES.SHOP_OWNER].includes(user?.role);
 
     const [shopFilter, setShopFilter] = useState("");
     const effectiveShopId = isSuperAdmin ? shopFilter : shopId;

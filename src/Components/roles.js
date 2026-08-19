@@ -153,7 +153,9 @@ export const canViewSubTab = (parentTabId, subTabId) => {
     const allowedRoles = SUB_TAB_PERMISSIONS[key];
 
     if (allowedRoles) {
-        return allowedRoles.includes(currentRole);
+        if (allowedRoles.includes(currentRole)) return true;
+        if (currentRole === "ORG_MANAGER" && allowedRoles.includes("SUPER_ADMIN")) return true;
+        return false;
     }
 
     // Unlisted sub-tabs: visible to all authenticated roles (legacy default)
@@ -257,7 +259,9 @@ export const ACTION_PERMISSIONS = {
 export const can = (actionKey) => {
     const role = CURRENT_USER.role;
     const allowedRoles = ACTION_PERMISSIONS[actionKey];
-    return allowedRoles ? allowedRoles.includes(role) : false;
+    return allowedRoles
+        ? allowedRoles.includes(role) || (role === "ORG_MANAGER" && allowedRoles.includes("SUPER_ADMIN"))
+        : false;
 };
 
 
@@ -265,11 +269,56 @@ export const can = (actionKey) => {
 //
 export const ROLES = {
     SUPER_ADMIN: "SUPER_ADMIN",
+    ORG_MANAGER: "ORG_MANAGER",
     WH_MANAGER: "WH_MANAGER",
     WH_STOCK_LISTER: "WH_STOCK_LISTER",
     SHOP_OWNER: "SHOP_OWNER",
     BILLING_STAFF: "BILLING_STAFF",
     SHOP_MANAGER: "SHOP_MANAGER",
+};
+
+export const isOrgLevelAdminRole = (role = CURRENT_USER.role) =>
+    role === ROLES.SUPER_ADMIN || role === ROLES.ORG_MANAGER;
+
+export const isSuperAdminRole = (role = CURRENT_USER.role) =>
+    role === ROLES.SUPER_ADMIN;
+
+export const canMutateFranchiseShop = (role = CURRENT_USER.role) =>
+    role === ROLES.SUPER_ADMIN;
+
+export const canMutateFranchiseShopOwner = (role = CURRENT_USER.role) =>
+    role === ROLES.SUPER_ADMIN;
+
+export const isFranchiseShopType = (shopType) => shopType === "FRANCHISE";
+
+export const displayShopTypeLabel = (shopType) => {
+    if (shopType === "OWNER") return "Mehta Mart Shop";
+    if (shopType === "FRANCHISE") return "Franchise Shop";
+    return shopType || "";
+};
+
+export const isFranchiseShopOwnerUser = (user) => {
+    if (!user || user.role !== ROLES.SHOP_OWNER) return false;
+    return isFranchiseShopType(user.shop?.shop_type) || isFranchiseShopType(user.owned_shop?.shop_type);
+};
+
+export const canAdminMutateUser = (actorRole, targetUser) => {
+    if (actorRole === ROLES.SUPER_ADMIN) return true;
+    if (actorRole !== ROLES.ORG_MANAGER) return false;
+    if (!targetUser) return true;
+    if (targetUser.role === ROLES.SUPER_ADMIN || targetUser.role === ROLES.ORG_MANAGER) return false;
+    if (isFranchiseShopOwnerUser(targetUser)) return false;
+    return true;
+};
+
+export const getAdminCreatableRoles = (actorRole) => {
+    if (actorRole === ROLES.SUPER_ADMIN) {
+        return ["SUPER_ADMIN", "ORG_MANAGER", "WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
+    }
+    if (actorRole === ROLES.ORG_MANAGER) {
+        return ["WH_MANAGER", "WH_STOCK_LISTER", "SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
+    }
+    return [];
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -287,6 +336,7 @@ export const CURRENT_USER = {
     locationId: null,
     locationName: null,
     name: null,
+    roleTitle: null,
 };
 
 export const syncCurrentUserFromAuth = (user) => {
@@ -294,6 +344,7 @@ export const syncCurrentUserFromAuth = (user) => {
         CURRENT_USER.role = null;
         CURRENT_USER.locationId = null;
         CURRENT_USER.name = null;
+        CURRENT_USER.roleTitle = null;
         return;
     }
 
@@ -303,11 +354,13 @@ export const syncCurrentUserFromAuth = (user) => {
     CURRENT_USER.locationId = user.warehouse_id || user.shop_id || null;
     CURRENT_USER.locationName = user.locationName || user.warehouse_id || user.shop_id || null;
     CURRENT_USER.name = user.name || null;
+    CURRENT_USER.roleTitle = user.role_title || user.roleTitle || null;
 };
 
 // Role permissions for tabs (controls which tabs appear in sidebar)
 export const ROLE_PERMISSIONS = {
     [ROLES.SUPER_ADMIN]: ["dashboard", "purchase", "inventory", "archive", "transfers", "warehouses", "parties", "reports", "settings", "vendors", "cashbank", "teammembers", "backup", "utilities", "companydetails"],
+    [ROLES.ORG_MANAGER]: ["dashboard", "purchase", "inventory", "archive", "transfers", "warehouses", "parties", "reports", "settings", "vendors", "cashbank", "teammembers", "backup", "utilities", "companydetails"],
     [ROLES.ACCOUNTANT]: ["dashboard", "sales", "purchase", "parties", "reports", "cashbank"],
     [ROLES.BILLING_STAFF]: ["dashboard", "sales", "parties", "transfers", "cashbank"],
     [ROLES.STOCK_LISTER]: ["dashboard", "inventory", "transfers", "cashbank"],
@@ -320,6 +373,7 @@ export const ROLE_PERMISSIONS = {
 
 export const ROLE_LABELS = {
     [ROLES.SUPER_ADMIN]: "Super Admin",
+    [ROLES.ORG_MANAGER]: "Org Manager",
     [ROLES.ACCOUNTANT]: "Accountant",
     [ROLES.BILLING_STAFF]: "Billing Staff",
     [ROLES.STOCK_LISTER]: "Stock Lister",
@@ -346,8 +400,31 @@ export const ROLE_LABELS = {
 //    filterLocationList(allShops)             → only their location in selector
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** True if the logged-in user is super admin (sees ALL data, no scoping) */
-export const isAdmin = () => CURRENT_USER.role === ROLES.SUPER_ADMIN;
+export const displayUserRoleLabel = (userOrRole, roleTitle) => {
+    if (userOrRole && typeof userOrRole === "object") {
+        if (userOrRole.role === ROLES.ORG_MANAGER) {
+            const title = String(userOrRole.role_title || userOrRole.roleTitle || "").trim();
+            return title || ROLE_LABELS[ROLES.ORG_MANAGER];
+        }
+        if (userOrRole.role === ROLES.SHOP_OWNER) {
+            if (isFranchiseShopOwnerUser(userOrRole)) return "Franchise Shop Owner";
+            if (userOrRole.shop?.shop_type === "OWNER" || userOrRole.owned_shop?.shop_type === "OWNER") {
+                return "Mehta Mart Owner";
+            }
+            return "Shop Owner";
+        }
+        return ROLE_LABELS[userOrRole.role] || userOrRole.role || "";
+    }
+    if (userOrRole === ROLES.ORG_MANAGER) {
+        const title = String(roleTitle || CURRENT_USER.roleTitle || "").trim();
+        return title || ROLE_LABELS[ROLES.ORG_MANAGER];
+    }
+    if (userOrRole === ROLES.SHOP_OWNER) return "Shop Owner";
+    return ROLE_LABELS[userOrRole] || userOrRole || "";
+};
+
+/** True if the logged-in user is super admin or org manager (sees ALL data, no scoping) */
+export const isAdmin = () => isOrgLevelAdminRole();
 
 /** True if the logged-in user is on the warehouse side */
 export const isWarehouseRole = () => CURRENT_USER.role === ROLES.WH_MANAGER;
@@ -425,5 +502,5 @@ export const filterByLocation = (data, fieldOverride = null) => {
 
 // Legacy/Compatibility helpers
 export const filterLocationList = (list) => getControlledLocations(list);
-export const needsLocationFilter = (role) => role !== ROLES.SUPER_ADMIN;
+export const needsLocationFilter = (role) => !isOrgLevelAdminRole(role);
 export const getLocationFilterField = (role) => (role === ROLES.WH_MANAGER ? 'locationId' : 'shopId');

@@ -104,7 +104,7 @@ function StatCard({ label, value, hint, icon: Icon, tone = "slate" }) {
 export default function ShopReportTab() {
     const { user } = useSelector((state) => state.auth);
     const userRole = user?.role || "";
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
+    const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
     const isShopOwner = userRole === "SHOP_OWNER";
     const shopId = user?.shop_id || user?.shop?.shop_id || "";
 

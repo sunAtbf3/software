@@ -18,7 +18,7 @@ const axiosBaseQuery = () => async ({ url, method, data }) => {
 export const appSettingsApi = createApi({
     reducerPath: "appSettingsApi",
     baseQuery: axiosBaseQuery(),
-    tagTypes: ["FranchiseSettings", "OnlineStockSettings", "CompanyInvoiceSettings"],
+    tagTypes: ["FranchiseSettings", "OnlineStockSettings", "CompanyInvoiceSettings", "WholesaleSettings"],
     endpoints: (builder) => ({
         getFranchiseSettings: builder.query({
             query: () => ({
@@ -71,6 +71,23 @@ export const appSettingsApi = createApi({
             invalidatesTags: ["CompanyInvoiceSettings"],
             transformResponse: (response) => response.data,
         }),
+        getWholesaleSettings: builder.query({
+            query: () => ({
+                url: "/settings/wholesale",
+                method: "GET",
+            }),
+            providesTags: ["WholesaleSettings"],
+            transformResponse: (response) => response.data,
+        }),
+        updateWholesaleSettings: builder.mutation({
+            query: (body) => ({
+                url: "/settings/wholesale",
+                method: "PUT",
+                data: body,
+            }),
+            invalidatesTags: ["WholesaleSettings"],
+            transformResponse: (response) => response.data,
+        }),
     }),
 });
 
@@ -81,4 +98,6 @@ export const {
     useUpdateOnlineStockSettingsMutation,
     useGetCompanyInvoiceSettingsQuery,
     useUpdateCompanyInvoiceSettingsMutation,
+    useGetWholesaleSettingsQuery,
+    useUpdateWholesaleSettingsMutation,
 } = appSettingsApi;

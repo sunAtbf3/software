@@ -17,7 +17,7 @@ import { ROLES, can } from "../../../roles";
 
 export default function BankDetailsTab() {
     const { user } = useSelector((state) => state.auth);
-    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.ORG_MANAGER;
     const isShopOwner = user?.role === ROLES.SHOP_OWNER;
     const isShopManager = user?.role === ROLES.SHOP_MANAGER;
     const canManageBank = can("shop.bank.write");

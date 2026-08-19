@@ -26,26 +26,34 @@ import {
 import UserAddForm from "./UserShared/UserAddForm";
 import UserEditForm from "./UserShared/UserEditForm";
 import { USER_ROLES } from "./UserShared/UserFormBody";
+import {
+    canAdminMutateUser,
+    displayUserRoleLabel,
+} from "../../../roles";
 
 // ── Role badge helper ──────────────────────────────────────────────────────
 const ROLE_BADGE_CLASSES = {
     SUPER_ADMIN: "bg-purple-50 text-purple-700 border border-purple-200",
+    ORG_MANAGER: "bg-violet-50 text-violet-700 border border-violet-200",
     WH_MANAGER: "bg-blue-50 text-blue-700 border border-blue-200",
     SHOP_OWNER: "bg-green-50 text-green-700 border border-green-200",
     SHOP_MANAGER: "bg-teal-50 text-teal-700 border border-teal-200",
 };
 const ROLE_BADGE_DEFAULT = "bg-gray-100 text-gray-600 border border-gray-200";
 
-const getRoleBadge = (role) => {
-    const r = USER_ROLES.find(r => r.value === role);
+const getRoleBadge = (user) => {
+    const role = user?.role;
+    const r = USER_ROLES.find(item => item.value === role);
     const badgeCls = ROLE_BADGE_CLASSES[role] || ROLE_BADGE_DEFAULT;
+    const label = displayUserRoleLabel(user);
     return r
-        ? <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badgeCls}`}>{r.label}</span>
+        ? <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badgeCls}`}>{label}</span>
         : <span className="text-xs text-gray-400 font-mono">{role}</span>;
 };
 
 const getRoleBreakdownBadgeClass = (value) => {
     if (value === "SUPER_ADMIN") return "bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full text-xs font-medium";
+    if (value === "ORG_MANAGER") return "bg-violet-50 text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "WH_MANAGER") return "bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "SHOP_OWNER") return "bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full text-xs font-medium";
     if (value === "SHOP_MANAGER") return "bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full text-xs font-medium";
@@ -75,6 +83,7 @@ const getAssignedTo = (user) => {
 
 export default function UsersTab() {
     const dispatch = useDispatch();
+    const actorRole = useSelector((state) => state.auth?.user?.role);
 
     // ── Slice state ────────────────────────────────────────────────────────
     const {
@@ -298,7 +307,7 @@ export default function UsersTab() {
                                     <td className="px-4 py-3 text-sm text-gray-500">{u.phone}</td>
 
                                     {/* Role */}
-                                    <td className="px-4 py-3">{getRoleBadge(u.role)}</td>
+                                    <td className="px-4 py-3">{getRoleBadge(u)}</td>
 
                                     {/* Assigned To */}
                                     <td className="px-4 py-3">{getAssignedTo(u)}</td>
@@ -318,12 +327,16 @@ export default function UsersTab() {
 
                                     {/* Actions */}
                                     <td className="px-4 py-3">
+                                        {canAdminMutateUser(actorRole, u) ? (
                                         <button
                                             onClick={() => dispatch(openEditForm(u))}
                                             className="text-xs border border-gray-200 text-gray-600 px-3 py-1 rounded-lg hover:bg-gray-50 transition-colors"
                                         >
                                             Edit
                                         </button>
+                                        ) : (
+                                            <span className="text-xs text-gray-400">—</span>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

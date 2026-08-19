@@ -28,7 +28,7 @@ export default function ArchiveTab() {
     pageSize,
   } = useSelector((state) => state.product);
 
-  const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
+  const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" || CURRENT_USER.role === "ORG_MANAGER" ? "" : CURRENT_USER.locationId || "";
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 

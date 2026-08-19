@@ -40,6 +40,14 @@ const PAYMENT_BADGE = {
     CANCELLED: "bg-red-50 text-red-600 border border-red-200",
 };
 
+const BILLING_MODE_BADGE = {
+    WHOLESALE: "bg-teal-50 text-teal-700 border border-teal-200",
+    WALK_IN: "bg-blue-50 text-blue-700 border border-blue-200",
+};
+
+const getBillingModeLabel = (salesChannel) =>
+    salesChannel === "WHOLESALE" ? "Wholesale" : "Retail";
+
 const fmtMoney = (n) =>
     `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -140,6 +148,16 @@ function SaleHistoryDetailModal({ billId, onClose, onPrint, onDownloadPdf, isPri
                                         )}
                                     </div>
                                     <div>
+                                        <p className="text-xs text-gray-500">Billing Mode</p>
+                                        <span
+                                            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                BILLING_MODE_BADGE[bill.sales_channel] || BILLING_MODE_BADGE.WALK_IN
+                                            }`}
+                                        >
+                                            {getBillingModeLabel(bill.sales_channel)}
+                                        </span>
+                                    </div>
+                                    <div>
                                         <p className="text-xs text-gray-500">Total</p>
                                         <p className="font-semibold text-gray-900">{fmtMoney(bill.total_amount)}</p>
                                     </div>
@@ -223,7 +241,7 @@ function SaleHistoryDetailModal({ billId, onClose, onPrint, onDownloadPdf, isPri
 export default function SaleHistoryTab() {
     const { user } = useSelector((state) => state.auth);
     const userRole = user?.role || "";
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
+    const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
     const isShopOwner = userRole === "SHOP_OWNER";
     const userShopId = user?.shop_id || user?.shop?.shop_id || "";
 
@@ -234,6 +252,7 @@ export default function SaleHistoryTab() {
     const [searchInput, setSearchInput] = useState("");
     const [appliedBillNumber, setAppliedBillNumber] = useState("");
     const [appliedMobile, setAppliedMobile] = useState("");
+    const [salesChannel, setSalesChannel] = useState("");
     const [cancelledFilter, setCancelledFilter] = useState(""); // "" | "false" | "true"
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
@@ -255,6 +274,13 @@ export default function SaleHistoryTab() {
         { skip: !isSuperAdmin }
     );
     const shops = shopsData?.shops || [];
+    const selectedAdminShop = isSuperAdmin
+        ? shops.find((shop) => shop.shop_id === adminShopId)
+        : null;
+    const effectiveShopType = isSuperAdmin
+        ? (selectedAdminShop?.shop_type || "")
+        : (user?.shop?.shop_type || user?.shop_type || "");
+    const canFilterBillingMode = effectiveShopType === "OWNER";
 
     const queryArgs = useMemo(
         () => ({
@@ -266,6 +292,7 @@ export default function SaleHistoryTab() {
             shop_id: effectiveShopId || undefined,
             bill_number: appliedBillNumber || undefined,
             customer_mobile: appliedMobile || undefined,
+            sales_channel: canFilterBillingMode ? (salesChannel || undefined) : undefined,
             is_cancelled: cancelledFilter === "" ? undefined : cancelledFilter,
         }),
         [
@@ -277,6 +304,8 @@ export default function SaleHistoryTab() {
             effectiveShopId,
             appliedBillNumber,
             appliedMobile,
+            canFilterBillingMode,
+            salesChannel,
             cancelledFilter,
         ]
     );
@@ -304,13 +333,7 @@ export default function SaleHistoryTab() {
     const [triggerPdf] = useLazyGetBillPdfQuery();
     const { printBill, downloadPdf, isPrinting, isPdfLoading } = useBillDocumentActions({
         isOnline: true,
-        triggerServerPdf: async (bill, printFormat) => {
-            const blob = await triggerPdf({
-                billId: bill.bill_id,
-                printFormat: printFormat || "A4",
-            }).unwrap();
-            return blob;
-        },
+        triggerServerPdf: triggerPdf,
     });
 
     const handlePresetChange = useCallback((presetId) => {
@@ -379,6 +402,7 @@ export default function SaleHistoryTab() {
         setSearchInput("");
         setAppliedBillNumber("");
         setAppliedMobile("");
+        setSalesChannel("");
         setCancelledFilter("");
         setPage(1);
         setPageSize(20);
@@ -512,6 +536,20 @@ export default function SaleHistoryTab() {
                         <option value="REFUNDED">Refunded</option>
                         <option value="CANCELLED">Cancelled status</option>
                     </select>
+                    {canFilterBillingMode && (
+                        <select
+                            value={salesChannel}
+                            onChange={(e) => {
+                                setSalesChannel(e.target.value);
+                                setPage(1);
+                            }}
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        >
+                            <option value="">All billing</option>
+                            <option value="WALK_IN">Retail bills</option>
+                            <option value="WHOLESALE">Wholesale bills</option>
+                        </select>
+                    )}
                     <select
                         value={cancelledFilter}
                         onChange={(e) => {
@@ -619,7 +657,14 @@ export default function SaleHistoryTab() {
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-xs text-gray-600">
-                                            {getBillTypeLabel(bill.bill_type)}
+                                            <p>{getBillTypeLabel(bill.bill_type)}</p>
+                                            <span
+                                                className={`mt-1 inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                                    BILLING_MODE_BADGE[bill.sales_channel] || BILLING_MODE_BADGE.WALK_IN
+                                                }`}
+                                            >
+                                                {getBillingModeLabel(bill.sales_channel)}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span

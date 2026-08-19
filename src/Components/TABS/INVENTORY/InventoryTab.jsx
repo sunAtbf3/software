@@ -41,6 +41,7 @@ const StatusBadge = ({ isActive }) => (
 
 export default function InventoryTab() {
   const dispatch = useDispatch();
+  const authUser = useSelector((state) => state.auth?.user);
 
   const {
     showAddForm, showEditForm, showViewModal,
@@ -86,7 +87,17 @@ export default function InventoryTab() {
     }
   };
 
-  const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
+  const warehouseId = useMemo(() => {
+    const role = authUser?.role || CURRENT_USER.role;
+    if (role === "SUPER_ADMIN" || role === "ORG_MANAGER") return "";
+    return (
+      authUser?.warehouse_id
+      || authUser?.warehouseId
+      || authUser?.locationId
+      || CURRENT_USER.locationId
+      || ""
+    );
+  }, [authUser]);
 
   const productListParams = useMemo(() => {
     const base = {
@@ -949,7 +960,7 @@ export default function InventoryTab() {
 //     selectedProductIds, // ADD THIS
 //   } = useSelector((state) => state.product);
 
-//   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
+//   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" || CURRENT_USER.role === "ORG_MANAGER" ? "" : CURRENT_USER.locationId || "";
 
 //   const { data, isLoading, isFetching, refetch } = useGetProductsQuery({
 //     page: currentPage, limit: pageSize,
@@ -1486,7 +1497,7 @@ export default function InventoryTab() {
 //     selectedProductIds, // ADD THIS
 //   } = useSelector((state) => state.product);
 
-//   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" ? "" : CURRENT_USER.locationId || "";
+//   const warehouseId = CURRENT_USER.role === "SUPER_ADMIN" || CURRENT_USER.role === "ORG_MANAGER" ? "" : CURRENT_USER.locationId || "";
 
 //   const { data, isLoading, isFetching, refetch } = useGetProductsQuery({
 //     page: currentPage, limit: pageSize,

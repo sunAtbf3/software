@@ -7,12 +7,15 @@
 import React from "react";
 import { useGetWarehousesQuery } from "../../../../../REDUX_FEATURES/REDUX_SLICES/Warehouse_api/warehouseApi";
 import { useGetShopsQuery } from "../../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopApi";
-import { USER_ROLES } from "./userRoles";
+import { USER_ROLES, OWNER_FORM_ROLE_MEHTA, getUserFormRoleOptions, isShopAssignmentFormRole, isWarehouseFormRole, getOwnerShopTypeFilter, resolveApiRole } from "./userRoles";
+import { useSelector } from "react-redux";
+import {
+    ROLES,
+    displayShopTypeLabel,
+    isOrgLevelAdminRole,
+} from "../../../../roles";
 
 export { USER_ROLES };
-
-const WH_ROLES = ["WH_MANAGER", "WH_STOCK_LISTER"];
-const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
 
 export default function UserFormBody({
     formData,
@@ -25,9 +28,11 @@ export default function UserFormBody({
     readOnly = false,
     lockRole = false,
 }) {
-    const role = formData.role || "";
-    const needsWH = WH_ROLES.includes(role);
-    const needsShop = SHOP_ROLES.includes(role);
+    const role = (formData.role === "SHOP_OWNER" ? OWNER_FORM_ROLE_MEHTA : formData.role) || "";
+    const apiRole = resolveApiRole(role);
+    const needsWH = isWarehouseFormRole(role);
+    const needsShop = isShopAssignmentFormRole(role);
+    const ownerShopTypeFilter = getOwnerShopTypeFilter(role);
 
     const { data: warehouseData, isLoading: warehousesLoading } = useGetWarehousesQuery(
         { page: 1, limit: 100, is_active: "true" },
@@ -38,10 +43,15 @@ export default function UserFormBody({
         { skip: teamMode || !needsShop }
     );
     const warehouses = warehouseData?.warehouses || [];
-    const shops = shopData?.shops || [];
-    const roleOptions = allowedRoles?.length
-        ? USER_ROLES.filter((r) => allowedRoles.includes(r.value))
-        : USER_ROLES;
+    const actorRole = useSelector((state) => state.auth?.user?.role);
+    const shops = (shopData?.shops || []).filter((s) => {
+        if (ownerShopTypeFilter) return s.shop_type === ownerShopTypeFilter;
+        if (actorRole === ROLES.ORG_MANAGER && apiRole === "SHOP_OWNER") {
+            return s.shop_type !== "FRANCHISE";
+        }
+        return true;
+    });
+    const roleOptions = getUserFormRoleOptions(actorRole, { teamMode, allowedRoles });
 
     const field = (name) => ({
         value: formData[name] ?? "",
@@ -137,8 +147,8 @@ export default function UserFormBody({
                     Role <span className="text-red-500">*</span>
                 </label>
                 <select
-                    value={formData.role || ""}
-                    onChange={(e) => onChange({ role: e.target.value })}
+                    value={role || ""}
+                    onChange={(e) => onChange({ role: e.target.value, shop_id: "" })}
                     className={inputCls("role")}
                     disabled={readOnly || lockRole || (teamMode && isEdit)}
                 >
@@ -192,8 +202,10 @@ export default function UserFormBody({
             {!teamMode && needsShop && (
                 <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Shop {!isEdit && <span className="text-gray-400 font-normal">(optional — assign later if needed)</span>}
-                        {isEdit && <span className="text-red-500">*</span>}
+                        Shop {isEdit && <span className="text-red-500">*</span>}
+                        {!isEdit && (
+                            <span className="text-gray-400 font-normal"> (optional — assign later if needed)</span>
+                        )}
                     </label>
                     {shopsLoading ? (
                         <div className={`${inputCls("shop_id")} text-gray-400`}>
@@ -209,19 +221,51 @@ export default function UserFormBody({
                             <option value="">— Select Shop —</option>
                             {shops.map((s) => (
                                 <option key={s.shop_id} value={s.shop_id}>
-                                    {s.shop_name}{s.city ? ` — ${s.city}` : ""}
+                                    {s.shop_name}{s.city ? ` — ${s.city}` : ""}{s.shop_type ? ` (${displayShopTypeLabel(s.shop_type)})` : ""}
                                 </option>
                             ))}
                         </select>
                     )}
                     {errorMsg("shop_id")}
+                    {!isEdit && ownerShopTypeFilter === "FRANCHISE" && (
+                        <p className="text-xs text-gray-400 mt-1">
+                            If you pick a shop now, only franchise shops are listed.
+                        </p>
+                    )}
+                    {!isEdit && ownerShopTypeFilter === "OWNER" && (
+                        <p className="text-xs text-gray-400 mt-1">
+                            If you pick a shop now, only Mehta Mart shops are listed.
+                        </p>
+                    )}
                 </div>
             )}
 
-            {!teamMode && role === "SUPER_ADMIN" && (
+            {!teamMode && isOrgLevelAdminRole(apiRole) && (
                 <div className="col-span-2 bg-purple-50 border border-purple-100 rounded-lg px-4 py-2">
                     <p className="text-xs text-purple-600">
-                        Super Admin has full system access — no warehouse or shop assignment needed.
+                        {apiRole === "ORG_MANAGER"
+                            ? "Org Manager has organisation-wide access except franchise shop and franchise owner setup — no warehouse or shop assignment needed."
+                            : "Super Admin has full system access — no warehouse or shop assignment needed."}
+                    </p>
+                </div>
+            )}
+
+            {!teamMode && apiRole === "ORG_MANAGER" && (
+                <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Role title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                        value={formData.role_title || ""}
+                        onChange={(e) => onChange({ role_title: e.target.value })}
+                        placeholder="e.g. MHM Manager"
+                        maxLength={80}
+                        className={inputCls("role_title")}
+                        disabled={readOnly || actorRole !== ROLES.SUPER_ADMIN}
+                    />
+                    {errorMsg("role_title")}
+                    <p className="text-xs text-gray-400 mt-1">
+                        Display name only. Permissions always stay Org Manager.
                     </p>
                 </div>
             )}

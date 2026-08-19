@@ -42,6 +42,6 @@ export const resolveShopId = (user) => user?.shop_id || user?.shop?.shop_id || "
 
 export const shouldSkipShopCashbank = (user) => {
     if (!user) return true;
-    if (user.role === "SUPER_ADMIN" && !resolveShopId(user)) return true;
+    if ((user.role === "SUPER_ADMIN" || user.role === "ORG_MANAGER") && !resolveShopId(user)) return true;
     return false;
 };

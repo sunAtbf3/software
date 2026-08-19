@@ -72,5 +72,7 @@ export const mapLocalStockToBarcodeProduct = (row) => {
     on_sale: row.on_sale === true || row.variant?.on_sale === true,
     sale_price: row.sale_price ?? row.variant?.sale_price ?? null,
     effective_special_price: row.variant?.effective_special_price ?? row.sale_price ?? null,
+    purchase_price: row.purchase_price ?? row.variant?.purchase_price,
+    expenses: row.expenses ?? row.variant?.expenses,
   };
 };

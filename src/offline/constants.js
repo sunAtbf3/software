@@ -58,6 +58,7 @@ export const OFFLINE_EVENTS = Object.freeze({
 
 export const SHOP_OFFLINE_ROLES = Object.freeze([
   'SUPER_ADMIN',
+  'ORG_MANAGER',
   'SHOP_OWNER',
   'BILLING_STAFF',
   'SHOP_MANAGER',

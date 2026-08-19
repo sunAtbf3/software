@@ -11,7 +11,7 @@ export const resolveNotificationUserContext = (user, ownerShopId = null) => ({
     role: user?.role || "",
     shopId: user?.shop_id || ownerShopId || "",
     warehouseId: user?.warehouse_id || "",
-    isSuperAdmin: user?.role === "SUPER_ADMIN",
+    isSuperAdmin: user?.role === "SUPER_ADMIN" || user?.role === "ORG_MANAGER",
     isWarehouseStaff: WH_ROLES.has(user?.role),
     isShopStaff: SHOP_ROLES.has(user?.role),
 });

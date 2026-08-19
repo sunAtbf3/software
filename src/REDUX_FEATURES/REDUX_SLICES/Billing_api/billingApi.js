@@ -117,6 +117,7 @@ export const billingApi = createApi({
                 shop_id = "",
                 bill_number = "",
                 customer_mobile = "",
+                sales_channel = "",
                 is_cancelled = "",
                 exclude_non_listed = "",
             } = {}) => {
@@ -127,6 +128,7 @@ export const billingApi = createApi({
                 if (shop_id) params.shop_id = shop_id;
                 if (bill_number) params.bill_number = bill_number;
                 if (customer_mobile) params.customer_mobile = customer_mobile;
+                if (sales_channel) params.sales_channel = sales_channel;
                 if (is_cancelled !== "" && is_cancelled != null) params.is_cancelled = is_cancelled;
                 if (exclude_non_listed !== "" && exclude_non_listed != null) {
                     params.exclude_non_listed = exclude_non_listed;

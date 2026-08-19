@@ -20,9 +20,9 @@ import { ROLES } from "../../../roles";
 
 export default function PaymentOutTab() {
     const { user } = useSelector((state) => state.auth);
-    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN || user?.role === ROLES.ORG_MANAGER;
     const warehouseId = user?.warehouse_id || "";
-    const canWrite = [ROLES.SUPER_ADMIN, ROLES.WH_MANAGER].includes(user?.role);
+    const canWrite = [ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER, ROLES.WH_MANAGER].includes(user?.role);
 
     const [warehouseFilter, setWarehouseFilter] = useState("");
     const effectiveWarehouseId = isSuperAdmin ? warehouseFilter : warehouseId;

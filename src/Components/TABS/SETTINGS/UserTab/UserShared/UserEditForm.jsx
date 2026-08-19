@@ -19,9 +19,13 @@ import {
     setSubmitting,
 } from "../../../../../REDUX_FEATURES/REDUX_SLICES/User_Api/userSlice";
 import UserFormBody from "./UserFormBody";
+import {
+    isWarehouseFormRole,
+    isShopAssignmentFormRole,
+    resolveApiRole,
+} from "./userRoles";
+import { displayUserRoleLabel } from "../../../../roles";
 
-const WH_ROLES = ["WH_MANAGER", "WH_STOCK_LISTER"];
-const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_#^])[A-Za-z\d@$!%*?&_#^]{8,}$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
 
@@ -71,11 +75,14 @@ export default function UserEditForm({
 
         if (!teamMode) {
             if (!role) errors.role = "Role is required";
-            if (WH_ROLES.includes(role) && !formData.warehouse_id?.trim()) {
+            if (isWarehouseFormRole(role) && !formData.warehouse_id?.trim()) {
                 errors.warehouse_id = "Warehouse is required for this role";
             }
-            if (SHOP_ROLES.includes(role) && !formData.shop_id?.trim()) {
+            if (isShopAssignmentFormRole(role) && !formData.shop_id?.trim()) {
                 errors.shop_id = "Shop is required for this role";
+            }
+            if (resolveApiRole(role) === "ORG_MANAGER" && !formData.role_title?.trim()) {
+                errors.role_title = "Role title is required for Org Manager";
             }
         }
 
@@ -102,17 +109,20 @@ export default function UserEditForm({
                     remarks: formData.remarks?.trim() || undefined,
                 }).unwrap();
             } else {
-                const role = formData.role;
+                const apiRole = resolveApiRole(formData.role);
                 const payload = {
                     userId: selectedUser.user_id,
                     name: formData.name.trim(),
                     phone: formData.phone.trim(),
-                    role,
+                    role: apiRole,
                     remarks: formData.remarks?.trim() || undefined,
                 };
                 if (formData.password) payload.password = formData.password;
-                if (WH_ROLES.includes(role)) payload.warehouse_id = formData.warehouse_id.trim();
-                if (SHOP_ROLES.includes(role)) payload.shop_id = formData.shop_id.trim();
+                if (isWarehouseFormRole(formData.role)) payload.warehouse_id = formData.warehouse_id.trim();
+                if (isShopAssignmentFormRole(formData.role)) payload.shop_id = formData.shop_id.trim();
+                if (apiRole === "ORG_MANAGER" && formData.role_title?.trim()) {
+                    payload.role_title = formData.role_title.trim();
+                }
                 await updateUser(payload).unwrap();
             }
             onSave();
@@ -188,7 +198,7 @@ export default function UserEditForm({
                                 {readOnly ? "View Team Member" : teamMode ? "Edit Team Member" : "Edit User"}
                             </h3>
                             <p className="text-xs text-gray-400 mt-0.5">
-                                {selectedUser?.name} — {selectedUser?.role}
+                                {selectedUser?.name} — {displayUserRoleLabel(selectedUser) || selectedUser?.role}
                             </p>
                         </div>
                         <button

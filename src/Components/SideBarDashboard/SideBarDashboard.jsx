@@ -3,7 +3,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { TAB_REGISTRY } from "../TabRegistry";
-import { ROLE_PERMISSIONS, ROLE_LABELS, ROLES, filterSubItemsByRole } from "../roles";
+import { ROLE_PERMISSIONS, ROLE_LABELS, ROLES, filterSubItemsByRole, displayUserRoleLabel } from "../roles";
 import { useLogoutMutation } from "../../REDUX_FEATURES/REDUX_SLICES/Login_Api/authApi";
 import {
     clearCredentials,
@@ -210,13 +210,13 @@ const SideBarDashboard = () => {
                     {isExpanded ? (
                         <div className="mt-2 text-center animate-fade-in">
                             <span className="inline-block px-2 py-0.5 text-[10px] rounded text-white bg-white/[0.06] border border-white/10 whitespace-nowrap">
-                                {ROLE_LABELS[activeRole] || activeRole}
+                                {displayUserRoleLabel(user) || ROLE_LABELS[activeRole] || activeRole}
                             </span>
                         </div>
                     ) : (
-                        <div className="mt-2 flex justify-center animate-fade-in" title={ROLE_LABELS[activeRole] || activeRole}>
+                        <div className="mt-2 flex justify-center animate-fade-in" title={displayUserRoleLabel(user) || ROLE_LABELS[activeRole] || activeRole}>
                             <div className="w-7 h-7 rounded-full bg-white/[0.06] text-white border border-white/10 flex items-center justify-center text-[10px] font-bold shadow-sm">
-                                {getRoleInitials(ROLE_LABELS[activeRole] || activeRole)}
+                                {getRoleInitials(displayUserRoleLabel(user) || ROLE_LABELS[activeRole] || activeRole)}
                             </div>
                         </div>
                     )}

@@ -76,6 +76,11 @@ const fmtDateTime = (iso) => {
 const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPdfLoading }) => {
     if (!bill) return null;
     const totalQty = bill.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
+    const salesChannelLabel = bill.sales_channel === "WHOLESALE" ? "Wholesale Bill" : "Retail Bill";
+    const salesChannelBadgeClass =
+        bill.sales_channel === "WHOLESALE"
+            ? "bg-teal-100 text-teal-700"
+            : "bg-blue-100 text-blue-700";
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto text-gray-700">
@@ -98,6 +103,12 @@ const BillViewModal = ({ bill, onClose, onPrint, onDownloadPdf, isPrinting, isPd
                                 <p className="font-medium text-gray-800">
                                     {getBillTypeLabel(bill.bill_type)}
                                 </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-500">Billing Mode</p>
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${salesChannelBadgeClass}`}>
+                                    {salesChannelLabel}
+                                </span>
                             </div>
                             {bill.place_of_supply_state_code && (
                                 <div>
@@ -208,6 +219,7 @@ export default function CheckoutPanel({
         billType,
         paymentMethod,
         lastCreatedBill,
+        pricingMode,
     } = useSelector((state) => state.billing);
     const subtotal = useSelector(selectCartSubtotal);
     const total = useSelector(selectCartTotal);
@@ -432,7 +444,7 @@ export default function CheckoutPanel({
             shop_id,
             bill_type: billType,
             payment_method: paymentMethod,
-            sales_channel: "WALK_IN",
+            sales_channel: pricingMode === "WHOLESALE" ? "WHOLESALE" : "WALK_IN",
             items,
             credit_note_ids: selectedCreditNoteIds,
             ...extra,
@@ -525,10 +537,10 @@ export default function CheckoutPanel({
 
             try {
                 if (saleLines.length > 0) {
-                    await applyLocalSaleDeductions(shop_id, saleLines);
+                    await applyLocalSaleDeductions(shop_id, saleLines, { requireCachedRow: false });
                 }
             } catch (stockErr) {
-                console.error("Local stock cache update after online bill:", stockErr);
+                console.warn("Local stock cache update after online bill skipped:", stockErr);
             }
 
             if (result.credit_applied > 0) {
@@ -1316,7 +1328,7 @@ export default function CheckoutPanel({
 //             shop_id,
 //             bill_type: billType,
 //             payment_method: paymentMethod,
-//             sales_channel: "WALK_IN",
+//             sales_channel: pricingMode === "WHOLESALE" ? "WHOLESALE" : "WALK_IN",
 //             items,
 //             credit_note_ids: selectedCreditNoteIds,
 //         };

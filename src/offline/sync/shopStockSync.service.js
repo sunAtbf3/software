@@ -11,10 +11,11 @@ export const broadcastStocksUpdated = (shopId, detail = {}) => {
 
 /**
  * Deduct sold quantities in IndexedDB so offline cache stays aligned with server sales.
+ * After an online bill, pass { requireCachedRow: false } — server already committed stock.
  */
-export const applyLocalSaleDeductions = async (shopId, lines) => {
+export const applyLocalSaleDeductions = async (shopId, lines, { requireCachedRow = true } = {}) => {
   if (!shopId || !lines?.length) return;
-  await shopStockMutationService.deductForSale(shopId, lines);
+  await shopStockMutationService.deductForSale(shopId, lines, { requireCachedRow });
   broadcastStocksUpdated(shopId, { reason: 'sale_deduct', lines });
 };
 

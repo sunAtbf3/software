@@ -67,7 +67,7 @@ export default function BulkTransferRequestsTab() {
     const userWarehouseId = user?.warehouse_id || "";
     const userRole = user?.role || "";
     const isWarehouseStaff = userRole === "WH_MANAGER" || userRole === "WH_STOCK_LISTER";
-    const showWhQtyColumn = userRole === "SUPER_ADMIN" || isWarehouseStaff;
+    const showWhQtyColumn = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER" || isWarehouseStaff;
     const isWhBulkFlow = isWarehouseStaff && !!userWarehouseId;
     // const isShopOwnerFlow = userRole === "SHOP_OWNER" && !!userShopId;
     const isShopOwnerFlow = (userRole === "SHOP_OWNER" || userRole === "SHOP_MANAGER") && !!userShopId;
@@ -349,7 +349,7 @@ export default function BulkTransferRequestsTab() {
         const isSourceWH = userWarehouseId && (requestFromWarehouseId === userWarehouseId);
         const isDestWH = userWarehouseId && (requestToWarehouseId === userWarehouseId);
         const isDestShop = userShopId && (requestToShopId === userShopId);
-        const isSuperAdmin = userRole === "SUPER_ADMIN";
+        const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
         
         // View details - always available
         actions.push({ type: "view", label: "View Details", icon: <Eye size={14} />, color: "text-gray-500" });

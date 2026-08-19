@@ -69,7 +69,7 @@ export default function CreditNotesTab() {
 
     const userShopId = user?.shop_id || "";
     const userRole = user?.role || "";
-    const isSuperAdmin = userRole === "SUPER_ADMIN";
+    const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
     const canCreate = userRole === "SHOP_OWNER" || userRole === "BILLING_STAFF" || isSuperAdmin;
 
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -523,7 +523,7 @@ export default function CreditNotesTab() {
 
 //     const userShopId = user?.shop_id || "";
 //     const userRole = user?.role || "";
-//     const isSuperAdmin = userRole === "SUPER_ADMIN";
+//     const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
 //     const canCreate = userRole === "SHOP_OWNER" || userRole === "BILLING_STAFF" || isSuperAdmin;
 
 //     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -969,7 +969,7 @@ export default function CreditNotesTab() {
 
 //     const userShopId = user?.shop_id || "";
 //     const userRole = user?.role || "";
-//     const isSuperAdmin = userRole === "SUPER_ADMIN";
+//     const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ORG_MANAGER";
 //     const canCreate = userRole === "SHOP_OWNER" || userRole === "BILLING_STAFF" || isSuperAdmin;
 
 //     // Local state for Create Modal

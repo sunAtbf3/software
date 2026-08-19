@@ -61,7 +61,7 @@ export default function ShopWarehouseReturnTab() {
     const user = useSelector((s) => s.auth?.user);
     const role = user?.role;
     const isShop = [ROLES.SHOP_OWNER, ROLES.SHOP_MANAGER].includes(role);
-    const isWh = [ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER, ROLES.SUPER_ADMIN].includes(role);
+    const isWh = [ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER, ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER].includes(role);
     const pageTitle = isShop ? "Return to Warehouse" : "Return Stock";
     const pageSubtitle = isShop
         ? "Return stock against an inbound transfer bill. Stock updates only when warehouse receives."

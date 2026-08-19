@@ -14,16 +14,34 @@ import {
     formatGstPercentLabel,
     toBillingNumber,
 } from "../../../../utils/billingCart.utils";
+import { useGetWholesaleSettingsQuery } from "../../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
+import { calculateWholesaleUnitPriceFromSelling } from "../../../../utils/wholesalePrice.utils";
 import { formatAttributesDisplay } from "../../../../utils/variantAttributes.utils";
 import ProductCode from "../../../shared/ProductCode";
 
 export default function VariantPickerModal() {
     const dispatch = useDispatch();
-    const { showVariantPicker, variantPickerTarget } = useSelector((state) => state.billing);
+    const { showVariantPicker, variantPickerTarget, pricingMode } = useSelector((state) => state.billing);
+    const authUser = useSelector((state) => state.auth?.user);
+    const canWholesaleBill = authUser?.shop?.shop_type === "OWNER" || authUser?.shop_type === "OWNER";
+    const { data: wholesaleSettings } = useGetWholesaleSettingsQuery(undefined, {
+        skip: !canWholesaleBill,
+    });
 
     if (!showVariantPicker || !variantPickerTarget) return null;
 
     const { product_name, variants } = variantPickerTarget;
+    const resolveVariantDisplayPrice = (variant) => {
+        const selling = toBillingNumber(variant?.special_price);
+        if (pricingMode !== "WHOLESALE") return selling;
+        return calculateWholesaleUnitPriceFromSelling(
+            variant,
+            wholesaleSettings?.wholesale_markup_percent,
+            selling
+        );
+    };
+    const resolveSaleTagPrice = (variant) =>
+        toBillingNumber(variant?.effective_special_price ?? variant?.sale_price ?? variant?.special_price);
 
     const handleSelectVariant = (variant) => {
         const cartItem = buildBillingCartItem({
@@ -41,6 +59,9 @@ export default function VariantPickerModal() {
             gst_type: variant.gst_type || "CGST_SGST",
             quantity_available: variant.quantity_available || 999999,
             combo_eligible: variant.combo_eligible === true,
+            purchase_price: variant.purchase_price,
+            expenses: variant.expenses,
+            price_type: pricingMode === "WHOLESALE" ? "WHOLESALE" : "SPECIAL",
         });
         dispatch(addToCart(cartItem));
         dispatch(closeVariantPicker());
@@ -91,9 +112,14 @@ export default function VariantPickerModal() {
                                             GST {formatGstPercentLabel(variant.gst_percent)}
                                         </span>
                                     )}
+                                    {variant.on_sale === true && (
+                                        <span className="ml-2 inline-flex text-rose-700 bg-rose-50 px-1 py-0.5 rounded font-semibold">
+                                            Sale ₹{resolveSaleTagPrice(variant).toFixed(0)}
+                                        </span>
+                                    )}
                                 </p>
                                 <p className="font-bold text-blue-600">
-                                    ₹{toBillingNumber(variant.special_price).toFixed(2)}
+                                    ₹{resolveVariantDisplayPrice(variant).toFixed(2)}
                                 </p>
                             </div>
                         </button>

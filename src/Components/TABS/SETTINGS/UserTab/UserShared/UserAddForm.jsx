@@ -14,9 +14,11 @@ import {
     setSubmitting,
 } from "../../../../../REDUX_FEATURES/REDUX_SLICES/User_Api/userSlice";
 import UserFormBody from "./UserFormBody";
-
-const WH_ROLES = ["WH_MANAGER", "WH_STOCK_LISTER"];
-const SHOP_ROLES = ["SHOP_OWNER", "BILLING_STAFF", "SHOP_MANAGER"];
+import {
+    isWarehouseFormRole,
+    isShopAssignmentFormRole,
+    resolveApiRole,
+} from "./userRoles";
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_#^])[A-Za-z\d@$!%*?&_#^]{8,}$/;
 const PHONE_REGEX = /^[6-9]\d{9}$/;
@@ -55,11 +57,11 @@ export default function UserAddForm({
         if (!role) errors.role = "Role is required";
 
         if (!teamMode) {
-            if (WH_ROLES.includes(role) && !formData.warehouse_id?.trim()) {
+            if (isWarehouseFormRole(role) && !formData.warehouse_id?.trim()) {
                 errors.warehouse_id = "Warehouse is required for this role";
             }
-            if (SHOP_ROLES.includes(role) && !formData.shop_id?.trim()) {
-                // optional for admin flow on create
+            if (resolveApiRole(role) === "ORG_MANAGER" && !formData.role_title?.trim()) {
+                errors.role_title = "Role title is required for Org Manager";
             }
         }
 
@@ -76,23 +78,26 @@ export default function UserAddForm({
 
         dispatch(setSubmitting(true));
         try {
-            const role = formData.role;
+            const apiRole = resolveApiRole(formData.role);
             const payload = {
                 name: formData.name.trim(),
                 phone: formData.phone.trim(),
                 password: formData.password,
-                role,
+                role: apiRole,
                 remarks: formData.remarks?.trim() || undefined,
             };
 
             if (teamMode) {
                 await createTeamMember(payload).unwrap();
             } else {
-                if (WH_ROLES.includes(role) && formData.warehouse_id?.trim()) {
+                if (isWarehouseFormRole(formData.role) && formData.warehouse_id?.trim()) {
                     payload.warehouse_id = formData.warehouse_id.trim();
                 }
-                if (SHOP_ROLES.includes(role) && formData.shop_id?.trim()) {
+                if (isShopAssignmentFormRole(formData.role) && formData.shop_id?.trim()) {
                     payload.shop_id = formData.shop_id.trim();
+                }
+                if (apiRole === "ORG_MANAGER" && formData.role_title?.trim()) {
+                    payload.role_title = formData.role_title.trim();
                 }
                 await createUser(payload).unwrap();
             }

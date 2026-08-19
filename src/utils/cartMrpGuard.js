@@ -24,5 +24,5 @@ export const getLinesExceedingMrp = (items = []) =>
 export const describeMrpViolations = (items = []) => {
   const bad = getLinesExceedingMrp(items);
   if (!bad.length) return null;
-  return "Special price cannot exceed MRP. Keep it at or below MRP to create the bill.";
+  return "Sell price cannot exceed MRP. Keep it at or below MRP to create the bill.";
 };

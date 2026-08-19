@@ -18,7 +18,7 @@ const PETTY_CASH_SUBTITLE = {
 export default function PettyCashBookTab() {
     const { user } = useSelector((state) => state.auth);
     const role = user?.role;
-    const isSuperAdmin = role === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = role === ROLES.SUPER_ADMIN || role === ROLES.ORG_MANAGER;
     const isShopRole = SHOP_ROLES.has(role);
     const isWhRole = WH_ROLES.has(role);
 

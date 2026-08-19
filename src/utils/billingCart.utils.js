@@ -97,6 +97,8 @@ export const buildBillingCartItem = ({
   on_sale = false,
   sale_price = null,
   effective_special_price = null,
+  purchase_price = null,
+  expenses = null,
 }) => {
   const onSale = on_sale === true;
   const sale = onSale ? toBillingNumber(effective_special_price ?? sale_price) : 0;
@@ -121,6 +123,8 @@ export const buildBillingCartItem = ({
     special_price: catalogSpecial,
     mrp: toBillingNumber(mrp),
     online_price: toBillingNumber(online_price),
+    purchase_price: toBillingNumber(purchase_price),
+    expenses: toBillingNumber(expenses),
     gst_percent: gst,
     gst_type: normalizedType,
     hsn_code: hsn_code ? String(hsn_code).trim() : null,

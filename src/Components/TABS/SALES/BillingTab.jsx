@@ -11,8 +11,11 @@ import {
     setBillingShopContext,
     recalculateCartGst,
     applyComboPricing,
+    setPricingMode,
+    setWholesaleMarkupPercent,
 } from "../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useGetActiveComboRulesQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
+import { useGetWholesaleSettingsQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
 import ProductPicker from "./BillingTab_Compo/ProductPicker";
 import CustomerSearch from "./BillingTab_Compo/CustomerSearch";
 import CartPanel from "./BillingTab_Compo/CartPanel";
@@ -27,9 +30,14 @@ import { BILL_TYPES } from "../../../constants/billingBillTypes";
 export default function BillingTab() {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { cart, billType } = useSelector((state) => state.billing);
+    const { cart, billType, pricingMode } = useSelector((state) => state.billing);
     const shop_id = getUserShopId(user) || "";
     const { data: myShop } = useGetMyShopQuery(undefined, { skip: !shop_id });
+    const shopType = myShop?.shop_type || user?.shop?.shop_type;
+    const canWholesaleBill = shopType === "OWNER";
+    const { data: wholesaleSettings } = useGetWholesaleSettingsQuery(undefined, {
+        skip: !canWholesaleBill,
+    });
     const { data: activeComboRules } = useGetActiveComboRulesQuery(undefined, {
         skip: billType === BILL_TYPES.NON_LISTED,
     });
@@ -53,7 +61,7 @@ export default function BillingTab() {
             cart
                 .map(
                     (item) =>
-                        `${item.variant_id}:${item.quantity}:${item.price_type}:${item.combo_eligible === true ? 1 : 0}:${item.special_price}:${item.price_overridden === true ? 1 : 0}`
+                        `${item.variant_id}:${item.quantity}:${item.price_type}:${item.combo_eligible === true ? 1 : 0}:${item.special_price}:${item.price_overridden === true ? 1 : 0}:${item.purchase_price}:${item.expenses}`
                 )
                 .join("|"),
         [cart]
@@ -66,17 +74,63 @@ export default function BillingTab() {
     }, [myShop, dispatch]);
 
     useEffect(() => {
+        if (shopType === "FRANCHISE" && pricingMode === "WHOLESALE") {
+            dispatch(setPricingMode("RETAIL"));
+        }
+    }, [shopType, pricingMode, dispatch]);
+
+    useEffect(() => {
+        if (wholesaleSettings?.wholesale_markup_percent != null) {
+            dispatch(setWholesaleMarkupPercent(wholesaleSettings.wholesale_markup_percent));
+        }
+    }, [wholesaleSettings?.wholesale_markup_percent, dispatch]);
+
+    useEffect(() => {
         dispatch(recalculateCartGst());
     }, [dispatch]);
 
     useEffect(() => {
         if (billType === BILL_TYPES.NON_LISTED) return;
         dispatch(applyComboPricing(activeComboRules || []));
-    }, [billType, comboCartFingerprint, activeComboRules, dispatch]);
+    }, [billType, comboCartFingerprint, activeComboRules, pricingMode, wholesaleSettings?.wholesale_markup_percent, dispatch]);
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 lg:h-[calc(100vh-7rem)]">
             <div className="col-span-1 lg:col-span-6 bg-white border border-gray-300 rounded flex flex-col min-h-[320px] lg:h-full p-3">
+                {canWholesaleBill && billType !== BILL_TYPES.NON_LISTED && (
+                    <div className="mb-2 flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-gray-600">Billing</span>
+                        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setPricingMode("RETAIL"))}
+                                className={`px-3 py-1.5 text-xs font-semibold ${
+                                    pricingMode !== "WHOLESALE"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                                Retail
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setPricingMode("WHOLESALE"))}
+                                className={`px-3 py-1.5 text-xs font-semibold ${
+                                    pricingMode === "WHOLESALE"
+                                        ? "bg-teal-600 text-white"
+                                        : "bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                                Wholesale
+                            </button>
+                        </div>
+                        {pricingMode === "WHOLESALE" && (
+                            <span className="text-[11px] text-teal-700">
+                                Wholesale @ {Number(wholesaleSettings?.wholesale_markup_percent ?? 40)}%
+                            </span>
+                        )}
+                    </div>
+                )}
                 {billType === BILL_TYPES.NON_LISTED ? (
                     <ManualItemsPanel />
                 ) : (

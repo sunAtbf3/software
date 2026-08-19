@@ -20,7 +20,11 @@ import {
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Shop_api/shopSlice";
 import ShopAddForm from "./ShopShared/ShopAddForm";
 import ShopEditForm from "./ShopShared/ShopEditForm";
-import { CURRENT_USER } from "../../../roles";
+import {
+    displayShopTypeLabel,
+    isOrgLevelAdminRole,
+    canMutateFranchiseShop,
+} from "../../../roles";
 
 const StatusBadge = ({ isActive }) => (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -45,7 +49,9 @@ export default function ShopsTab() {
         pageSize,
     } = useSelector((state) => state.shop);
 
-    const isSuperAdmin = user?.role === "SUPER_ADMIN";
+    const canAddShop = isOrgLevelAdminRole(user?.role);
+    const canEditShop = (shop) =>
+        canMutateFranchiseShop(user?.role) || (isOrgLevelAdminRole(user?.role) && shop?.shop_type !== "FRANCHISE");
 
     // ── Queries ───────────────────────────────────────────────────────────────
     const { data, isLoading, isFetching, refetch } = useGetShopsQuery({
@@ -88,7 +94,7 @@ export default function ShopsTab() {
                     >
                         Refresh
                     </button>
-                    {isSuperAdmin && (
+                    {canAddShop && (
                         <button
                             onClick={() => dispatch(openAddForm())}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm cursor-pointer"
@@ -163,7 +169,7 @@ export default function ShopsTab() {
                     <div className="col-span-full text-center py-12">
                         <Building2 size={48} className="text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-400 text-sm">No shops found</p>
-                        {isSuperAdmin && (
+                        {canAddShop && (
                             <button onClick={() => dispatch(openAddForm())} className="text-blue-600 text-xs font-medium hover:underline mt-2">
                                 Add your first shop
                             </button>
@@ -185,8 +191,11 @@ export default function ShopsTab() {
                                         <StatusBadge isActive={shop.is_active} />
                                     </div>
                                     <p className="text-xs font-mono text-gray-400 mt-1">{shop.shop_code}</p>
+                                    {shop.shop_type && (
+                                        <p className="text-xs text-indigo-600 mt-1">{displayShopTypeLabel(shop.shop_type)}</p>
+                                    )}
                                 </div>
-                                {isSuperAdmin && (
+                                {canEditShop(shop) && (
                                     <button
                                         onClick={() => dispatch(openEditForm(shop))}
                                         className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
