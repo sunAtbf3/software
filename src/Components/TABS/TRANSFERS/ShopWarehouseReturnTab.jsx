@@ -21,6 +21,7 @@ import { ROLES } from "../../roles";
 import {
     useGetShopWarehouseReturnsQuery,
     useLazyPreviewReturnSourceQuery,
+    useLazySearchReturnSourcesQuery,
     useCreateShopWarehouseReturnMutation,
     useApproveShopWarehouseReturnMutation,
     useRejectShopWarehouseReturnMutation,
@@ -45,6 +46,19 @@ const STATUS_BADGE = {
 const fmtMoney = (n) =>
     `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
+const fmtDateTime = (value) => {
+    if (!value) return "—";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
 /** Never allow typing above max remaining (e.g. received 5 → max 5). */
 const clampReturnQty = (raw, maxAllowed) => {
     const max = Math.max(0, Math.floor(Number(maxAllowed) || 0));
@@ -64,7 +78,7 @@ export default function ShopWarehouseReturnTab() {
     const isWh = [ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER, ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER].includes(role);
     const pageTitle = isShop ? "Return to Warehouse" : "Return Stock";
     const pageSubtitle = isShop
-        ? "Return stock against an inbound transfer bill. Stock updates only when warehouse receives."
+        ? "Return stock against an inbound transfer — search by bill, request, product name or code. Stock updates only when warehouse receives."
         : "Incoming shop returns — approve, then receive to update warehouse stock.";
 
     const [statusFilter, setStatusFilter] = useState("");
@@ -85,6 +99,7 @@ export default function ShopWarehouseReturnTab() {
     const rows = data?.items || [];
 
     const [previewSource, { isFetching: previewing }] = useLazyPreviewReturnSourceQuery();
+    const [searchSources, { isFetching: searchingSources }] = useLazySearchReturnSourcesQuery();
     const [createReturn, { isLoading: creating }] = useCreateShopWarehouseReturnMutation();
     const [approveReturn] = useApproveShopWarehouseReturnMutation();
     const [rejectReturn] = useRejectShopWarehouseReturnMutation();
@@ -94,38 +109,92 @@ export default function ShopWarehouseReturnTab() {
     const [fetchBill] = useLazyGetShopWarehouseReturnBillQuery();
     const [downloadBillPdf] = useLazyDownloadShopWarehouseReturnBillPdfQuery();
 
+    const [createSearch, setCreateSearch] = useState("");
     const [billNumber, setBillNumber] = useState("");
+    const [sourceMatches, setSourceMatches] = useState([]);
     const [returnReason, setReturnReason] = useState("");
     const [preview, setPreview] = useState(null);
     const [qtyMap, setQtyMap] = useState({});
+    const isSearching = previewing || searchingSources;
 
     const resetCreate = () => {
+        setCreateSearch("");
         setBillNumber("");
+        setSourceMatches([]);
         setReturnReason("");
         setPreview(null);
         setQtyMap({});
         setShowCreate(false);
     };
 
-    const handlePreview = async () => {
-        if (!billNumber.trim()) {
-            toast.error("Enter transfer bill / request number");
+    const applyPreviewData = (dataPreview, lookupNumber) => {
+        setBillNumber(lookupNumber);
+        setCreateSearch(lookupNumber);
+        setPreview(dataPreview);
+        const initial = {};
+        for (const line of dataPreview.lines || []) {
+            initial[line.variant_id] = "";
+        }
+        setQtyMap(initial);
+        if (!(dataPreview.lines || []).length) {
+            toast.info("No returnable lines on this bill");
+        }
+    };
+
+    /** One search: exact bill/request first, else product name/code → bill list. */
+    const handleCreateSearch = async () => {
+        const q = createSearch.trim();
+        if (!q) {
+            toast.error("Enter bill no., request no., product name, or product code");
+            return;
+        }
+
+        setSourceMatches([]);
+        setPreview(null);
+        setQtyMap({});
+        setBillNumber("");
+
+        // 1) Exact transfer bill / request number
+        try {
+            const dataPreview = await previewSource({ bill_number: q }).unwrap();
+            applyPreviewData(dataPreview, q);
+            return;
+        } catch {
+            // Not an exact bill — fall through to product search
+        }
+
+        if (q.length < 2) {
+            toast.error("No matching bill. For product search enter at least 2 characters");
+            return;
+        }
+
+        // 2) Product name / code → list of bills
+        try {
+            const result = await searchSources({ q }).unwrap();
+            const list = Array.isArray(result?.sources) ? result.sources : [];
+            setSourceMatches(list);
+            if (!list.length) {
+                toast.info("No transfer bill or product match found at your shop");
+            }
+        } catch (err) {
+            setSourceMatches([]);
+            toast.error(getApiErrorMessage(err, "Search failed"));
+        }
+    };
+
+    const handleSelectSourceMatch = async (match) => {
+        const lookup = String(match?.lookup_number || "").trim();
+        if (!lookup) {
+            toast.error("Invalid bill reference");
             return;
         }
         try {
-            const dataPreview = await previewSource({ bill_number: billNumber.trim() }).unwrap();
-            setPreview(dataPreview);
-            const initial = {};
-            for (const line of dataPreview.lines || []) {
-                initial[line.variant_id] = "";
-            }
-            setQtyMap(initial);
-            if (!(dataPreview.lines || []).length) {
-                toast.info("No returnable lines on this bill");
-            }
+            const dataPreview = await previewSource({ bill_number: lookup }).unwrap();
+            setSourceMatches([]);
+            applyPreviewData(dataPreview, lookup);
+            toast.success("Bill loaded — set return qty below");
         } catch (err) {
-            setPreview(null);
-            toast.error(getApiErrorMessage(err, "Bill not found"));
+            toast.error(getApiErrorMessage(err, "Could not load selected bill"));
         }
     };
 
@@ -374,22 +443,75 @@ export default function ShopWarehouseReturnTab() {
                                 </button>
                             </div>
                             <div className="p-6 space-y-4 text-sm">
-                                <div className="flex gap-2">
-                                    <input
-                                        value={billNumber}
-                                        onChange={(e) => setBillNumber(e.target.value)}
-                                        placeholder="Transfer bill no. or request no."
-                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handlePreview}
-                                        disabled={previewing}
-                                        className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                                    >
-                                        {previewing ? "Loading…" : "Load bill"}
-                                    </button>
+                                <div>
+                                    <label className="text-xs text-gray-500">Search transfer bill</label>
+                                    <div className="mt-1 flex gap-2">
+                                        <input
+                                            value={createSearch}
+                                            onChange={(e) => setCreateSearch(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    handleCreateSearch();
+                                                }
+                                            }}
+                                            placeholder="Bill no., request no., product name or code"
+                                            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCreateSearch}
+                                            disabled={isSearching}
+                                            className="inline-flex items-center gap-1.5 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            <Search size={14} />
+                                            {isSearching ? "Searching…" : "Search"}
+                                        </button>
+                                    </div>
                                 </div>
+
+                                {sourceMatches.length > 0 && (
+                                    <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-lg bg-white divide-y divide-gray-100">
+                                        {sourceMatches.map((match, idx) => (
+                                            <button
+                                                key={`${match.source_type}-${match.lookup_number}-${match.matched_variant_id}-${idx}`}
+                                                type="button"
+                                                onClick={() => handleSelectSourceMatch(match)}
+                                                disabled={previewing}
+                                                className="w-full text-left px-3 py-2.5 hover:bg-blue-50/70 transition-colors disabled:opacity-50"
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium text-gray-800 truncate">
+                                                            {match.transfer_bill_number
+                                                                || match.reference_number
+                                                                || match.lookup_number}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-500 truncate">
+                                                            {match.matched_product_name}
+                                                            {match.matched_product_code
+                                                                ? ` · ${match.matched_product_code}`
+                                                                : ""}
+                                                        </p>
+                                                        <p className="text-[11px] text-gray-400">
+                                                            {match.warehouse?.warehouse_name || "Warehouse"}
+                                                            {" · "}
+                                                            Remaining {match.matched_remaining_returnable_qty}
+                                                        </p>
+                                                    </div>
+                                                    <div className="shrink-0 text-right">
+                                                        <p className="text-[11px] font-medium text-gray-700">
+                                                            {fmtDateTime(match.event_at)}
+                                                        </p>
+                                                        <p className="text-[10px] text-blue-600 mt-0.5">
+                                                            Select bill
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
 
                                 {preview && (
                                     <div className="rounded-lg border border-blue-100 bg-blue-50/40 p-3 text-xs space-y-1 text-gray-700">

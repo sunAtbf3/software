@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { Package } from "lucide-react";
 import {
     buildSameProductComboHints,
     describeComboQtyProgress,
@@ -13,6 +14,31 @@ import {
 
 const fmtMoney = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
+/** Small product thumb — fails soft to Package icon if URL broken/missing. */
+function VariantThumb({ src, alt, sizeClass = "w-10 h-10" }) {
+    const [failed, setFailed] = useState(false);
+    const showImage = Boolean(src) && !failed;
+
+    return (
+        <div
+            className={`${sizeClass} rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center`}
+        >
+            {showImage ? (
+                <img
+                    src={src}
+                    alt={alt || "Product"}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setFailed(true)}
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <Package size={16} className="text-gray-300" />
+            )}
+        </div>
+    );
+}
+
 const buildSelectionPatch = (product, variant, checked, existingQty) => {
     const maxQty = variant.warehouse_available ?? 0;
     return {
@@ -24,6 +50,7 @@ const buildSelectionPatch = (product, variant, checked, existingQty) => {
         product_name: product.name,
         sku: variant.sku,
         product_code: variant.product_code,
+        image_url: variant.image_url || null,
         available_stock: maxQty,
         mrp: variant.mrp ?? null,
         special_price: variant.special_price ?? null,
@@ -102,16 +129,23 @@ function VariantCard({
                     }
                     className="w-4 h-4 mt-0.5 rounded border-gray-300 shrink-0"
                 />
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 leading-snug">
-                        {isMulti ? `↳ ${product.name}` : product.name}
-                    </p>
-                    <p className="text-xs font-semibold text-blue-600 mt-0.5">
-                        {variant.product_code}
-                        {variant.sku && variant.sku !== variant.product_code ? (
-                            <span className="font-medium text-gray-400"> · {variant.sku}</span>
-                        ) : null}
-                    </p>
+                <div className="flex-1 min-w-0 flex items-start gap-2.5">
+                    <VariantThumb
+                        src={variant.image_url}
+                        alt={product.name}
+                        sizeClass="w-11 h-11"
+                    />
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 leading-snug">
+                            {isMulti ? `↳ ${product.name}` : product.name}
+                        </p>
+                        <p className="text-xs font-semibold text-blue-600 mt-0.5">
+                            {variant.product_code}
+                            {variant.sku && variant.sku !== variant.product_code ? (
+                                <span className="font-medium text-gray-400"> · {variant.sku}</span>
+                            ) : null}
+                        </p>
+                    </div>
                 </div>
                 <div className="shrink-0 text-right">
                     <input
@@ -544,16 +578,23 @@ export default function VariantCatalogPicker({
                                                 isMulti ? "pl-4 lg:pl-6" : ""
                                             }`}
                                         >
-                                            <span
-                                                className="block text-xs lg:text-sm font-medium truncate"
-                                                title={product.name}
-                                            >
-                                                {isMulti ? (
-                                                    <span className="text-gray-600 text-xs">↳ {product.name}</span>
-                                                ) : (
-                                                    product.name
-                                                )}
-                                            </span>
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <VariantThumb
+                                                    src={variant.image_url}
+                                                    alt={product.name}
+                                                    sizeClass="w-10 h-10"
+                                                />
+                                                <span
+                                                    className="block text-xs lg:text-sm font-medium truncate min-w-0"
+                                                    title={product.name}
+                                                >
+                                                    {isMulti ? (
+                                                        <span className="text-gray-600 text-xs">↳ {product.name}</span>
+                                                    ) : (
+                                                        product.name
+                                                    )}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-2 lg:px-3 py-2 align-middle min-w-0">
                                             <p

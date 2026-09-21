@@ -38,6 +38,14 @@ export const shopWarehouseReturnApi = createApi({
             }),
             transformResponse: (response) => response.data,
         }),
+        searchReturnSources: builder.query({
+            query: (params) => ({
+                url: "/shop-warehouse-returns/search-sources",
+                method: "GET",
+                params,
+            }),
+            transformResponse: (response) => response.data,
+        }),
         getShopWarehouseReturns: builder.query({
             query: (params) => ({
                 url: "/shop-warehouse-returns",
@@ -137,6 +145,7 @@ export const shopWarehouseReturnApi = createApi({
 
 export const {
     useLazyPreviewReturnSourceQuery,
+    useLazySearchReturnSourcesQuery,
     useGetShopWarehouseReturnsQuery,
     useGetShopWarehouseReturnByIdQuery,
     useLazyGetShopWarehouseReturnBillQuery,

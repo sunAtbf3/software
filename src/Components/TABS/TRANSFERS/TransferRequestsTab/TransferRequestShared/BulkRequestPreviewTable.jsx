@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Trash2 } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Trash2, Package } from "lucide-react";
 import {
     describeComboQtyProgress,
     describeFranchiseComboBlend,
@@ -17,6 +17,28 @@ const fmtMoney = (value) => {
     if (!Number.isFinite(n)) return "—";
     return `₹${n.toFixed(2)}`;
 };
+
+function PreviewThumb({ src, alt }) {
+    const [failed, setFailed] = useState(false);
+    const showImage = Boolean(src) && !failed;
+
+    return (
+        <div className="w-9 h-9 rounded-md overflow-hidden bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center">
+            {showImage ? (
+                <img
+                    src={src}
+                    alt={alt || "Product"}
+                    loading="lazy"
+                    decoding="async"
+                    onError={() => setFailed(true)}
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                <Package size={14} className="text-gray-300" />
+            )}
+        </div>
+    );
+}
 
 export default function BulkRequestPreviewTable({
     items = [],
@@ -125,7 +147,15 @@ export default function BulkRequestPreviewTable({
                                 return (
                                     <tr key={item.variant_id} className="hover:bg-gray-50/80">
                                         <td className="px-3 py-2.5 text-sm text-gray-800 align-middle">
-                                            <span className="line-clamp-2">{item.product_name || "—"}</span>
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <PreviewThumb
+                                                    src={item.image_url}
+                                                    alt={item.product_name}
+                                                />
+                                                <span className="line-clamp-2 min-w-0">
+                                                    {item.product_name || "—"}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="px-3 py-2.5 align-middle">
                                             <span className="text-xs font-semibold text-blue-600">

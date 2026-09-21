@@ -19,6 +19,9 @@ import {
     Truck,
     ArrowDownToLine,
     LayoutDashboard,
+    Banknote,
+    Undo2,
+    PiggyBank,
 } from "lucide-react";
 import { toast } from "../../../shared/ToastConfig";
 import DateRangePresetBar from "../../../shared/DateRangePresetBar";
@@ -81,6 +84,8 @@ function StatCard({ label, value, hint, icon: Icon, tone = "slate" }) {
         sky: "border-sky-100 bg-sky-50/50 text-sky-800",
         amber: "border-amber-100 bg-amber-50/50 text-amber-900",
         teal: "border-teal-100 bg-teal-50/40 text-teal-900",
+        rose: "border-rose-100 bg-rose-50/40 text-rose-900",
+        violet: "border-violet-100 bg-violet-50/40 text-violet-900",
     };
     const iconTone = {
         slate: "text-slate-400",
@@ -88,6 +93,8 @@ function StatCard({ label, value, hint, icon: Icon, tone = "slate" }) {
         sky: "text-sky-500",
         amber: "text-amber-500",
         teal: "text-teal-600",
+        rose: "text-rose-500",
+        violet: "text-violet-500",
     };
     return (
         <div className={`rounded-2xl border p-4 ${tones[tone] || tones.slate}`}>
@@ -177,14 +184,6 @@ export default function ShopReportTab() {
 
     const purchaseBills = purchaseData?.bills || [];
     const purchaseMeta = purchaseData?.meta || { total: 0 };
-    const purchaseAmount = useMemo(
-        () =>
-            purchaseBills.reduce(
-                (sum, b) => sum + Number(b.franchise_bill_totals?.final_amount || 0),
-                0
-            ),
-        [purchaseBills]
-    );
     const purchaseQty = useMemo(
         () => purchaseBills.reduce((sum, b) => sum + (Number(b.total_quantity) || 0), 0),
         [purchaseBills]
@@ -193,6 +192,17 @@ export default function ShopReportTab() {
     const transferTotal = transferHistoryData?.meta?.total ?? transfers.length;
 
     const sales = overviewData?.sales || {};
+    const purchases = overviewData?.purchases || {};
+    const expenses = overviewData?.expenses || {};
+    const returns = overviewData?.returns || {};
+    const profit = overviewData?.profit || {};
+    const purchaseAmount = Number(purchases.total_amount) || 0;
+    const purchaseBillCount = Number(purchases.bill_count) || purchaseMeta.total || 0;
+    const expenseAmount = Number(expenses.total_amount) || 0;
+    const returnAmount = Number(returns.total_amount) || 0;
+    const profitAmount = Number(profit.profit_amount) || 0;
+    const netPurchase = Number(profit.net_purchase) || 0;
+    const returnsRecent = Array.isArray(returns.recent) ? returns.recent : [];
     const paymentEntries = Object.entries(sales.payment_methods || {});
 
     const handlePresetChange = useCallback((presetId) => {
@@ -254,9 +264,14 @@ export default function ShopReportTab() {
             ["Collected", sales.total_collected || 0],
             ["Outstanding Balance", sales.total_balance || 0],
             [],
-            ["Purchase Bills", purchaseMeta.total || 0],
-            ["Purchase Amount (page)", purchaseAmount],
-            ["Purchase Qty (page)", purchaseQty],
+            ["Purchase Bills", purchaseBillCount],
+            ["Purchase Amount", purchaseAmount],
+            ["Purchase Qty (list page)", purchaseQty],
+            ["Petty Cash Expenses", expenseAmount],
+            ["Returns Amount", returnAmount],
+            ["Returns Count", returns.count || 0],
+            ["Net Purchase", netPurchase],
+            ["Profit", profitAmount],
             ["Transfers", transferTotal],
             [],
             ["Payment Method", "Count", "Amount"],
@@ -490,8 +505,8 @@ export default function ShopReportTab() {
 
             {!isLoading && reportType === "overview" && overviewData && (
                 <div className="space-y-5">
-                    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-5">
-                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-5 space-y-5">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-wider text-teal-700">
                                     Shop snapshot
@@ -505,54 +520,152 @@ export default function ShopReportTab() {
                                 </p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-                            <StatCard
-                                label="Sale Bills"
-                                value={sales.bill_count || 0}
-                                hint="invoices in period"
-                                icon={Receipt}
-                                tone="sky"
-                            />
-                            <StatCard
-                                label="Sales"
-                                value={formatCurrency(sales.total_amount)}
-                                hint="bill totals"
-                                icon={IndianRupee}
-                                tone="emerald"
-                            />
-                            <StatCard
-                                label="Collected"
-                                value={formatCurrency(sales.total_collected)}
-                                hint="payments received"
-                                icon={Wallet}
-                                tone="teal"
-                            />
-                            <StatCard
-                                label="Purchase Bills"
-                                value={purchaseMeta.total || 0}
-                                hint="warehouse inward"
-                                icon={Package}
-                                tone="amber"
-                            />
-                            <StatCard
-                                label="Purchase Value"
-                                value={formatCurrency(purchaseAmount)}
-                                hint={
-                                    purchaseMeta.total > purchaseBills.length
-                                        ? `first ${purchaseBills.length} of ${purchaseMeta.total}`
-                                        : "inward amount"
-                                }
-                                icon={ArrowDownToLine}
-                                tone="amber"
-                            />
-                            <StatCard
-                                label="Transfers"
-                                value={transferTotal}
-                                hint="stock movements"
-                                icon={Truck}
-                                tone="slate"
-                            />
-                        </div>
+
+                        {/* Sales */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-2.5">
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                                    <IndianRupee size={14} />
+                                </span>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">Sales</h4>
+                                    <p className="text-[11px] text-slate-500">Money coming in this period</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                <StatCard
+                                    label="Sale Bills"
+                                    value={sales.bill_count || 0}
+                                    hint="invoices in period"
+                                    icon={Receipt}
+                                    tone="sky"
+                                />
+                                <StatCard
+                                    label="Sales"
+                                    value={formatCurrency(sales.total_amount)}
+                                    hint="bill totals"
+                                    icon={IndianRupee}
+                                    tone="emerald"
+                                />
+                                <StatCard
+                                    label="Collected"
+                                    value={formatCurrency(sales.total_collected)}
+                                    hint="payments received"
+                                    icon={Wallet}
+                                    tone="teal"
+                                />
+                            </div>
+                        </section>
+
+                        {/* Purchases & costs */}
+                        <section className="pt-1 border-t border-slate-200/80">
+                            <div className="flex items-center gap-2 mb-2.5 mt-3">
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                                    <Package size={14} />
+                                </span>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">Purchases &amp; costs</h4>
+                                    <p className="text-[11px] text-slate-500">
+                                        Warehouse purchases + petty cash − approved returns
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                <StatCard
+                                    label="Purchase Bills"
+                                    value={purchaseBillCount}
+                                    hint="warehouse inward"
+                                    icon={Package}
+                                    tone="amber"
+                                />
+                                <StatCard
+                                    label="Purchase Value"
+                                    value={formatCurrency(purchaseAmount)}
+                                    hint="transfer bill totals"
+                                    icon={ArrowDownToLine}
+                                    tone="amber"
+                                />
+                                <StatCard
+                                    label="Petty Cash"
+                                    value={formatCurrency(expenseAmount)}
+                                    hint={`${expenses.count || 0} expense(s)`}
+                                    icon={Banknote}
+                                    tone="rose"
+                                />
+                                <StatCard
+                                    label="Returns"
+                                    value={formatCurrency(returnAmount)}
+                                    hint={`${returns.count || 0} approved return(s) · reduces purchase`}
+                                    icon={Undo2}
+                                    tone="violet"
+                                />
+                                <StatCard
+                                    label="Net Purchase"
+                                    value={formatCurrency(netPurchase)}
+                                    hint="Purchase + Expenses − Returns"
+                                    icon={TrendingUp}
+                                    tone="amber"
+                                />
+                                <StatCard
+                                    label="Transfers"
+                                    value={transferTotal}
+                                    hint="stock movements"
+                                    icon={Truck}
+                                    tone="slate"
+                                />
+                            </div>
+                        </section>
+
+                        {/* Profit */}
+                        <section className="pt-1 border-t border-slate-200/80">
+                            <div className="flex items-center gap-2 mb-2.5 mt-3">
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                                    <PiggyBank size={14} />
+                                </span>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">Profit</h4>
+                                    <p className="text-[11px] text-slate-500">
+                                        Sales − Net purchase
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                className={`rounded-2xl border p-4 sm:p-5 ${
+                                    profitAmount >= 0
+                                        ? "border-emerald-200 bg-emerald-50/60"
+                                        : "border-rose-200 bg-rose-50/60"
+                                }`}
+                            >
+                                <div className="flex flex-wrap items-end justify-between gap-4">
+                                    <div>
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide opacity-70 text-slate-700">
+                                            Period profit
+                                        </p>
+                                        <p
+                                            className={`text-3xl sm:text-4xl font-bold tabular-nums leading-tight mt-1 ${
+                                                profitAmount >= 0 ? "text-emerald-800" : "text-rose-800"
+                                            }`}
+                                        >
+                                            {formatCurrency(profitAmount)}
+                                        </p>
+                                    </div>
+                                    <div className="text-xs text-slate-600 space-y-1 min-w-[12rem]">
+                                        <div className="flex justify-between gap-6">
+                                            <span>Sales</span>
+                                            <span className="font-semibold tabular-nums">{formatCurrency(sales.total_amount)}</span>
+                                        </div>
+                                        <div className="flex justify-between gap-6">
+                                            <span>− Net purchase</span>
+                                            <span className="font-semibold tabular-nums">{formatCurrency(netPurchase)}</span>
+                                        </div>
+                                        <div className="border-t border-slate-200/80 pt-1 flex justify-between gap-6 font-semibold text-slate-800">
+                                            <span>= Profit</span>
+                                            <span className="tabular-nums">{formatCurrency(profitAmount)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -689,6 +802,59 @@ export default function ShopReportTab() {
 
                         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+                                <Undo2 size={16} className="text-violet-600" />
+                                <h3 className="text-sm font-semibold text-slate-800">Returns · period</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-white border-b border-slate-100">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left text-[11px] text-slate-500">Return / Bill</th>
+                                            <th className="px-3 py-2 text-left text-[11px] text-slate-500">Date</th>
+                                            <th className="px-3 py-2 text-left text-[11px] text-slate-500">Status</th>
+                                            <th className="px-3 py-2 text-right text-[11px] text-slate-500">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {returnsRecent.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-3 py-8 text-center text-slate-400 text-sm">
+                                                    No approved returns in this period
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            returnsRecent.map((row) => (
+                                                <tr key={row.return_id}>
+                                                    <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                                                        {row.return_bill_number || row.return_number || "—"}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-xs text-slate-600">
+                                                        {fmtShortDate(row.return_bill_generated_at)}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-xs">
+                                                        <span className="inline-flex px-1.5 py-0.5 rounded bg-violet-50 text-violet-700">
+                                                            {row.status || "—"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right text-xs font-semibold tabular-nums text-violet-800">
+                                                        {formatCurrency(row.amount)}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p className="px-4 py-2 text-[11px] text-slate-400 border-t border-slate-100">
+                                {returns.count || 0} return(s) · {formatCurrency(returnAmount)} credited against purchases
+                                (APPROVED / DISPATCHED / COMPLETED only)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
                                 <Truck size={16} className="text-slate-600" />
                                 <h3 className="text-sm font-semibold text-slate-800">Transfers · recent</h3>
                             </div>
@@ -738,6 +904,52 @@ export default function ShopReportTab() {
                             <p className="px-4 py-2 text-[11px] text-slate-400 border-t border-slate-100">
                                 {transferTotal} transfer(s) in period · full lists in Purchase History / Transfers
                             </p>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+                                <PiggyBank size={16} className="text-emerald-600" />
+                                <h3 className="text-sm font-semibold text-slate-800">Profit · breakdown</h3>
+                            </div>
+                            <div className="p-4 space-y-2">
+                                <div className="flex justify-between text-sm text-slate-600">
+                                    <span>Sales</span>
+                                    <span className="font-semibold tabular-nums text-slate-900">
+                                        {formatCurrency(sales.total_amount)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-sm text-slate-600">
+                                    <span>− Purchases</span>
+                                    <span className="font-semibold tabular-nums text-amber-800">
+                                        {formatCurrency(purchaseAmount)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-sm text-slate-600">
+                                    <span>− Petty cash</span>
+                                    <span className="font-semibold tabular-nums text-rose-700">
+                                        {formatCurrency(expenseAmount)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-sm text-slate-600">
+                                    <span>+ Returns</span>
+                                    <span className="font-semibold tabular-nums text-violet-700">
+                                        {formatCurrency(returnAmount)}
+                                    </span>
+                                </div>
+                                <div className="pt-2 border-t border-slate-100 flex justify-between text-sm">
+                                    <span className="font-semibold text-slate-800">Profit</span>
+                                    <span
+                                        className={`font-bold tabular-nums ${
+                                            profitAmount >= 0 ? "text-emerald-700" : "text-rose-700"
+                                        }`}
+                                    >
+                                        {formatCurrency(profitAmount)}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-slate-400 pt-1">
+                                    Updates with the period filter above. Returns count only after approval.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
