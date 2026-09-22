@@ -289,22 +289,15 @@ export default function RequestActionModals({ onSuccess }) {
     };
 
     const handleReceive = async () => {
-        const isShopWhReceive =
-            selectedRequest?.request_type === "WH_TO_SHOP" &&
-            (isShopOwner || isShopManager);
         const remaining =
             (selectedRequest?.approved_quantity ?? selectedRequest?.quantity ?? 0) -
             (selectedRequest?.received_quantity || 0);
-        const qty = isShopWhReceive ? remaining : parseInt(receivedQuantity, 10);
+        // Receive confirms full remaining qty only — no partial qty edit in UI.
+        const qty = remaining;
 
         if (!Number.isInteger(qty) || qty <= 0) {
-            dispatch(setActionErrors({ received_quantity: "Valid quantity is required" }));
-            toast.error("Please enter quantity to receive.");
-            return;
-        }
-        if (qty > remaining) {
-            dispatch(setActionErrors({ received_quantity: `Cannot receive more than ${remaining}` }));
-            toast.error(`Cannot receive more than ${remaining} units.`);
+            dispatch(setActionErrors({ received_quantity: "Nothing left to receive" }));
+            toast.error("Nothing left to receive.");
             return;
         }
         setIsSubmitting(true);
@@ -686,11 +679,14 @@ export default function RequestActionModals({ onSuccess }) {
     // RECEIVE MODAL RENDER
     // ─────────────────────────────────────────────────────────────
     if (showReceiveModal && selectedRequest) {
-        const isShopWhReceive =
-            selectedRequest?.request_type === "WH_TO_SHOP" &&
-            (isShopOwner || isShopManager);
         const sentQty = selectedRequest?.approved_quantity ?? selectedRequest?.quantity ?? 0;
         const remaining = sentQty - (selectedRequest.received_quantity || 0);
+        const sentLabel =
+            selectedRequest?.request_type === "SHOP_TO_SHOP"
+                ? "Sent by source shop"
+                : selectedRequest?.request_type === "WH_TO_SHOP"
+                  ? "Sent by warehouse"
+                  : "Sent quantity";
         return (
             <div className="fixed inset-0 z-50 overflow-y-auto text-gray-700">
     <div className="flex items-center justify-center min-h-screen px-4 py-8">
@@ -705,22 +701,13 @@ export default function RequestActionModals({ onSuccess }) {
                         <div className="bg-gray-50 rounded-lg p-3 text-sm">
                             <p><strong>Product:</strong> {selectedRequest.variant?.product?.name}</p>
                             <p><strong>Total Requested:</strong> {selectedRequest.quantity}</p>
-                            <p><strong>Sent by Warehouse:</strong> {sentQty}</p>
+                            <p><strong>{sentLabel}:</strong> {sentQty}</p>
                             <p><strong>Already Received:</strong> {selectedRequest.received_quantity || 0}</p>
                             <p><strong>Receiving Now:</strong> <span className="font-bold text-green-700">{remaining}</span></p>
                         </div>
-                        {!isShopWhReceive && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Quantity to Receive <span className="text-red-500">*</span></label>
-                            <input type="number" min="1" max={remaining} value={receivedQuantity} onChange={(e) => dispatch(setReceivedQuantity(e.target.value))} className={inputCls("received_quantity", actionErrors)} placeholder={`Max ${remaining}`} />
-                            {actionErrors.received_quantity && <p className="text-xs text-red-500 mt-1">{actionErrors.received_quantity}</p>}
-                        </div>
-                        )}
-                        {isShopWhReceive && (
-                            <p className="text-xs text-gray-500 bg-green-50 border border-green-100 rounded-lg p-3">
-                                Warehouse dispatched <strong>{remaining}</strong> unit(s). Confirm to receive the same quantity.
-                            </p>
-                        )}
+                        <p className="text-xs text-gray-500 bg-green-50 border border-green-100 rounded-lg p-3">
+                            Confirm to receive <strong>{remaining}</strong> unit(s) — same as dispatched quantity remaining.
+                        </p>
                         <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Remarks (optional)</label>
                             <textarea value={receiveRemarks} onChange={(e) => dispatch(setReceiveRemarks(e.target.value))} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none" placeholder="Optional" />
@@ -728,7 +715,7 @@ export default function RequestActionModals({ onSuccess }) {
                     </div>
                     <div className="border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
                         <button onClick={() => dispatch(closeReceiveModal())} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
-                        <button onClick={handleReceive} disabled={isSubmitting} className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">{isSubmitting ? "Processing..." : "Receive"}</button>
+                        <button onClick={handleReceive} disabled={isSubmitting || remaining <= 0} className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">{isSubmitting ? "Processing..." : "Receive"}</button>
                     </div>
                 </div>
     </div>
