@@ -54,7 +54,10 @@ export default function ViewRequestModal({ onSuccess }) {
 
     const request = requestDetail || viewRequestData;
     const isWarehouseUser = [ROLES.SUPER_ADMIN, ROLES.ORG_MANAGER, ROLES.WH_MANAGER, ROLES.WH_STOCK_LISTER].includes(user?.role);
-    const isFranchiseTransfer = request.is_franchise_transfer || request.to_shop?.shop_type === "FRANCHISE";
+    const isFranchiseTransfer =
+        request.is_franchise_transfer ||
+        ((request.request_type === "WH_TO_SHOP" || request.request_type === "SHOP_TO_SHOP") &&
+            request.to_shop?.shop_type === "FRANCHISE");
     const franchisePricing = request.franchise_pricing;
     const isEmergency = request.priority === "HIGH";
     const isRejected = request.status === "REJECTED";

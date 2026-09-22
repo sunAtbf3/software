@@ -42,6 +42,26 @@ import { getApiErrorMessage } from "../../../../../utils/apiErrorMessage";
 import { TRANSFER_BILL_TYPES } from "../../../../../constants/transferBillTypes";
 import { CURRENT_USER, isAdmin } from "../../../../roles";
 
+/**
+ * Align with backend commercial bill gate (WH→shop / shop→shop to OWNER|FRANCHISE).
+ * When to_shop.shop_type is missing on the list row, still treat shop-dest transfers
+ * as commercial so approve always sends transfer_bill_type (avoids backend 400).
+ */
+const requiresTransferBillType = (req) => {
+    if (!req) return false;
+    if (req.is_franchise_transfer) return true;
+    const type = req.request_type;
+    if (type !== "WH_TO_SHOP" && type !== "SHOP_TO_SHOP") return false;
+    const destType = req.to_shop?.shop_type;
+    if (destType === "FRANCHISE" || destType === "OWNER") return true;
+    // Incomplete list payload: destination shop id present → commercial bill path on backend
+    if (!destType && req.to_shop_id) return true;
+    return false;
+};
+
+const resolveApproveBillType = (billType) =>
+    billType || TRANSFER_BILL_TYPES.NON_GST;
+
 export default function RequestActionModals({ onSuccess }) {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
@@ -211,18 +231,16 @@ export default function RequestActionModals({ onSuccess }) {
     const handleApprove = async () => {
         setIsSubmitting(true);
         try {
-            const isFranchise =
-                selectedRequest?.is_franchise_transfer ||
-                (selectedRequest?.request_type === "WH_TO_SHOP" &&
-                    selectedRequest?.to_shop?.shop_type === "FRANCHISE");
+            const needsBillType = requiresTransferBillType(selectedRequest);
+            const billType = resolveApproveBillType(transferBillType);
 
             await approveRequest({
                 requestId: selectedRequest.request_id,
-                ...(isFranchise ? { transfer_bill_type: transferBillType } : {}),
+                ...(needsBillType ? { transfer_bill_type: billType } : {}),
                 idempotencyKey: generateIdempotencyKey(),
             }).unwrap();
             toast.success(
-                isFranchise ? "Request approved — transfer bill generated" : "Request approved successfully"
+                needsBillType ? "Request approved — transfer bill generated" : "Request approved successfully"
             );
             dispatch(closeApproveRejectModal());
             if (onSuccess) onSuccess();
@@ -500,10 +518,8 @@ export default function RequestActionModals({ onSuccess }) {
     // ─────────────────────────────────────────────────────────────
     if (showApproveRejectModal && selectedRequest) {
         const isEmergencyRequest = selectedRequest.priority === "HIGH";
-        const isFranchiseApprove =
-            selectedRequest?.is_franchise_transfer ||
-            (selectedRequest?.request_type === "WH_TO_SHOP" &&
-                selectedRequest?.to_shop?.shop_type === "FRANCHISE");
+        const needsBillType = requiresTransferBillType(selectedRequest);
+        const activeBillType = resolveApproveBillType(transferBillType);
         
         return (
             <div className="fixed inset-0 z-50 overflow-y-auto text-gray-700">
@@ -534,15 +550,18 @@ export default function RequestActionModals({ onSuccess }) {
                             <p><strong>Quantity:</strong> {selectedRequest.quantity}</p>
                             <p><strong>Remarks:</strong> {selectedRequest.request_remarks || "—"}</p>
                         </div>
-                        {isFranchiseApprove && approveRejectAction === "approve" && (
+                        {needsBillType && approveRejectAction === "approve" && (
                             <div className="border border-blue-100 bg-blue-50/50 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-semibold text-blue-900">Transfer bill type (required)</p>
+                                <p className="text-[11px] text-blue-800/80">
+                                    Default is Non-GST. Change only if GST invoice or receipt is needed.
+                                </p>
                                 <div className="grid grid-cols-3 gap-2">
                                     <button
                                         type="button"
                                         onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.NON_GST))}
                                         className={`py-2 rounded-lg text-xs font-medium border ${
-                                            transferBillType === TRANSFER_BILL_TYPES.NON_GST
+                                            activeBillType === TRANSFER_BILL_TYPES.NON_GST
                                                 ? "bg-blue-600 text-white border-blue-600"
                                                 : "bg-white text-gray-700 border-gray-200"
                                         }`}
@@ -553,7 +572,7 @@ export default function RequestActionModals({ onSuccess }) {
                                         type="button"
                                         onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.GST))}
                                         className={`py-2 rounded-lg text-xs font-medium border ${
-                                            transferBillType === TRANSFER_BILL_TYPES.GST
+                                            activeBillType === TRANSFER_BILL_TYPES.GST
                                                 ? "bg-green-600 text-white border-green-600"
                                                 : "bg-white text-gray-700 border-gray-200"
                                         }`}
@@ -564,7 +583,7 @@ export default function RequestActionModals({ onSuccess }) {
                                         type="button"
                                         onClick={() => dispatch(setTransferBillType(TRANSFER_BILL_TYPES.RECEIPT))}
                                         className={`py-2 rounded-lg text-xs font-medium border ${
-                                            transferBillType === TRANSFER_BILL_TYPES.RECEIPT
+                                            activeBillType === TRANSFER_BILL_TYPES.RECEIPT
                                                 ? "bg-amber-600 text-white border-amber-600"
                                                 : "bg-white text-gray-700 border-gray-200"
                                         }`}
