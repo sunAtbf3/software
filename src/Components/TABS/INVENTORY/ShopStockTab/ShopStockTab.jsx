@@ -60,10 +60,22 @@ const groupStocksByProduct = (stocks) => {
                 product_id: productId,
                 product_code: product.product_code,
                 name: product.name,
+                image_url:
+                    product.variants?.[0]?.images?.[0]?.url ||
+                    variant.images?.[0]?.url ||
+                    null,
                 stocks: [],
                 variants: [],
                 isMultiVariant: false,
             });
+        } else {
+            const existing = productMap.get(productId);
+            if (!existing.image_url) {
+                existing.image_url =
+                    product.variants?.[0]?.images?.[0]?.url ||
+                    variant.images?.[0]?.url ||
+                    null;
+            }
         }
         
         const group = productMap.get(productId);
@@ -524,8 +536,26 @@ export default function ShopStockTab() {
                                         
                                         {/* Product */}
                                         <td className="px-4 py-3">
-                                            <p className="font-semibold text-gray-800">{group.name || "—"}</p>
-                                            <p className="text-xs font-semibold text-blue-600">{group.product_code || "—"}</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
+                                                    {group.image_url ? (
+                                                        <img
+                                                            src={group.image_url}
+                                                            alt={group.name || "Product"}
+                                                            className="w-full h-full object-cover"
+                                                            loading="lazy"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <Package size={16} className="text-gray-300" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-gray-800">{group.name || "—"}</p>
+                                                    <p className="text-xs font-semibold text-blue-600">{group.product_code || "—"}</p>
+                                                </div>
+                                            </div>
                                         </td>
                                         
                                         {/* Variant SKU */}

@@ -74,6 +74,12 @@ const isExpiringSoon = (expiryDate) => {
 const variantExpandKey = (stock) =>
     stock.aggregate_key || `${stock.warehouse_id}:${stock.variant_id}`;
 
+/** Primary-variant image first, then this row's variant image (Products tab pattern). */
+const getStockProductImageUrl = (stock) =>
+    stock?.variant?.product?.variants?.[0]?.images?.[0]?.url ||
+    stock?.variant?.images?.[0]?.url ||
+    null;
+
 /** Resolve a concrete batch row for edit/qty modals when the list row is variant-aggregated. */
 const resolveActionStockRow = (row) => {
     if (row?.batch_records?.length) {
@@ -196,6 +202,7 @@ export default function InventoryStockTab() {
     const renderStockRow = (stock, { isChild = false, isVariantSummary = false, expandKey = "", canExpand = false, isExpanded = false } = {}) => {
         const product = stock.variant?.product || {};
         const variant = stock.variant || {};
+        const productImageUrl = getStockProductImageUrl(stock);
         const status = getStockStatus(stock.quantity, stock.low_stock_threshold);
         const location = [stock.room_zone, stock.rack_shelf, stock.position]
             .filter(Boolean).join(" / ") || "—";
@@ -244,14 +251,30 @@ export default function InventoryStockTab() {
 
                 <td className="px-4 py-3 min-w-[130px]">
                     {!isChild ? (
-                        <div>
-                            <p className="font-semibold text-gray-800 text-sm leading-tight">{product.name || "—"}</p>
-                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{product.product_code || "—"}</p>
-                            {isVariantSummary && stock.batch_count > 1 && (
-                                <span className="inline-block mt-1 text-[10px] font-medium text-indigo-500 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5">
-                                    {stock.batch_count} batches
-                                </span>
-                            )}
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
+                                {productImageUrl ? (
+                                    <img
+                                        src={productImageUrl}
+                                        alt={product.name || "Product"}
+                                        className="w-full h-full object-cover"
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <Package size={16} className="text-gray-300" />
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800 text-sm leading-tight">{product.name || "—"}</p>
+                                <p className="text-xs font-semibold text-blue-600 mt-0.5">{product.product_code || "—"}</p>
+                                {isVariantSummary && stock.batch_count > 1 && (
+                                    <span className="inline-block mt-1 text-[10px] font-medium text-indigo-500 bg-indigo-50 border border-indigo-100 rounded-full px-1.5 py-0.5">
+                                        {stock.batch_count} batches
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <span className="text-xs text-gray-300 pl-2">↳ batch</span>
