@@ -14,6 +14,12 @@ import {
     DEFAULT_WHOLESALE_MARKUP_PERCENT,
     calculateWholesaleUnitPriceFromSelling,
 } from "../../../utils/wholesalePrice.utils";
+import {
+    DEFAULT_FRANCHISE_MARKUP_PERCENT,
+    resolveFranchiseMarkupPercent,
+    getCartLineFranchiseFloor,
+} from "../../../utils/franchisePrice.utils";
+import { sellPriceBelowFranchiseFloor } from "../../../utils/cartMrpGuard";
 
 // Helper: calculate line total
 const calculateLineTotal = (unit_price, quantity) => unit_price * quantity;
@@ -161,7 +167,8 @@ const initialState = {
     salesChannel: "WALK_IN",
     pricingMode: "RETAIL",
     wholesaleMarkupPercent: DEFAULT_WHOLESALE_MARKUP_PERCENT,
-
+    franchiseMarkupPercent: DEFAULT_FRANCHISE_MARKUP_PERCENT,
+    shopType: "",
     shopName: "",
 
     // UI state
@@ -327,6 +334,14 @@ const billingSlice = createSlice({
                 return;
             }
 
+            if (state.shopType === "FRANCHISE") {
+                const floor = getCartLineFranchiseFloor(item, state.franchiseMarkupPercent);
+                if (sellPriceBelowFranchiseFloor(parsed, floor)) {
+                    item.special_price_invalid = true;
+                    return;
+                }
+            }
+
             const catalog = item.price_type === "WHOLESALE"
                 ? wholesaleOf(item, catalogSpecialOf(item), state.wholesaleMarkupPercent)
                 : resolveBillingDefaultUnitPrice(item);
@@ -465,8 +480,15 @@ const billingSlice = createSlice({
             });
         },
 
+        setFranchiseMarkupPercent: (state, action) => {
+            state.franchiseMarkupPercent = resolveFranchiseMarkupPercent(action.payload);
+        },
+
         setBillingShopContext: (state, action) => {
             state.shopName = action.payload?.shop_name || "";
+            if (action.payload?.shop_type != null) {
+                state.shopType = String(action.payload.shop_type || "");
+            }
         },
 
         setPaymentMethod: (state, action) => {
@@ -588,6 +610,7 @@ export const {
     setBillType,
     setPricingMode,
     setWholesaleMarkupPercent,
+    setFranchiseMarkupPercent,
     setBillingShopContext,
     setPaymentMethod,
     setExtraDiscount,

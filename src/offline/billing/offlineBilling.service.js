@@ -8,7 +8,7 @@ import {
 import { applyLocalSaleDeductions } from '../sync/shopStockSync.service';
 import { enqueueMutation } from '../sync/pushService';
 import { getUserShopId } from '../constants';
-import { describeMrpViolations } from '../../utils/cartMrpGuard';
+import { describeCartPriceBandViolations } from '../../utils/cartMrpGuard';
 
 const nowIso = () => new Date().toISOString();
 
@@ -129,13 +129,19 @@ export const createOfflineBill = async ({
     throw new Error('Credit notes cannot be applied while offline');
   }
 
-  const mrpViolation = describeMrpViolations(cart);
+  const config = await shopConfigRepository.getConfigBundle();
+  const shop = config?.shop;
+
+  const mrpViolation = describeCartPriceBandViolations(cart, {
+    shopType: shop?.shop_type,
+    franchiseMarkupPercent:
+      config?.franchise_markup_percent ??
+      config?.settings?.franchise_markup_percent,
+  });
   if (mrpViolation) {
     throw new Error(mrpViolation);
   }
 
-  const config = await shopConfigRepository.getConfigBundle();
-  const shop = config?.shop;
   const shopCode = shop?.shop_code || resolvedShopId.slice(-6);
 
   let staffSnapshot = null;

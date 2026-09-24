@@ -23,7 +23,8 @@ import { formatAttributesDisplay } from "../../../../utils/variantAttributes.uti
 import { isWithGstBill, BILL_TYPES } from "../../../../constants/billingBillTypes";
 import { useShopPricingVisibility, isSpecialPriceOnlyShopType } from "../../../../utils/shopPricingVisibility";
 import { buildComboCartHints, priceKey } from "../../../../utils/comboPricing.utils";
-import { sellPriceExceedsMrp } from "../../../../utils/cartMrpGuard";
+import { sellPriceExceedsMrp, sellPriceBelowFranchiseFloor } from "../../../../utils/cartMrpGuard";
+import { getCartLineFranchiseFloor } from "../../../../utils/franchisePrice.utils";
 
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
@@ -38,9 +39,18 @@ const formatPriceInput = (value) => {
 /**
  * Slightly larger editable Special Price under the product name.
  * Catalog listing special_price is not mutated — only this cart line's unit_price.
- * Cannot exceed this item's MRP — message shows while filling.
+ * Cannot exceed MRP; franchise shops also cannot go below F.Price on manual edit.
  */
-function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridden, mrp, fieldLabel = "Special" }) {
+function CartSpecialPriceInput({
+    variantId,
+    unitPrice,
+    catalogSpecial,
+    overridden,
+    mrp,
+    franchiseFloor = 0,
+    enforceFranchiseFloor = false,
+    fieldLabel = "Special",
+}) {
     const dispatch = useDispatch();
     const [draft, setDraft] = useState(() => formatPriceInput(unitPrice));
     const [focused, setFocused] = useState(false);
@@ -48,6 +58,8 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
 
     const mrpCap = Number(mrp);
     const hasMrpCap = Number.isFinite(mrpCap) && mrpCap > 0;
+    const floor = Number(franchiseFloor);
+    const hasFloor = enforceFranchiseFloor && Number.isFinite(floor) && floor > 0;
 
     useEffect(() => {
         if (!focused && !error) {
@@ -77,6 +89,14 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
             if (commitDraft) setDraft(formatPriceInput(unitPrice));
             return false;
         }
+        if (hasFloor && sellPriceBelowFranchiseFloor(n, floor)) {
+            setDraft(trimmed);
+            setError(
+                `Cannot go below F.Price ₹${formatPriceInput(floor)}. Keep ${fieldLabel.toLowerCase()} price at or above F.Price.`
+            );
+            dispatch(setCartSpecialPriceInvalid({ variant_id: variantId, invalid: true }));
+            return false;
+        }
         if (hasMrpCap && sellPriceExceedsMrp(n, mrpCap)) {
             setDraft(trimmed);
             setError(`Cannot exceed MRP ₹${formatPriceInput(mrpCap)}. Keep ${fieldLabel.toLowerCase()} price at or below MRP.`);
@@ -90,6 +110,11 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
         return true;
     };
 
+    const titleParts = [];
+    if (hasFloor) titleParts.push(`Min F.Price ₹${formatPriceInput(floor)}`);
+    if (hasMrpCap) titleParts.push(`Max MRP ₹${formatPriceInput(mrpCap)}`);
+    titleParts.push(`Listing special remains ₹${formatPriceInput(catalogSpecial)}`);
+
     return (
         <div className="inline-flex flex-col gap-0.5 min-w-0">
             <label className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-md pl-1.5 pr-1 py-0.5">
@@ -97,7 +122,8 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                 <input
                     type="number"
                     inputMode="decimal"
-                    min="0"
+                    min={hasFloor ? floor : 0}
+                    max={hasMrpCap ? mrpCap : undefined}
                     step="0.01"
                     value={draft}
                     onFocus={(e) => {
@@ -119,13 +145,7 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
                             ? "border-red-400 text-red-700 focus:ring-red-300"
                             : "border-gray-300 text-gray-800 focus:ring-blue-400"
                     }`}
-                    title={
-                        hasMrpCap
-                            ? `Max MRP ₹${formatPriceInput(mrpCap)}. Listing special remains ₹${formatPriceInput(catalogSpecial)}`
-                            : overridden
-                            ? `Edited for this bill. Listing special remains ₹${formatPriceInput(catalogSpecial)}`
-                            : "Edit sell price for this bill only"
-                    }
+                    title={titleParts.join(". ")}
                     aria-label={`${fieldLabel} price for this bill`}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? `special-price-err-${variantId}` : undefined}
@@ -146,12 +166,15 @@ function CartSpecialPriceInput({ variantId, unitPrice, catalogSpecial, overridde
 
 export default function CartPanel() {
     const dispatch = useDispatch();
-    const { cart, manualCart, billType, pricingMode } = useSelector((state) => state.billing);
+    const { cart, manualCart, billType, pricingMode, franchiseMarkupPercent } = useSelector(
+        (state) => state.billing
+    );
     const { shopType, isShopScoped } = useShopPricingVisibility();
     // OWNER + FRANCHISE (and shop staff while type loads): no MRP dropdown.
     const specialPriceOnlyBilling =
         isShopScoped || isSpecialPriceOnlyShopType(shopType);
     const wholesaleBilling = pricingMode === "WHOLESALE" && shopType === "OWNER";
+    const enforceFranchiseFloor = shopType === "FRANCHISE";
     const priceFieldLabel = wholesaleBilling ? "Wholesale" : "Special";
     const withGst = isWithGstBill(billType);
 
@@ -288,6 +311,11 @@ export default function CartPanel() {
                                                     catalogSpecial={item.special_price ?? item.retail_price}
                                                     overridden={item.price_overridden === true}
                                                     mrp={item.mrp}
+                                                    franchiseFloor={getCartLineFranchiseFloor(
+                                                        item,
+                                                        franchiseMarkupPercent
+                                                    )}
+                                                    enforceFranchiseFloor={enforceFranchiseFloor}
                                                     fieldLabel={priceFieldLabel}
                                                 />
                                                 {item.on_sale === true && (
@@ -334,6 +362,11 @@ export default function CartPanel() {
                                                         catalogSpecial={item.special_price ?? item.retail_price}
                                                         overridden={item.price_overridden === true}
                                                         mrp={item.mrp}
+                                                        franchiseFloor={getCartLineFranchiseFloor(
+                                                            item,
+                                                            franchiseMarkupPercent
+                                                        )}
+                                                        enforceFranchiseFloor={enforceFranchiseFloor}
                                                         fieldLabel={priceFieldLabel}
                                                     />
                                                 )}

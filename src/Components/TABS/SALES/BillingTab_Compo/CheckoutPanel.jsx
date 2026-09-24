@@ -52,7 +52,7 @@ import {
     selectExtraDiscount,
 } from "../../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { computeFinalPayable } from "../../../../utils/billingPayable";
-import { describeMrpViolations } from "../../../../utils/cartMrpGuard";
+import { describeCartPriceBandViolations } from "../../../../utils/cartMrpGuard";
 import { getStateName } from "../../../../constants/indianStateCodes";
 import { BILL_TYPES, getBillTypeLabel, isWithGstBill, isNonListedBill } from "../../../../constants/billingBillTypes";
 
@@ -220,6 +220,8 @@ export default function CheckoutPanel({
         paymentMethod,
         lastCreatedBill,
         pricingMode,
+        shopType: billingShopType,
+        franchiseMarkupPercent,
     } = useSelector((state) => state.billing);
     const subtotal = useSelector(selectCartSubtotal);
     const total = useSelector(selectCartTotal);
@@ -345,8 +347,9 @@ export default function CheckoutPanel({
         extraDiscountAmount: extraDiscountInput,
         creditAmount: totalSelectedCredit,
     });
-    const mrpViolationMessage = describeMrpViolations(
-        isNonListedBill(billType) ? manualCart : cart
+    const mrpViolationMessage = describeCartPriceBandViolations(
+        isNonListedBill(billType) ? manualCart : cart,
+        { shopType: billingShopType, franchiseMarkupPercent }
     );
     const cartEmpty = isNonListedBill(billType) ? manualCart.length === 0 : cart.length === 0;
     const createBillDisabled = cartEmpty || isCreatingBill || Boolean(mrpViolationMessage);
@@ -582,8 +585,9 @@ export default function CheckoutPanel({
     };
 
     const assertSellPricesWithinMrp = () => {
-        const message = describeMrpViolations(
-            isNonListedBill(billType) ? manualCart : cart
+        const message = describeCartPriceBandViolations(
+            isNonListedBill(billType) ? manualCart : cart,
+            { shopType: billingShopType, franchiseMarkupPercent }
         );
         if (!message) return true;
         toast.error(message);

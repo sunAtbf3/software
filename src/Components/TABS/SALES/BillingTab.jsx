@@ -13,9 +13,13 @@ import {
     applyComboPricing,
     setPricingMode,
     setWholesaleMarkupPercent,
+    setFranchiseMarkupPercent,
 } from "../../../REDUX_FEATURES/REDUX_SLICES/Billing_api/billingSlice";
 import { useGetActiveComboRulesQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/ComboRule_api/comboRuleApi";
-import { useGetWholesaleSettingsQuery } from "../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
+import {
+    useGetWholesaleSettingsQuery,
+    useGetFranchiseSettingsQuery,
+} from "../../../REDUX_FEATURES/REDUX_SLICES/AppSettings_api/appSettingsApi";
 import ProductPicker from "./BillingTab_Compo/ProductPicker";
 import CustomerSearch from "./BillingTab_Compo/CustomerSearch";
 import CartPanel from "./BillingTab_Compo/CartPanel";
@@ -35,8 +39,12 @@ export default function BillingTab() {
     const { data: myShop } = useGetMyShopQuery(undefined, { skip: !shop_id });
     const shopType = myShop?.shop_type || user?.shop?.shop_type;
     const canWholesaleBill = shopType === "OWNER";
+    const isFranchiseShop = shopType === "FRANCHISE";
     const { data: wholesaleSettings } = useGetWholesaleSettingsQuery(undefined, {
         skip: !canWholesaleBill,
+    });
+    const { data: franchiseSettings } = useGetFranchiseSettingsQuery(undefined, {
+        skip: !isFranchiseShop,
     });
     const { data: activeComboRules } = useGetActiveComboRulesQuery(undefined, {
         skip: billType === BILL_TYPES.NON_LISTED,
@@ -69,9 +77,16 @@ export default function BillingTab() {
 
     useEffect(() => {
         if (myShop) {
-            dispatch(setBillingShopContext({ shop_name: myShop.shop_name }));
+            dispatch(
+                setBillingShopContext({
+                    shop_name: myShop.shop_name,
+                    shop_type: myShop.shop_type || shopType || "",
+                })
+            );
+        } else if (shopType) {
+            dispatch(setBillingShopContext({ shop_type: shopType }));
         }
-    }, [myShop, dispatch]);
+    }, [myShop, shopType, dispatch]);
 
     useEffect(() => {
         if (shopType === "FRANCHISE" && pricingMode === "WHOLESALE") {
@@ -84,6 +99,12 @@ export default function BillingTab() {
             dispatch(setWholesaleMarkupPercent(wholesaleSettings.wholesale_markup_percent));
         }
     }, [wholesaleSettings?.wholesale_markup_percent, dispatch]);
+
+    useEffect(() => {
+        if (franchiseSettings?.franchise_markup_percent != null) {
+            dispatch(setFranchiseMarkupPercent(franchiseSettings.franchise_markup_percent));
+        }
+    }, [franchiseSettings?.franchise_markup_percent, dispatch]);
 
     useEffect(() => {
         dispatch(recalculateCartGst());
