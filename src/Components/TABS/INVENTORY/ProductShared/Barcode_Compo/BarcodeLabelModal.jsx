@@ -25,7 +25,7 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const [totalPages, setTotalPages] = useState(1);
     const [labelsPerPage, setLabelsPerPage] = useState(8); // 1 = Solo View, 8 = Grid View
     const [batchCanvases, setBatchCanvases] = useState([]);
-    const [labelType, setLabelType] = useState(LABEL_TYPE_WITH_PRICE);
+    const [labelType, setLabelType] = useState(LABEL_TYPE_WITH_CODE);
     const previewGenRef = useRef(0);
 
     // Track unique raw generated image strings for the individual layout renderer
@@ -36,8 +36,9 @@ const BarcodeLabelModal = ({ isOpen, onClose, variantsWithProducts }) => {
     const drawOptions = { showPrices, encodeSpecialPrice };
 
     useEffect(() => {
-        if (!isOpen) {
-            setLabelType(LABEL_TYPE_WITH_PRICE);
+        if (isOpen) {
+            // Client default: always open on "Label with code"
+            setLabelType(LABEL_TYPE_WITH_CODE);
         }
     }, [isOpen]);
 
