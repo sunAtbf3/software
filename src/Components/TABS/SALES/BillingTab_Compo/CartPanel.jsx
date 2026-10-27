@@ -4,7 +4,7 @@
 // Pure Redux - no API calls
 // UPDATED: Price type options to match backend (SPECIAL, RETAIL, WHOLESALE, MRP, ONLINE)
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Trash2, Plus, Minus } from "lucide-react";
 import {
@@ -29,6 +29,29 @@ import { getCartLineFranchiseFloor } from "../../../../utils/franchisePrice.util
 const toNumber = (value, defaultValue = 0) => {
     const num = Number(value);
     return isNaN(num) ? defaultValue : num;
+};
+
+const getCartLineId = (item, billType) =>
+    billType === BILL_TYPES.NON_LISTED ? item.id : item.variant_id;
+
+const buildCartQtySnapshot = (items, billType) =>
+    (items || []).map((item) => ({
+        id: getCartLineId(item, billType),
+        qty: Number(item.quantity) || 0,
+    }));
+
+/** Only new lines or qty increases — ignore combo/price recalcs so checkout/edit flows do not jump. */
+const findAddedCartLineId = (prev, next) => {
+    if (!next.length) return null;
+    if (next.length > (prev?.length || 0)) {
+        return next[next.length - 1].id;
+    }
+    let targetId = null;
+    for (const row of next) {
+        const old = prev.find((p) => p.id === row.id);
+        if (old && row.qty > old.qty) targetId = row.id;
+    }
+    return targetId;
 };
 
 const formatPriceInput = (value) => {
@@ -188,6 +211,34 @@ export default function CartPanel() {
     );
 
     const items = billType === BILL_TYPES.NON_LISTED ? manualCart : cart;
+    const cartScrollRef = useRef(null);
+    const cartRowRefs = useRef(new Map());
+    const prevCartQtyRef = useRef([]);
+
+    useEffect(() => {
+        const next = buildCartQtySnapshot(items, billType);
+        const prev = prevCartQtyRef.current;
+        prevCartQtyRef.current = next;
+
+        const targetId = findAddedCartLineId(prev, next);
+        if (targetId == null) return;
+
+        const scrollToAdded = () => {
+            try {
+                const row = cartRowRefs.current.get(targetId);
+                if (row && typeof row.scrollIntoView === "function") {
+                    row.scrollIntoView({ block: "nearest", inline: "nearest" });
+                    return;
+                }
+                const scroller = cartScrollRef.current;
+                if (scroller) scroller.scrollTop = scroller.scrollHeight;
+            } catch {
+                // Fail-soft: never block billing if scroll is unavailable.
+            }
+        };
+
+        requestAnimationFrame(scrollToAdded);
+    }, [items, billType]);
 
     const handleQuantityChange = (id, newQty) => {
         const qty = toNumber(newQty);
@@ -232,7 +283,7 @@ export default function CartPanel() {
     }
 
     return (
-        <div className="flex-1 overflow-y-auto border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+        <div ref={cartScrollRef} className="flex-1 overflow-y-auto border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
             {billType !== BILL_TYPES.NON_LISTED && comboHints.groups.length > 0 && (
                 <div className="sticky top-0 z-20 border-b border-blue-100 bg-blue-50 px-3 py-2 space-y-1">
                     {comboHints.groups.map((group) => (
@@ -287,7 +338,14 @@ export default function CartPanel() {
                             : Boolean(groupHint && groupHint.needed_for_next > 0);
 
                         return (
-                            <tr key={itemId} className="bg-white">
+                            <tr
+                                key={itemId}
+                                ref={(el) => {
+                                    if (el) cartRowRefs.current.set(itemId, el);
+                                    else cartRowRefs.current.delete(itemId);
+                                }}
+                                className="bg-white"
+                            >
                                 <td className="px-3 py-3">
                                     <p className="font-semibold text-gray-800 text-xs">{itemName}</p>
                                     {billType !== BILL_TYPES.NON_LISTED && item.product_code && (
